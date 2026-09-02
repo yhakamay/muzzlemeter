@@ -65,6 +65,15 @@ extension SniffCommand {
                   acechrono-sniff dump --name AC6000
                   acechrono-sniff dump --id 1234ABCD-... --log tools/re/captures/shot1.log
                   acechrono-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
+                  acechrono-sniff dump --name AC6000 --interactive
+
+                --interactive では購読完了後に stdin からコマンドを受け付けます:
+                  <hex>            既定の write characteristic へ送る (例: 5a 4b 00 4b)
+                  w <char> <hex>   characteristic を指定して write
+                  r <char>         read
+                  sub / unsub <char>  notify の購読 / 解除
+                  list             GATT ツリー再表示
+                  q / Ctrl-D       切断して終了
                 """
         )
 
@@ -90,9 +99,27 @@ extension SniffCommand {
         )
         var write: [String] = []
 
+        @Option(
+            name: .customLong("write-delay"),
+            help: ArgumentHelp(
+                "連続する --write の間隔（ミリ秒）。応答をどの write のものか対応付けるため。",
+                valueName: "ms"
+            )
+        )
+        var writeDelay: Int = 200
+
+        @Flag(
+            name: [.short, .long],
+            help: "購読・--write 完了後に stdin からコマンドを受け付ける対話モード。"
+        )
+        var interactive: Bool = false
+
         func validate() throws {
             guard (name == nil) != (id == nil) else {
                 throw ValidationError("--name か --id のどちらか一方を指定してください。")
+            }
+            guard writeDelay >= 0 else {
+                throw ValidationError("--write-delay は 0 以上で指定してください: \(writeDelay)")
             }
             _ = try parseWrites(write)
             _ = try parseServiceFilter(filterService)
@@ -116,7 +143,12 @@ extension SniffCommand {
             let logPath = log ?? "tools/re/captures/\(Timestamp.fileStamp(Date())).log"
 
             let sniffer = BLESniffer(
-                mode: .dump(matcher: matcher, writes: writes),
+                mode: .dump(
+                    matcher: matcher,
+                    writes: writes,
+                    writeDelay: Double(writeDelay) / 1000,
+                    interactive: interactive
+                ),
                 serviceFilter: filter,
                 logger: LogWriter(path: logPath)
             )

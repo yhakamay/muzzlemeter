@@ -74,6 +74,56 @@ swift run acechrono-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切�
 
 write プロパティがあれば withResponse、無ければ withoutResponse で送る。
 
+`--write` を複数指定した場合、既定では **200 ms 間隔**で 1 件ずつ送る。どの write に対する
+応答なのかを対応付けられるようにするためで、間隔は `--write-delay <ms>` で変えられる
+（`0` で連続送信）。
+
+```sh
+swift run acechrono-sniff dump --name AC6000 --write ffe1 01 --write ffe1 02 --write-delay 500
+```
+
+### 対話モード（ハンドシェイクの試行錯誤用）
+
+`--interactive`（短縮 `-i`）を付けると、GATT 列挙・購読・`--write` の送信が終わった後に
+**stdin から 1 行ずつコマンドを受け付ける**。バイト列を 1 つ試すたびに接続し直す必要が
+なくなるので、未知のハンドシェイクを総当たりで探るときはこれを使う。
+
+```sh
+swift run acechrono-sniff dump --name AC6000 --interactive
+swift run acechrono-sniff dump --name AC6000 -i --write ffe1 01a50000   # 初期化してから対話
+```
+
+受け付けるコマンド:
+
+| 入力 | 動作 |
+|---|---|
+| `5a 4b 00 4b` / `5a4b004b` | **既定の write characteristic** へ送る |
+| `w <char> <hex>` | characteristic を指定して write |
+| `r <char>` | characteristic を read |
+| `sub <char>` / `unsub <char>` | notify の購読 / 解除 |
+| `list` | GATT ツリーを再表示（`*notifying*` 付き） |
+| `h` | ヘルプ |
+| `q` / Ctrl-D | 切断して終了 |
+
+- `<char>` は characteristic UUID（`ffe1` のような短縮形も可）か、**一意に決まる前置一致**。
+  複数に当たる場合は候補を表示して何もしない。
+- **既定の write characteristic** は、write（応答あり）を持つ最初の characteristic。
+  無ければ writeWithoutResponse を持つ最初のもの。開始時に画面に表示される。
+- 空行と `#` で始まる行は無視される。解釈できない入力は 1 行の usage を出す。
+- 対話中の write / read / 結果は**キャプチャログにもそのまま記録される**ので、
+  後から `ReplayScript` で読み直せる。
+
+notify は入力中でも非同期に流れてくるため、プロンプト `> ` は**起動直後と各コマンドの結果の
+直後だけ**表示される（毎回出すとパケットで画面が埋まるため）。
+
+候補のバイト列をファイルやパイプで流し込むこともできる。**端末以外から読んでいるときは
+`--write-delay` の間隔で 1 行ずつ処理する**ので、どの応答がどの行のものか分かる:
+
+```sh
+printf '5a4b004b\n5a4b014c\n' | swift run acechrono-sniff dump --name AC6000 -i
+swift run acechrono-sniff dump --name AC6000 -i --write-delay 500 < candidates.txt
+```
+
 ### macOS の Bluetooth 権限
 
 CLI から CoreBluetooth を使うと、**ターミナルアプリ自体**に Bluetooth 権限が必要になる。
