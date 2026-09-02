@@ -3,14 +3,36 @@
 Acetech **AC6000 MKIII BT**（エアソフト用弾速計）を、公式アプリ「AceSoft」より使いやすい
 自作 iOS アプリで扱うためのプロジェクト。
 
-BLE プロトコルが非公開のため、**プロトコル解析から始める**。現在は
+BLE プロトコルが非公開のため**プロトコル解析から始めた**が、**解析は完了して実機で検証済み**。
+現在は
 
 - Phase 0（土台）と解析用 macOS CLI `acechrono-sniff`
-- Phase 2（`AceChronoKit`: ドメイン・BLE 抽象・`ChronoDevice`）
-- Phase 3（iOS アプリの骨格。デモ再生で全画面が動く）
+- Phase 1（BLE プロトコル解析 → `docs/PROTOCOL.md`。実機で確定）
+- Phase 2（`AceChronoKit`: フレームコーデック・鍵ハンドシェイク・CoreBluetooth トランスポート）
+- Phase 3（iOS アプリ。実機接続とリプレイの両方で全画面が動く）
 
-まで完了。**実機の BLE プロトコルはまだ未確定**なので、アプリはリプレイ（記録済みパケットの
-再生）でのみ動作する。パケットパーサと実機トランスポートは解析完了後に追加する。
+まで完了。
+
+## AC6000 と話すのに必要なこと（要点）
+
+詳細は `docs/PROTOCOL.md`。実装する側が最低限知っておくべき事実だけ:
+
+| | |
+|---|---|
+| スキャン | 広告名 `AC6000BT-` の前方一致。**サービスは広告されない**ので `services: nil` で拾う |
+| notify | `3337E46E-F79E-4FF5-9A49-77C36D170C62`（service `5CDE0C3D-…`） |
+| write | `9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C`（service `53C47FE1-…`）**Write With Response** |
+| フレーム | `AA <L> <cmd> <payload…> <cks>`。`L` はフレーム全長 |
+| チェックサム | `(Σ frame[0..L-2] + key1 + key2) & 0xFF`。**鍵を知らないと組めないし検証もできない** |
+| **鍵** | **広告の manufacturer data の 4・5 バイト目**（`00 05 08 c4 94 52 04` → `key1=0xC4 key2=0x94`） |
+| ハンドシェイク | TX `aa 06 4b <k1> <k2> <cks>`（この 1 本だけ鍵 0/0 で署名）→ RX `aa 05 41 4b <cks>`（ACK）。**55 ms で返る。本体の電源ボタン押下は不要** |
+| keep-alive | **不要**（送らない） |
+| 弾速 | `FIRE_REPORT (0x52)` の `rawSpeed / 100` = m/s（実機 LCD と突き合わせて確定）。**LCD は切り捨て表示**なのでアプリの m/s 表示も切り捨てに揃えてある |
+| 電源 OFF | 1 バイトの `00` 通知。エラーではない。約 0.76 秒後にリンクが落ちる |
+| 🚫 禁止 | OTA characteristic `F7BF3564-…` への書き込み（文鎮化）。`0x61` CLEAR_LOG の送信 |
+
+本体は**要求していないフレーム**（`0x47` / `0x5A`）も自発的に送ってくる。
+「予期しない = エラー」にしないこと。
 
 ## 構成
 
@@ -61,6 +83,43 @@ swift run acechrono-sniff dump --name AC6000 --log tools/re/captures/single-shot
 ```
 
 ログは指定しなければ `tools/re/captures/<yyyyMMdd-HHmmss>.log` に自動保存される。
+
+### ハンドシェイク（`--handshake`）— 実機検証はこれを使う
+
+広告の manufacturer data から鍵を取り出し、**購読完了後に `0x4B` READ_KEY を自動送信する**。
+受信フレームは hex の次の行にデコード結果も表示される。
+
+```sh
+swift run acechrono-sniff dump --name AC6000BT- --handshake
+```
+
+期待される出力:
+
+```
+見つかりました: name: AC6000BT-009809  ...  mfg: 00 05 08 c4 94 52 04
+handshake: 広告から鍵を取得しました key1=0xc4 key2=0x94
+[2026-09-03T...] write -> 9C6AA1EE-... (withResponse) len=6 hex: aa 06 4b c4 94 53
+  -> READ_KEY key1=0xc4 key2=0x94
+write 成功 9C6AA1EE-...
+[2026-09-03T...] [+55.0 ms] 3337E46E-... len=5 hex: aa 05 41 4b 93 ascii: ..AK.
+  -> ACK for READ_KEY                     ← これが出れば成功
+```
+
+そのまま BB を撃つと `FIRE_REPORT` がデコードされて出る:
+
+```
+[+...] 3337E46E-... len=10 hex: aa 0a 52 00 00 45 01 00 00 a4
+  -> FIRE_REPORT rawSpeed=325 (3.25 m/s) rawRev=0 flags=0
+```
+
+`--handshake` と `--interactive` は併用できる（ハンドシェイク後に手で追試したいとき）:
+
+```sh
+swift run acechrono-sniff dump --name AC6000BT- --handshake --interactive
+```
+
+フレームの組み立て・検証は **`AceChronoKit` の `ChronoFrame` をそのまま使っている**ので、
+サニファで通ったバイト列はアプリでもそのまま通る。
 
 ### 初期化コマンドを送る
 
@@ -229,23 +288,47 @@ sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
 CLI の `swift build` / `swift test` にはこれは**不要**。
 
-### デモ（リプレイ）モード
+### 実機モードとリプレイモード
 
-実機の BLE プロトコルが未確定なので、アプリは現状 **記録済みパケットの再生でのみ動く**。
+| 実行環境 | トランスポート |
+|---|---|
+| iPhone 実機 | `CoreBluetoothTransport`（実際に AC6000 へ接続する） |
+| シミュレータ | `ReplayTransport`（CoreBluetooth のハードウェアが無いため自動） |
+| 実機 + `--replay` | `ReplayTransport` |
 
-- **シミュレータでは自動的に**リプレイモードになる（CoreBluetooth のハードウェアが無いため）
-- 実機でも起動引数 `--replay` を付ければリプレイモードになる
+**デコーダと設定は両方で同じ**（`AceChronoDecoder` + `ChronoDevice.Configuration.ac6000()`）。
+再生でも鍵ハンドシェイクまで実機と同じ経路を通るので、UI から見て挙動が変わらない
+（`ReplayTransport.demoPeripheral` が実機の広告 `00 05 08 c4 94 52 04` を持っている）。
 
-再生されるデータは `App/AceChrono/Resources/demo-replay.txt`。形式は
+再生ソースは 2 つ:
 
-```
-+<先頭からのミリ秒> <characteristic UUID> <hex バイト列>
-```
+- 既定（`--replay`）: `App/AceChrono/Services/ReplaySupport.swift` の合成スクリプト。
+  発数が多く UI を作り込みやすい。**バイト列は実プロトコルで組んでいる。**
+- `--replay-capture`: `App/AceChrono/Resources/acesoft-iphone-rx.txt`
+  （公式アプリの実キャプチャそのもの。5 発 + 電源 OFF まで含む）を早送り再生
 
-`ReplayScript` は **`acechrono-sniff dump` のログ形式もそのまま読める**ので、実機キャプチャが
-取れたらこのファイルを差し替えるだけで本物のデータで UI を確認できる。
-なお現在のデモ用ペイロードのバイト並びは `App/AceChrono/Services/DemoReplay.swift` で
-**このアプリのために勝手に決めた仮のもの**で、AC6000 の実プロトコルとは無関係。
+`ReplayScript` は **`acechrono-sniff dump` のログ形式もそのまま読める**ので、
+新しくキャプチャを取ったらそのファイルを置くだけで再生できる。
+
+## 実機での検証手順
+
+1. 本体の電源を入れ、Mac の近くに置く
+2. **Terminal.app / iTerm.app から**（他アプリの統合ターミナルは不可）:
+
+   ```sh
+   swift run acechrono-sniff dump --name AC6000BT- --handshake
+   ```
+
+3. `-> ACK for READ_KEY` が出ればハンドシェイク成功。そのまま BB を撃って
+   `FIRE_REPORT rawSpeed=…` の行と**本体 LCD の表示**を突き合わせる
+4. ログは `tools/re/captures/<日時>.log` に残るので、そのまま
+   `Tests/AceChronoKitTests/Fixtures/` や再生スクリプトに使える
+
+まだ確かめられていないこと（`docs/PROTOCOL.md` §10）:
+
+- `rawRev`（連射速度）の単位 → フルオートで数発撃って連射間隔と突き合わせる
+- アモ重量のワイヤスケール（×100 か ×1000 か）→ 本体で重量設定を変えながら `0x47` を見る
+- 鍵未知の初回ペアリング経路（実装はしてあるが実物を見ていない）
 
 ## プロトコル解析
 
