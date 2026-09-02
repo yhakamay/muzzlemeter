@@ -3,8 +3,14 @@
 Acetech **AC6000 MKIII BT**（エアソフト用弾速計）を、公式アプリ「AceSoft」より使いやすい
 自作 iOS アプリで扱うためのプロジェクト。
 
-BLE プロトコルが非公開のため、**プロトコル解析から始める**。現在は Phase 0（土台）が完了し、
-解析用の macOS CLI `acechrono-sniff` が動く状態。
+BLE プロトコルが非公開のため、**プロトコル解析から始める**。現在は
+
+- Phase 0（土台）と解析用 macOS CLI `acechrono-sniff`
+- Phase 2（`AceChronoKit`: ドメイン・BLE 抽象・`ChronoDevice`）
+- Phase 3（iOS アプリの骨格。デモ再生で全画面が動く）
+
+まで完了。**実機の BLE プロトコルはまだ未確定**なので、アプリはリプレイ（記録済みパケットの
+再生）でのみ動作する。パケットパーサと実機トランスポートは解析完了後に追加する。
 
 ## 構成
 
@@ -15,7 +21,8 @@ BLE プロトコルが非公開のため、**プロトコル解析から始め�
 | `Tests/AceChronoKitTests/` | Swift Testing によるテスト |
 | `docs/PROTOCOL.md` | 解析結果（UUID・パケット形式・チェックサム） |
 | `tools/re/` | APK / jadx 出力 / キャプチャログ（gitignore） |
-| `App/AceChrono/` | iOS アプリ（後のマイルストーンで追加） |
+| `App/AceChrono/` | iOS アプリ（SwiftUI + SwiftData） |
+| `project.yml` | XcodeGen 定義。`.xcodeproj` はここから生成する |
 
 ## acechrono-sniff の使い方
 
@@ -91,21 +98,59 @@ CLI から CoreBluetooth を使うと、**ターミナルアプリ自体**に Bl
 
 ## ビルド
 
-CLI とテストは **Command Line Tools のツールチェーン（Swift 6.4）だけで動く**。
+### AceChronoKit と CLI
+
+**Command Line Tools のツールチェーン（Swift 6.4）だけで動く**。
 
 ```sh
 swift build
 swift test
 ```
 
-iOS アプリ（後のマイルストーン）をビルドする段階になったら、`xcodebuild` を使うため
-Xcode 側のツールチェーンに切り替える必要がある（パスワード入力が必要な**ユーザー作業**）:
+### iOS アプリ
+
+`.xcodeproj` は `project.yml` から **XcodeGen で生成する成果物**であり、リポジトリには
+含まれていない（gitignore）。クローン後、あるいは `project.yml` やファイル構成を変えたら
+**必ず最初に実行する**:
+
+```sh
+xcodegen generate          # → AceChrono.xcodeproj
+```
+
+その後:
+
+```sh
+open AceChrono.xcodeproj
+# または
+xcodebuild -project AceChrono.xcodeproj -scheme AceChrono \
+  -destination 'platform=iOS Simulator,name=iPhone 17' build
+```
+
+`xcodebuild` を使うには Xcode 側のツールチェーンが必要（**ユーザー作業**、要パスワード）:
 
 ```sh
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```
 
-これは CLI の `swift build` / `swift test` には**不要**。
+CLI の `swift build` / `swift test` にはこれは**不要**。
+
+### デモ（リプレイ）モード
+
+実機の BLE プロトコルが未確定なので、アプリは現状 **記録済みパケットの再生でのみ動く**。
+
+- **シミュレータでは自動的に**リプレイモードになる（CoreBluetooth のハードウェアが無いため）
+- 実機でも起動引数 `--replay` を付ければリプレイモードになる
+
+再生されるデータは `App/AceChrono/Resources/demo-replay.txt`。形式は
+
+```
++<先頭からのミリ秒> <characteristic UUID> <hex バイト列>
+```
+
+`ReplayScript` は **`acechrono-sniff dump` のログ形式もそのまま読める**ので、実機キャプチャが
+取れたらこのファイルを差し替えるだけで本物のデータで UI を確認できる。
+なお現在のデモ用ペイロードのバイト並びは `App/AceChrono/Services/DemoReplay.swift` で
+**このアプリのために勝手に決めた仮のもの**で、AC6000 の実プロトコルとは無関係。
 
 ## プロトコル解析
 

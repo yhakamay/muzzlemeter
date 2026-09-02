@@ -1,0 +1,131 @@
+import AceChronoKit
+import Charts
+import SwiftData
+import SwiftUI
+
+/// セッション詳細。速度推移のチャート（平均線・±SD 帯）と全ショット表。
+struct SessionDetailView: View {
+    let session: Session
+    @Environment(ChronoService.self) private var service
+
+    var body: some View {
+        let shots = session.orderedShots
+        let stats = session.stats
+
+        List {
+            Section {
+                chart(shots: shots, stats: stats)
+                    .frame(height: 220)
+                    .listRowInsets(EdgeInsets(top: 12, leading: 8, bottom: 12, trailing: 16))
+            }
+
+            Section("統計") {
+                StatsCard(
+                    stats: stats,
+                    speedUnit: service.speedUnit,
+                    rateOfFireUnit: service.rateOfFireUnit,
+                    fallbackRateOfFireRPS: RateOfFire.estimateRPS(shots: session.domainShots)
+                )
+                .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+                .listRowBackground(Color.clear)
+            }
+
+            Section("ショット") {
+                ForEach(Array(shots.enumerated()), id: \.element.persistentModelID) { index, shot in
+                    HStack {
+                        Text("\(index + 1)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 32, alignment: .leading)
+                        Text(service.speedUnit.formatted(metersPerSecond: shot.velocityMetersPerSecond))
+                            .font(.body.monospacedDigit())
+                        Spacer()
+                        Text(String(format: "%.2f J", shot.joules(massGrams: session.bbWeightGrams)))
+                            .font(.callout.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        Text(shot.timestamp, format: .dateTime.hour().minute().second())
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+        }
+        .navigationTitle(Text(session.startedAt, format: .dateTime.month().day().hour().minute()))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ShareLink(
+                    item: CSVFile(
+                        name: CSVExporter.fileName(for: session),
+                        text: CSVExporter.csv(for: session)
+                    ),
+                    preview: SharePreview("このセッションの CSV")
+                ) {
+                    Label("CSV 書き出し", systemImage: "square.and.arrow.up")
+                }
+            }
+        }
+    }
+
+    // MARK: - チャート
+
+    @ViewBuilder
+    private func chart(shots: [ShotRecord], stats: SessionStats) -> some View {
+        let unit = service.speedUnit
+        let values = shots.enumerated().map { index, shot in
+            (index: index + 1, value: unit.value(fromMetersPerSecond: shot.velocityMetersPerSecond))
+        }
+        let mean = stats.meanMetersPerSecond.map { unit.value(fromMetersPerSecond: $0) }
+        // SD は「差」なので、fps 換算では比率だけを掛ける（オフセットの無い線形変換）。
+        let sd = stats.sampleStandardDeviation.map {
+            unit.value(fromMetersPerSecond: $0) - unit.value(fromMetersPerSecond: 0)
+        }
+
+        if values.isEmpty {
+            ContentUnavailableView("ショットがありません", systemImage: "chart.xyaxis.line")
+        } else {
+            Chart {
+                if let mean, let sd {
+                    RectangleMark(
+                        yStart: .value("−SD", mean - sd),
+                        yEnd: .value("+SD", mean + sd)
+                    )
+                    .foregroundStyle(.blue.opacity(0.12))
+                }
+                if let mean {
+                    RuleMark(y: .value("平均", mean))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .foregroundStyle(.secondary)
+                        .annotation(position: .top, alignment: .leading) {
+                            Text("平均 \(unit.format(metersPerSecond: stats.meanMetersPerSecond ?? 0)) \(unit.symbol)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                }
+                ForEach(values, id: \.index) { point in
+                    LineMark(
+                        x: .value("発", point.index),
+                        y: .value("速度", point.value)
+                    )
+                    .foregroundStyle(.blue)
+                    PointMark(
+                        x: .value("発", point.index),
+                        y: .value("速度", point.value)
+                    )
+                    .symbolSize(24)
+                    .foregroundStyle(.blue)
+                }
+            }
+            .chartYAxisLabel(unit.symbol)
+            .chartXAxisLabel("発目")
+        }
+    }
+}
+
+#Preview {
+    NavigationStack {
+        SessionDetailView(session: PreviewSupport.sampleSession)
+    }
+    .environment(ChronoService(defaults: PreviewSupport.defaults, forceReplay: true))
+    .modelContainer(PreviewSupport.container)
+}

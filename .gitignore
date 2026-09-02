@@ -2,6 +2,9 @@
 .DS_Store
 
 # Xcode
+# .xcodeproj は project.yml から XcodeGen で生成する成果物なので追跡しない。
+# 取得後は `xcodegen generate` を実行すること（README 参照）。
+*.xcodeproj/
 *.xcodeproj/xcuserdata/
 *.xcworkspace/xcuserdata/
 xcuserdata/
