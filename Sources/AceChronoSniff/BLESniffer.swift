@@ -24,6 +24,7 @@ struct PendingWrite: Sendable {
     let characteristicUUID: String  // 正規化済み 128bit 文字列
     let payload: Data
     let rawUUIDText: String
+    let writeType: WriteTypePreference
 }
 
 /// 動作モード。
@@ -32,11 +33,13 @@ enum SniffMode: Sendable {
     /// - Parameters:
     ///   - writeDelay: `--write` を連続で送るときの間隔（秒）。応答をどの write に対する
     ///     ものか対応付けられるように、既定でも 0 にはしない。
+    ///   - writeType: `--write-type`。対話モードで種別を明示しなかった write の既定値。
     ///   - interactive: 購読・初期 write 完了後に stdin から追加コマンドを受け付けるか。
     case dump(
         matcher: PeripheralMatcher,
         writes: [PendingWrite],
         writeDelay: Double,
+        writeType: WriteTypePreference,
         interactive: Bool
     )
 }
@@ -73,8 +76,14 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 
     /// `--write-delay`（秒）。dump 以外では使わない。
     private var writeDelay: Double {
-        if case .dump(_, _, let delay, _) = mode { return delay }
+        if case .dump(_, _, let delay, _, _) = mode { return delay }
         return 0
+    }
+
+    /// `--write-type`。対話モードで種別を明示しなかった write に使う。
+    private var defaultWriteType: WriteTypePreference {
+        if case .dump(_, _, _, let type, _) = mode { return type }
+        return .auto
     }
 
     init(mode: SniffMode, serviceFilter: [CBUUID]?, logger: LogWriter) {
@@ -200,7 +209,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
                 exit(0)
             }
 
-        case .dump(let matcher, _, _, _):
+        case .dump(let matcher, _, _, _, _):
             switch matcher {
             case .name(let n): print("\"\(n)\" を含む名前のデバイスを探しています…")
             case .identifier(let id): print("identifier \(id) のデバイスを探しています…")
@@ -295,7 +304,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 
     /// `--write` を `writeDelay` 間隔で 1 件ずつ送り、終わったら対話モードへ入る。
     private func performWrites(_ peripheral: CBPeripheral) {
-        guard case .dump(_, let writes, let delay, _) = mode else { return }
+        guard case .dump(_, let writes, let delay, _, _) = mode else { return }
         // 購読が確定してから送るため少し待つ。
         queue.asyncAfter(deadline: .now() + 0.7) { [weak self] in
             self?.runWrite(at: 0, of: writes, delay: delay, on: peripheral)
@@ -314,7 +323,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         }
         let pending = writes[index]
         if let characteristic = findCharacteristic(pending.characteristicUUID, in: peripheral) {
-            _ = send(pending.payload, to: characteristic, on: peripheral)
+            _ = send(pending.payload, to: characteristic, on: peripheral, preference: pending.writeType)
         } else {
             out("write: \(pending.rawUUIDText) が見つかりません（スキップ）")
         }
@@ -324,22 +333,43 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         }
     }
 
+    /// `--write-type` / `wr` / `wn` の指定を実際の `CBCharacteristicWriteType` に落とす。
+    ///
+    /// `auto` だけは characteristic のプロパティに従い、書けなければ nil（スキップ）を返す。
+    /// `with` / `without` はプロパティに関わらず**強制する**。プロパティを正しく申告しない
+    /// ファームウェアが相手でも試せることが、このオプションの存在理由だから。
+    private func resolveWriteType(
+        _ preference: WriteTypePreference,
+        for characteristic: CBCharacteristic
+    ) -> CBCharacteristicWriteType? {
+        let props = characteristic.properties
+        switch preference {
+        case .auto:
+            if props.contains(.write) { return .withResponse }
+            if props.contains(.writeWithoutResponse) { return .withoutResponse }
+            out("write: \(characteristic.uuid.uuidString) は書き込み不可（スキップ）")
+            return nil
+        case .with:
+            if !props.contains(.write) {
+                out("注意: \(characteristic.uuid.uuidString) は write プロパティを持ちませんが withResponse で送ります")
+            }
+            return .withResponse
+        case .without:
+            if !props.contains(.writeWithoutResponse) {
+                out("注意: \(characteristic.uuid.uuidString) は writeWithoutResponse プロパティを持ちませんが withoutResponse で送ります")
+            }
+            return .withoutResponse
+        }
+    }
+
     /// 1 件送信して、応答を待つ必要がある（withResponse）かどうかを返す。
     private func send(
         _ payload: Data,
         to characteristic: CBCharacteristic,
-        on peripheral: CBPeripheral
+        on peripheral: CBPeripheral,
+        preference: WriteTypePreference
     ) -> Bool {
-        let props = characteristic.properties
-        let type: CBCharacteristicWriteType
-        if props.contains(.write) {
-            type = .withResponse
-        } else if props.contains(.writeWithoutResponse) {
-            type = .withoutResponse
-        } else {
-            out("write: \(characteristic.uuid.uuidString) は書き込み不可（スキップ）")
-            return false
-        }
+        guard let type = resolveWriteType(preference, for: characteristic) else { return false }
         let kind = (type == .withResponse) ? "withResponse" : "withoutResponse"
         out(
             "[\(Timestamp.iso8601(Date()))] write -> \(characteristic.uuid.uuidString) (\(kind)) len=\(payload.count) hex: \(Hex.string(payload))"
@@ -400,6 +430,15 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         return all.first { $0.properties.contains(.writeWithoutResponse) }
     }
 
+    /// 1 回の write で送れる最大バイト数。ATT_MTU の実測値として使える
+    /// （withoutResponse は ATT_MTU-3、withResponse は最大 512 が返るのが普通）。
+    /// フレームが途中で切れているのか、そもそも届いていないのかを切り分けるために出す。
+    private func printMaximumWriteLengths(_ peripheral: CBPeripheral) {
+        let withResponse = peripheral.maximumWriteValueLength(for: .withResponse)
+        let withoutResponse = peripheral.maximumWriteValueLength(for: .withoutResponse)
+        out("最大 write 長: withResponse=\(withResponse) bytes  withoutResponse=\(withoutResponse) bytes")
+    }
+
     private func printGATTTree(_ peripheral: CBPeripheral) {
         out("=== GATT ツリー ===")
         let services = peripheral.services ?? []
@@ -432,7 +471,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 extension BLESniffer {
     /// 購読と `--write` が済んだ後に呼ばれる。stdin リーダーは 1 回だけ起動する。
     private func startInteractiveIfNeeded(_ peripheral: CBPeripheral) {
-        guard case .dump(_, _, _, let interactive) = mode, interactive else { return }
+        guard case .dump(_, _, _, _, let interactive) = mode, interactive else { return }
         guard !interactiveStarted else {
             // 再接続後。既定の write 先を出し直してプロンプトに戻る。
             announceDefaultWriteCharacteristic(peripheral)
@@ -454,6 +493,7 @@ extension BLESniffer {
         } else {
             out("既定の write 先: (書き込める characteristic がありません)")
         }
+        out("既定の write 種別: --write-type \(defaultWriteType.rawValue)（wr / wn で 1 回ずつ上書きできます）")
     }
 
     /// `readLine()` はブロックするので専用スレッドで回し、BLE 操作は CoreBluetooth の
@@ -484,31 +524,69 @@ extension BLESniffer {
         // ユーザーが Enter を押した時点で端末側が改行しているので、プロンプトは消えている。
         promptShown = false
 
-        switch InteractiveCommand.parse(line) {
-        case .none:
+        let commands = InteractiveCommand.parseLine(line)
+        guard !commands.isEmpty else {
             prompt()
+            return
+        }
+        run(commands, at: 0)
+    }
+
+    /// `;` 区切りの複数コマンドを `--write-delay` 間隔で順に実行する。
+    /// プロンプトは最後の 1 つが終わってから出す。
+    private func run(_ commands: [InteractiveCommand], at index: Int) {
+        guard !isQuitting, index < commands.count else { return }
+        let waitsForResponse = execute(commands[index])
+
+        guard index + 1 < commands.count else {
+            if waitsForResponse {
+                deferPrompt()
+            } else {
+                prompt()
+            }
+            return
+        }
+        // 応答をどのフレームのものか対応付けられるよう、--write と同じ間隔を空ける。
+        queue.asyncAfter(deadline: .now() + writeDelay) { [weak self] in
+            self?.run(commands, at: index + 1)
+        }
+    }
+
+    /// 1 コマンドを実行し、非同期の応答（write/read/notify 設定）を待つ必要があるかを返す。
+    /// プロンプトの出し入れは呼び出し側（`run`）の責任。
+    private func execute(_ command: InteractiveCommand) -> Bool {
+        switch command {
+        case .none:
+            return false
 
         case .help:
             out(InteractiveCommand.helpText)
-            prompt()
+            return false
 
         case .quit:
             quit(reason: "q")
+            return false
 
         case .list:
             guard let peripheral = target else {
                 out("未接続です。")
-                prompt()
-                return
+                return false
             }
             printGATTTree(peripheral)
-            prompt()
+            return false
 
-        case .write(let targetText, let payload):
+        case .mtu:
             guard let peripheral = target else {
                 out("未接続です。")
-                prompt()
-                return
+                return false
+            }
+            printMaximumWriteLengths(peripheral)
+            return false
+
+        case .write(let targetText, let payload, let type):
+            guard let peripheral = target else {
+                out("未接続です。")
+                return false
             }
             let characteristic: CBCharacteristic?
             if let targetText {
@@ -517,55 +595,50 @@ extension BLESniffer {
                 characteristic = defaultWriteCharacteristic(in: peripheral)
                 if characteristic == nil { out("書き込める characteristic がありません。") }
             }
-            guard let characteristic else {
-                prompt()
-                return
-            }
-            if send(payload, to: characteristic, on: peripheral) {
-                deferPrompt()  // didWriteValueFor を待つ
-            } else {
-                prompt()
-            }
+            guard let characteristic else { return false }
+            // 種別を明示していなければ --write-type に従う。
+            return send(
+                payload,
+                to: characteristic,
+                on: peripheral,
+                preference: type ?? defaultWriteType
+            )
 
         case .read(let targetText):
             guard let peripheral = target,
                 let characteristic = resolveCharacteristic(targetText, in: peripheral)
             else {
                 if target == nil { out("未接続です。") }
-                prompt()
-                return
+                return false
             }
             guard characteristic.properties.contains(.read) else {
                 out("read 不可: \(characteristic.uuid.uuidString)")
-                prompt()
-                return
+                return false
             }
             pendingReads.insert(UUIDText.canonical(characteristic.uuid))
             peripheral.readValue(for: characteristic)
-            deferPrompt()  // didUpdateValueFor を待つ
+            return true  // didUpdateValueFor を待つ
 
         case .setNotify(let targetText, let enabled):
             guard let peripheral = target,
                 let characteristic = resolveCharacteristic(targetText, in: peripheral)
             else {
                 if target == nil { out("未接続です。") }
-                prompt()
-                return
+                return false
             }
             let props = characteristic.properties
             guard props.contains(.notify) || props.contains(.indicate) else {
                 out("notify/indicate 不可: \(characteristic.uuid.uuidString)")
-                prompt()
-                return
+                return false
             }
             out("\(enabled ? "subscribe" : "unsubscribe"): \(characteristic.uuid.uuidString)")
             peripheral.setNotifyValue(enabled, for: characteristic)
-            deferPrompt()  // didUpdateNotificationStateFor を待つ
+            return true  // didUpdateNotificationStateFor を待つ
 
         case .invalid(let message):
             out(message)
             out(InteractiveCommand.usage)
-            prompt()
+            return false
         }
     }
 
@@ -633,7 +706,7 @@ extension BLESniffer: CBCentralManagerDelegate {
             seenPeripherals[peripheral.identifier] = Date()
             print(describeAdvertisement(advertisementData, rssi: RSSI, peripheral: peripheral))
 
-        case .dump(let matcher, _, _, _):
+        case .dump(let matcher, _, _, _, _):
             guard target == nil else { return }
             guard matcher.matches(peripheral: peripheral, advertisementData: advertisementData) else { return }
             central.stopScan()
@@ -646,6 +719,7 @@ extension BLESniffer: CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         out("接続しました: \(peripheral.name ?? "(no name)") [\(peripheral.identifier.uuidString)]")
+        printMaximumWriteLengths(peripheral)
         out("")
         out("=== GATT ツリー ===")
         startDiscovery(peripheral)

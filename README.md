@@ -72,8 +72,6 @@ swift run acechrono-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 
 swift run acechrono-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切りでも可
 ```
 
-write プロパティがあれば withResponse、無ければ withoutResponse で送る。
-
 `--write` を複数指定した場合、既定では **200 ms 間隔**で 1 件ずつ送る。どの write に対する
 応答なのかを対応付けられるようにするためで、間隔は `--write-delay <ms>` で変えられる
 （`0` で連続送信）。
@@ -81,6 +79,28 @@ write プロパティがあれば withResponse、無ければ withoutResponse �
 ```sh
 swift run acechrono-sniff dump --name AC6000 --write ffe1 01 --write ffe1 02 --write-delay 500
 ```
+
+#### write の種別（`--write-type`）
+
+BLE の write には **withResponse**（相手が ATT の応答を返す）と **withoutResponse**
+（撃ちっぱなし）がある。どちらを受け付けるかはファームウェア次第で、**片方しか処理しない**
+実装や、プロパティの申告と実際の挙動が食い違う実装がある。そのため種別は明示的に選べる。
+
+| 値 | 動作 |
+|---|---|
+| `auto`（既定） | `write` プロパティがあれば withResponse、無ければ withoutResponse |
+| `with` | プロパティに関わらず **常に withResponse** |
+| `without` | プロパティに関わらず **常に withoutResponse** |
+
+`with` / `without` はプロパティを持たない characteristic に対しても強制的に送る（注意行を出す）。
+申告が当てにならない相手を試せることがこのオプションの目的だから。
+
+```sh
+swift run acechrono-sniff dump --name AC6000 --write-type without --write ffe1 850600
+```
+
+`--write-type` は `--write` と、対話モードの `<hex>` / `w` の**既定値**になる。
+対話モードでは `wr` / `wn` で 1 回ごとに上書きできる。
 
 ### 対話モード（ハンドシェイクの試行錯誤用）
 
@@ -91,16 +111,20 @@ swift run acechrono-sniff dump --name AC6000 --write ffe1 01 --write ffe1 02 --w
 ```sh
 swift run acechrono-sniff dump --name AC6000 --interactive
 swift run acechrono-sniff dump --name AC6000 -i --write ffe1 01a50000   # 初期化してから対話
+swift run acechrono-sniff dump --name AC6000 -i --write-type without    # 既定を without に
 ```
 
 受け付けるコマンド:
 
 | 入力 | 動作 |
 |---|---|
-| `5a 4b 00 4b` / `5a4b004b` | **既定の write characteristic** へ送る |
-| `w <char> <hex>` | characteristic を指定して write |
+| `5a 4b 00 4b` / `5a4b004b` | **既定の write characteristic** へ送る（種別は `--write-type`） |
+| `w <char> <hex>` | characteristic を指定して write（種別は `--write-type`） |
+| `wr [<char>] <hex>` | **withResponse** で write |
+| `wn [<char>] <hex>` | **withoutResponse** で write |
 | `r <char>` | characteristic を read |
 | `sub <char>` / `unsub <char>` | notify の購読 / 解除 |
+| `mtu` | 1 回の write で送れる最大バイト数を表示 |
 | `list` | GATT ツリーを再表示（`*notifying*` 付き） |
 | `h` | ヘルプ |
 | `q` / Ctrl-D | 切断して終了 |
@@ -108,10 +132,31 @@ swift run acechrono-sniff dump --name AC6000 -i --write ffe1 01a50000   # 初期
 - `<char>` は characteristic UUID（`ffe1` のような短縮形も可）か、**一意に決まる前置一致**。
   複数に当たる場合は候補を表示して何もしない。
 - **既定の write characteristic** は、write（応答あり）を持つ最初の characteristic。
-  無ければ writeWithoutResponse を持つ最初のもの。開始時に画面に表示される。
+  無ければ writeWithoutResponse を持つ最初のもの。開始時に write の既定種別と一緒に表示される。
+- `wr` / `wn` の `<char>` は省略できる。**トークンが 2 つ以上あり、先頭が 4 / 8 / 36 桁**の
+  ときだけ characteristic 指定と解釈する。`wn 85 06 4b` の `85` は 2 桁なので hex のまま。
+  4 桁区切りの hex を既定の宛先へ送りたいときは `wn 85064b00` と空白を詰める。
+- **1 行に `;` 区切りで複数フレームを書ける**。`--write-delay` の間隔で順に送られるので、
+  ハンドシェイクのように続けて投げる必要がある列を 1 行で試せる:
+
+  ```
+  > 85 06 4b 00 00 d6 ; 85 05 5a 00 e4
+  > wn 8506 ; wr ffe1 5a00 ; r ffe1
+  ```
+
+  どれか 1 つでも解釈できない場合は**何も送らない**（打ち間違いで前半だけ送るのを防ぐため）。
 - 空行と `#` で始まる行は無視される。解釈できない入力は 1 行の usage を出す。
 - 対話中の write / read / 結果は**キャプチャログにもそのまま記録される**ので、
   後から `ReplayScript` で読み直せる。
+
+`mtu`（と接続直後の自動表示）が出す `maximumWriteValueLength` は、フレームが長すぎて
+途中で切られているのか、そもそも届いていないのかを切り分けるのに使う。withoutResponse は
+ネゴシエートされた ATT_MTU から 3 バイト引いた値、withResponse は分割送信されるため
+最大 512 が返るのが普通。
+
+```
+最大 write 長: withResponse=512 bytes  withoutResponse=182 bytes
+```
 
 notify は入力中でも非同期に流れてくるため、プロンプト `> ` は**起動直後と各コマンドの結果の
 直後だけ**表示される（毎回出すとパケットで画面が埋まるため）。

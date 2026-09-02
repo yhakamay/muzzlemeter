@@ -65,15 +65,20 @@ extension SniffCommand {
                   acechrono-sniff dump --name AC6000
                   acechrono-sniff dump --id 1234ABCD-... --log tools/re/captures/shot1.log
                   acechrono-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
-                  acechrono-sniff dump --name AC6000 --interactive
+                  acechrono-sniff dump --name AC6000 --interactive --write-type without
 
                 --interactive では購読完了後に stdin からコマンドを受け付けます:
                   <hex>            既定の write characteristic へ送る (例: 5a 4b 00 4b)
                   w <char> <hex>   characteristic を指定して write
+                  wr [<char>] <hex>  withResponse で write
+                  wn [<char>] <hex>  withoutResponse で write
                   r <char>         read
                   sub / unsub <char>  notify の購読 / 解除
+                  mtu              1 回に書ける最大バイト数を表示
                   list             GATT ツリー再表示
                   q / Ctrl-D       切断して終了
+                1 行を ";" で区切ると複数フレームを --write-delay 間隔で順に送ります:
+                  85 06 4b 00 00 d6 ; 85 05 5a 00 e4
                 """
         )
 
@@ -108,6 +113,19 @@ extension SniffCommand {
         )
         var writeDelay: Int = 200
 
+        @Option(
+            name: .customLong("write-type"),
+            help: ArgumentHelp(
+                """
+                write の種別。auto は write プロパティがあれば withResponse、無ければ \
+                withoutResponse。with / without は characteristic のプロパティに関わらず強制する。\
+                --write と、対話モードの <hex> / w の既定値になる。
+                """,
+                valueName: "auto|with|without"
+            )
+        )
+        var writeType: WriteTypePreference = .auto
+
         @Flag(
             name: [.short, .long],
             help: "購読・--write 完了後に stdin からコマンドを受け付ける対話モード。"
@@ -121,7 +139,7 @@ extension SniffCommand {
             guard writeDelay >= 0 else {
                 throw ValidationError("--write-delay は 0 以上で指定してください: \(writeDelay)")
             }
-            _ = try parseWrites(write)
+            _ = try parseWrites(write, type: writeType)
             _ = try parseServiceFilter(filterService)
         }
 
@@ -138,7 +156,7 @@ extension SniffCommand {
                 throw ValidationError("--name か --id を指定してください。")
             }
 
-            let writes = try parseWrites(write)
+            let writes = try parseWrites(write, type: writeType)
             let filter = try parseServiceFilter(filterService)
             let logPath = log ?? "tools/re/captures/\(Timestamp.fileStamp(Date())).log"
 
@@ -147,6 +165,7 @@ extension SniffCommand {
                     matcher: matcher,
                     writes: writes,
                     writeDelay: Double(writeDelay) / 1000,
+                    writeType: writeType,
                     interactive: interactive
                 ),
                 serviceFilter: filter,
@@ -161,6 +180,10 @@ extension SniffCommand {
 
 // MARK: - 共通のパース
 
+/// `--write-type auto|with|without` を受け取れるようにする。
+/// `CaseIterable` + `RawRepresentable` なので候補は ArgumentParser が --help に出してくれる。
+extension WriteTypePreference: ExpressibleByArgument {}
+
 private func parseServiceFilter(_ text: String?) throws -> [CBUUID]? {
     guard let text else { return nil }
     guard let uuid = UUIDText.makeCBUUID(text) else {
@@ -171,7 +194,7 @@ private func parseServiceFilter(_ text: String?) throws -> [CBUUID]? {
 
 /// `--write ffe1 0102 --write ffe2 03` のように 2 値ずつ与えられたトークン列を解釈する。
 /// `--write ffe1=0102` 形式も受け付ける。
-private func parseWrites(_ tokens: [String]) throws -> [PendingWrite] {
+private func parseWrites(_ tokens: [String], type: WriteTypePreference) throws -> [PendingWrite] {
     var result = [PendingWrite]()
     var index = 0
     while index < tokens.count {
@@ -200,7 +223,8 @@ private func parseWrites(_ tokens: [String]) throws -> [PendingWrite] {
             PendingWrite(
                 characteristicUUID: UUIDText.canonical(uuidText),
                 payload: payload,
-                rawUUIDText: uuidText
+                rawUUIDText: uuidText,
+                writeType: type
             )
         )
     }
