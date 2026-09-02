@@ -8,16 +8,35 @@ public struct DiscoveredPeripheral: Sendable, Hashable, Identifiable, Codable {
     /// 受信信号強度（dBm）。不明なら `nil`。
     public let rssi: Int?
     /// アドバタイズされていたサービス UUID。
+    ///
+    /// AC6000 は**サービスをアドバタイズしない**ため、実機では常に空になる。
     public let advertisedServices: [UUID]
+    /// アドバタイズの Manufacturer Specific Data（`00 05 08 c4 94 52 04`）。
+    ///
+    /// AC6000 はここにチェックサム鍵を載せている（`DeviceKeys(manufacturerData:)`）。
+    /// **ハンドシェイクに必須の情報なので、トランスポートは必ず持ち回ること。**
+    public let manufacturerData: Data?
 
-    public init(id: UUID, name: String?, rssi: Int? = nil, advertisedServices: [UUID] = []) {
+    public init(
+        id: UUID,
+        name: String?,
+        rssi: Int? = nil,
+        advertisedServices: [UUID] = [],
+        manufacturerData: Data? = nil
+    ) {
         self.id = id
         self.name = name
         self.rssi = rssi
         self.advertisedServices = advertisedServices
+        self.manufacturerData = manufacturerData
     }
 
     public var displayName: String { name ?? id.uuidString }
+
+    /// 広告から取り出したチェックサム鍵。載っていなければ `nil`。
+    public var keys: DeviceKeys? {
+        manufacturerData.flatMap(DeviceKeys.init(manufacturerData:))
+    }
 }
 
 /// トランスポート層（BLE そのもの）から上がってくる、プロトコル解釈前の生イベント。
@@ -38,6 +57,9 @@ public enum ChronoTransportError: Error, Sendable, Equatable {
     case unavailable(String)
     case unknownCharacteristic(UUID)
     case writeNotSupported(UUID)
+    /// 書き込みが禁止されている characteristic（OTA 制御）への書き込みを拒否した。
+    /// `docs/PROTOCOL.md` §11 を参照。
+    case forbiddenCharacteristic(UUID)
 }
 
 /// BLE の実体を隠す抽象。

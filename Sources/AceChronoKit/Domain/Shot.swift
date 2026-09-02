@@ -12,18 +12,28 @@ public struct Shot: Sendable, Hashable, Codable, Identifiable {
     /// 初速（m/s）。
     public let velocityMetersPerSecond: Double
     /// 本体が報告した連射速度（発/秒）。報告が無ければ `nil`。
+    ///
+    /// AC6000 の `FIRE_REPORT`（`0x52`）は `rawRev` を送ってくるが、**その単位が
+    /// RPS なのか RPM なのか ×10 なのかは未検証**（`docs/PROTOCOL.md` §7.1 / §10-2）。
+    /// そのため `AceChronoDecoder` はここを埋めず、生値を `rawRateOfFire` に入れる。
+    /// 表示用の連射速度は `RateOfFire.estimateRPS` がタイムスタンプ差から推定する。
     public let rateOfFireRPS: Double?
+    /// 本体が報告した連射速度の**生値**（`FIRE_REPORT` の `rawRev`）。
+    /// 単発では 0 が来る。単位が確定するまでは換算せずそのまま持つ。
+    public let rawRateOfFire: UInt16?
 
     public init(
         id: UUID = UUID(),
         timestamp: Date = Date(),
         velocityMetersPerSecond: Double,
-        rateOfFireRPS: Double? = nil
+        rateOfFireRPS: Double? = nil,
+        rawRateOfFire: UInt16? = nil
     ) {
         self.id = id
         self.timestamp = timestamp
         self.velocityMetersPerSecond = velocityMetersPerSecond
         self.rateOfFireRPS = rateOfFireRPS
+        self.rawRateOfFire = rawRateOfFire
     }
 
     /// BB 重量からこのショットの運動エネルギー（J）を求める。

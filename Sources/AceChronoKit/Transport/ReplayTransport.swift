@@ -53,11 +53,17 @@ public actor ReplayTransport: ChronoTransport {
         self.continuation = continuation
     }
 
+    /// 再生用の擬似ペリフェラル。
+    ///
+    /// manufacturer data には**実機の広告そのまま**（`00 05 08 c4 94 52 04`）を載せてある。
+    /// こうしておくと `ChronoDevice` が実機と同じ経路で鍵 `c4/94` を取り出せるので、
+    /// 記録済みフレームのチェックサム検証まで含めて本番と同じコードが走る。
     public static let demoPeripheral = DiscoveredPeripheral(
         id: UUID(uuidString: "00000000-0000-0000-0000-ACEC40000000") ?? UUID(),
         name: "AC6000BT-DEMO",
         rssi: -52,
-        advertisedServices: []
+        advertisedServices: [],
+        manufacturerData: Data([0x00, 0x05, 0x08, 0xC4, 0x94, 0x52, 0x04])
     )
 
     // MARK: - ChronoTransport
