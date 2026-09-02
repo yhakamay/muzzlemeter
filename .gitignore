@@ -1,0 +1,32 @@
+# macOS
+.DS_Store
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+xcuserdata/
+DerivedData/
+build/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Reverse engineering artifacts
+# APK / デコンパイル結果 / 文字列ダンプ / キャプチャログは
+# 巨大かつ第三者の著作物なのでリポジトリには入れない。
+tools/re/*.apk
+tools/re/*.xapk
+tools/re/jadx/
+tools/re/xapk/
+tools/re/libs/
+tools/re/notes/
+tools/re/captures/*.log
+
+# 手順書と captures/ のプレースホルダだけは追跡する
+tools/re/*
+!tools/re/README.md
+!tools/re/captures/
+tools/re/captures/*
+!tools/re/captures/.gitkeep
