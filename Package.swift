@@ -54,6 +54,7 @@ let package = Package(
             name: "AceChronoKitTests",
             dependencies: ["AceChronoKit"],
             path: "Tests/AceChronoKitTests",
+            resources: [.copy("Fixtures")],
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
     ]

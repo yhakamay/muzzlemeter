@@ -1,60 +1,567 @@
 # AC6000 MKIII BT BLE プロトコル
 
-Acetech AC6000 MKIII BT の BLE 通信仕様。公式ドキュメントは存在しないため、
-`acechrono-sniff` による実機ダンプと AceSoft (Android, `com.acetk.acesoft`) の
-逆コンパイル結果から確定させていく。
+Acetech AC6000 MKIII BT の BLE 通信仕様。
 
-ステータス: **未解析（Phase 1 で埋める）**
+> **本書が最終的な正典（authoritative）。**
+> `docs/PROTOCOL-ble-tx.md` / `docs/PROTOCOL-dart-aot.md` / `docs/PROTOCOL-apk-analysis.md` は
+> AceSoft の静的解析メモとしてそのまま残すが、**本書と食い違う箇所は本書が優先する**
+> （特にチェックサム式・ヘッダ値・FIRE_REPORT レイアウト・1 バイト `00` 通知の解釈）。
 
-## Device identification
+ステータス: **実機グラウンドトゥルースで確定**（Phase 1b 完了）
 
-アドバタイズされるデバイス名、サービス UUID、manufacturer data。
+## 0. 出典と確度の凡例
 
-TBD
+| | |
+|---|---|
+| キャプチャ | `tools/re/captures/acesoft-iphone.pklg`（Apple PacketLogger, iPhone の HCI ログ） |
+| 抽出物 | `tools/re/notes/pklg-att.tsv`（生）/ `tools/re/notes/pklg-timeline.txt`（可読タイムライン） |
+| フィクスチャ | `Tests/AceChronoKitTests/Fixtures/acesoft-iphone-{rx,tx}.txt` |
+| 相手 | AceSoft (iOS) ⇄ `AC6000BT-009809`（`54:dc:e9:db:f6:0c`, public address） |
+| 収録内容 | 接続 → GATT 探索 → 鍵ハンドシェイク → 初期化 → 手投げ BB 5 発 → 単位切替 → 電源 OFF |
+| 全長 | 約 104 秒 / ATT フレーム 66 本（うちアプリ層フレーム TX 8 / RX 16） |
 
-## GATT layout
+確度: **確定** = 本キャプチャに直接の証拠あり / **推定** = 整合するが単独では決め手に欠ける /
+**未検証** = 静的解析由来で今回のキャプチャには現れなかった。
 
-サービスと characteristic の一覧（UUID / プロパティ / 役割）。
+> ⚠️ 速度スケール（§7）とアモプリセットの単位（§6.4）は「**推定**」である。
+> 実弾 1 発を撃って本体 LCD と突き合わせれば確定する。§10 参照。
 
-TBD
+---
 
-## Init sequence
+## 1. Device identification
 
-接続後に必要な書き込み（開始コマンド等）と、その順序・タイミング。
+### 1.1 アドバタイズ
 
-TBD
+29 本のアドバタイズを収録。ペイロードは全て同一。
 
-## Packet formats
+```
+02 01 06                                    Flags: LE General Discoverable | BR/EDR Not Supported
+11 09 41 43 36 30 30 30 42 54 2d 30 30 39 38 30 39 00
+                                            Complete Local Name (0x09), 16 bytes
+                                            = "AC6000BT-009809" + NUL padding
+08 ff 00 05 08 c4 94 52 04                  Manufacturer Specific Data (0xFF), 7 bytes
+```
 
-### Shot
+Manufacturer Specific Data の内訳（**推定**）:
 
-1 発ごとの弾速パケット。ヘッダ、長さ、速度のエンコーディング（単位・スケール）、
-連番、タイムスタンプの有無。
+| offset | bytes | 内容 |
+|---|---|---|
+| 0..1 | `00 05` | company id（LE = `0x0500`。Bluetooth SIG の正規割り当てではない） |
+| 2 | `08` | 機種コード? （AC6000 = 8 と推定） |
+| **3** | **`c4`** | **key1** |
+| **4** | **`94`** | **key2** |
+| 5..6 | `52 04` | 不明（シリアル `009809` = `0x2651` とは一致しない） |
 
-TBD
+> **重要**: offset 3/4 の `c4 94` は、この直後にアプリが `0x4B` フレームで送り返した
+> `key1`/`key2` と**完全に一致する**。本体はペアリング鍵をアドバタイズに載せている可能性が高い
+> （**推定** / §4.3 参照）。
 
-### Status
+### 1.2 接続後の識別
 
-本体設定（単位、BB 重量、電源、バッテリー）に関する通知。
+| 項目 | 値 |
+|---|---|
+| GAP Device Name (`0x2A00`, handle `0x000B`) | `ACETECH-12345678` |
+| BD_ADDR | `54:dc:e9:db:f6:0c`（public。OUI = Silicon Laboratories） |
 
-TBD
+**スキャン時のマッチは広告名 `AC6000BT-` の前方一致で行うこと。**
+`0x2A00` は全個体で `ACETECH-12345678` の可能性があり、識別に使えない。
 
-### Other
+---
 
-上記に当てはまらないパケット。
+## 2. GATT layout
 
-TBD
+キャプチャで観測されたアトリビュートテーブル（**確定**）。
 
-## Checksum
+| handles | UUID | 役割 |
+|---|---|---|
+| `0x0001`–`0x0008` | `0x1801` | GATT（Service Changed / Database Hash / Client Supported Features） |
+| `0x0009`–`0x000D` | `0x1800` | GAP（`0x000B` = Device Name） |
+| `0x000E`–`0x0011` | `5CDE0C3D-7B1D-4352-94BB-02269C9F42B5` | **Notify サービス** |
+| &nbsp;&nbsp;`0x0010` | `3337E46E-F79E-4FF5-9A49-77C36D170C62` | properties `0x10` = **Notify のみ** |
+| &nbsp;&nbsp;`0x0011` | `0x2902` | 上記の CCCD |
+| `0x0012`–`0x0014` | `53C47FE1-6C22-4EA6-99C7-7B6325EC75B9` | **Write サービス** |
+| &nbsp;&nbsp;`0x0014` | `9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C` | properties `0x0C` = **Write + Write Without Response** |
+| `0x0015`–`0xFFFF` | `1D14D6EE-FD63-4FA1-BFA4-8F47B42119F0` | Silicon Labs **OTA** サービス |
+| &nbsp;&nbsp;`0x0017` | `F7BF3564-FB6D-4E53-88A4-5E37E0326063` | properties `0x08` = Write。**絶対に書かない**（§11） |
 
-チェックサム / CRC の計算範囲とアルゴリズム。
+**Notify と Write は別サービスにある。** 1 サービスにまとめて探索しないこと。
 
-TBD
+Included service (`0x2802`) の探索は 3 回とも Error Response（Attribute Not Found）。
+Include は存在しない。
 
-## Open questions
+### 2.1 リンク層パラメータ（確定）
 
-- 連射時の ROF は本体が送ってくるのか、ホスト側でタイムスタンプ差から計算するのか
-- ペイロードに難読化・暗号化があるか
-- MKIII と初代 BT でパケットが異なるか（バージョン識別の手段）
+| 項目 | 値 |
+|---|---|
+| Connection Interval | 30 ms |
+| Connection Latency | 0 |
+| Supervision Timeout | 720 ms（短い。電源 OFF から 0.72 秒で切断される） |
+| PHY | TX/RX とも LE 2M |
+| Data Length Extension | TX/RX 251 octets / 2120 µs |
+| **ATT MTU** | **247**（**ペリフェラル側が Exchange MTU Request を投げ**、iPhone が 247 で応答） |
+| **SMP / ボンディング** | **一切無し。** リンクは暗号化されない。ペアリングは完全にアプリ層（`0x4B`） |
 
-TBD
+MTU 247 だが、実際のフレームは最大 11 バイト。**MTU に依存する実装にしないこと。**
+
+---
+
+## 3. Frame format
+
+TX / RX で完全に同一（**確定**。全 23 フレームで検証済み・違反ゼロ）。
+
+```
+offset 0      : header  = 0xAA                    ← AC6000BT の実測値
+offset 1      : L       = フレーム全長（header/len/payload/checksum を含む）
+offset 2      : cmd
+offset 3..L-2 : payload
+offset L-1    : checksum
+```
+
+* **`L = payload.length + 3`**、かつ **`L == 実際のバイト数`**。
+  全 23 フレームで一致。違反フレームは 1 件も無い。
+* payload の多バイト整数は **リトルエンディアン**（**確定**。§7 / §6.4）。
+
+### 3.1 チェックサム — 鍵が加算される
+
+```
+checksum = ( Σ frame[0 .. L-2]  +  key1  +  key2 ) & 0xFF
+```
+
+**これが本キャプチャ最大の発見。** 静的解析（`docs/PROTOCOL-ble-tx.md` §1）で
+「用途不明・常に 0」とされていた `_frame(payload, a, header, b)` の引数 `a` / `b` は
+**`key1` / `key2` そのもの**だった。
+
+* 鍵確立**前**（= `0x4B` フレーム自身）は `key1 = key2 = 0`。
+* 鍵確立**後**は TX / RX の**両方向**が `key1 + key2` を加算する。
+* 検証結果: 鍵を加算する式では **23/23 フレームが一致**。
+  鍵を加算しない単純総和では **22/22 フレームが不一致**。偶然ではない。
+
+**帰結: 鍵を知らないクライアントは、フレームを組めないし検証もできない。**
+これが以前の実機テストで `85 06 4b 00 00 d6` が無反応だった理由の一部でもある
+（ヘッダも違っていた）。
+
+### 3.2 計算例（worked example）
+
+TX `READ_KEY` — 鍵確立前なので `key1 = key2 = 0`:
+
+```
+frame  : aa 06 4b c4 94 ??
+sum    : 0xAA + 0x06 + 0x4B + 0xC4 + 0x94 = 0x253
++k1+k2 : 0x253 + 0x00 + 0x00              = 0x253
+& 0xFF :                                    0x53
+frame  : aa 06 4b c4 94 53          ✓ キャプチャと一致
+```
+
+TX `READ_CURRENT_AMMO` — 鍵確立後（`key1 = 0xC4`, `key2 = 0x94`）:
+
+```
+frame  : aa 05 5a 00 ??
+sum    : 0xAA + 0x05 + 0x5A + 0x00 = 0x109
++k1+k2 : 0x109 + 0xC4 + 0x94       = 0x261
+& 0xFF :                             0x61
+frame  : aa 05 5a 00 61             ✓ キャプチャと一致
+```
+
+RX `FIRE_REPORT` — 受信側も同じ式で検証できる:
+
+```
+frame  : aa 0a 52 00 00 1a 01 00 00 79
+sum    : 0xAA+0x0A+0x52+0x00+0x00+0x1A+0x01+0x00+0x00 = 0x121
++k1+k2 : 0x121 + 0xC4 + 0x94                          = 0x279
+& 0xFF :                                                0x79   ✓
+```
+
+### 3.3 参照実装（Swift）
+
+```swift
+/// key1/key2 は 0x4B ハンドシェイク前は 0、確立後は本体の鍵。
+func aceChecksum(_ bytes: ArraySlice<UInt8>, key1: UInt8, key2: UInt8) -> UInt8 {
+    var sum = Int(key1) + Int(key2)
+    for b in bytes { sum &+= Int(b) }
+    return UInt8(sum & 0xFF)
+}
+
+func aceFrame(cmd: UInt8, payload: [UInt8], key1: UInt8, key2: UInt8) -> [UInt8] {
+    let body: [UInt8] = [0xAA, UInt8(payload.count + 4), cmd] + payload
+    return body + [aceChecksum(body[...], key1: key1, key2: key2)]
+}
+// 注: cmd は payload の先頭バイトなので L = (cmd 込み payload).count + 3。
+//     上式では payload に cmd を含めていないため +4 になる。
+```
+
+### 3.4 ATT write の種類
+
+アプリは write characteristic の properties に **Write Without Response が有るにもかかわらず、
+全 8 フレームを ATT Write Request（応答あり）で送っている**（**確定**）。
+自作クライアントも `.withResponse` を使うこと。
+
+---
+
+## 4. Init sequence（実バイト列）
+
+`t` は LE Connection Complete からの経過秒。全て `tools/re/notes/pklg-timeline.txt` から。
+
+### 4.1 GATT フェーズ
+
+| t | 向き | 内容 |
+|---|---|---|
+| +0.030 | RX | Exchange MTU Request（Client Rx MTU 247）← **本体から** |
+| +0.391 | TX | Exchange MTU Response（Server Rx MTU 247） |
+| +0.421…+1.260 | — | サービス / キャラクタリスティック / ディスクリプタ探索 |
+| +0.661 | TX | Write `0x0004` ← `02 00`（`0x1801` Service Changed の indication。iOS が自動で行う） |
+| **+1.263** | **TX** | **Write `0x0011` ← `01 00`（notify char の CCCD を有効化）** |
+| +1.320 | RX | Write Response |
+
+### 4.2 アプリケーションフェーズ
+
+CCCD 応答の **564 ms 後**に最初のフレーム。以降はコマンドキューが
+**1 フレームあたり約 300–360 ms 間隔**で流れる（応答受信 → 次を送信）。
+
+```
+t=+1.827  TX  aa 06 4b c4 94 53              READ_KEY / VERIFY_KEY  (key1=0xC4, key2=0x94)
+t=+1.890  RX  aa 05 41 4b 93                 ACK(0x41) for cmd 0x4B     ← 63 ms 後
+t=+2.205  TX  aa 05 5a 00 61                 READ_CURRENT_AMMO
+t=+2.250  RX  aa 0a 5a 01 01 58 02 14 00 d6  現在の弾 = プリセット #1, 6.00 mm / 0.20 g
+t=+2.554  TX  aa 05 62 00 69                 READ_LOG_COUNT
+t=+2.610  RX  aa 06 62 00 01 6b              log count = 1
+t=+2.915  TX  aa 06 47 01 01 51              READ_AMMO_PRESET #1
+t=+2.970  RX  aa 0b 47 00 41 01 58 02 14 00 04
+t=+3.276  TX  aa 06 47 01 02 52              READ_AMMO_PRESET #2
+t=+3.330  RX  aa 0b 47 00 41 02 58 02 19 00 0a
+t=+3.635  TX  aa 06 47 01 03 53              READ_AMMO_PRESET #3
+t=+3.690  RX  aa 0b 47 00 41 03 58 02 2b 00 1d
+t=+3.995  TX  aa 06 47 01 04 54              READ_AMMO_PRESET #4
+t=+4.050  RX  aa 0b 47 00 41 04 58 02 2d 00 20
+t=+4.355  TX  aa 06 47 01 05 55              READ_AMMO_PRESET #5
+t=+4.410  RX  aa 0b 47 00 41 05 58 02 58 00 4c
+t=+5.627  TX  (ATT Read By Type 0x2A00) → "ACETECH-12345678"
+```
+
+**アプリが送ったフレームはこの 8 本で全て。** 以降 99 秒間、TX は 1 本も無い。
+
+### 4.3 鍵ハンドシェイク（`0x4B`）— 確定した挙動
+
+本キャプチャでは **アプリは最初から `key1=0xC4, key2=0x94` を知っていた**。
+つまり観測されたのは **VerifyKey**（既知鍵の照合）であって初回ペアリングではない。
+
+| ケース | TX | RX |
+|---|---|---|
+| 初回（鍵未知） | `aa 06 4b 00 00 fb` | **未検証**。静的解析では `<hdr> ?? 4b <k1> <k2> ...`。本体の電源ボタン押下が必要 |
+| **2 回目以降（鍵既知）** | **`aa 06 4b <k1> <k2> <cks>`** | **`aa 05 41 4b <cks>`**（cmd `0x41` = ACK、payload = 照合した cmd `0x4B`） |
+
+**確定した事実:**
+
+* 応答は **63 ms 後**に到着。**電源ボタン押下は不要だった**
+  （鍵が一致していれば即座に ACK が返る）。
+* 応答の cmd は **`0x4B` ではなく `0x41`（ACK）**。
+  静的解析の `_handleReadKey`（`cmd == 0x4B` かつ `key1 = data[3]`, `key2 = data[4]`）は
+  **鍵未知のとき**のパスであり、鍵既知のときはこの `0x41` ACK パスを通る。
+* この ACK フレーム自身のチェックサムが**既に `key1+key2` を含んでいる**。
+  つまり本体は「鍵が合っていること」をチェックサムで即座に示している。
+
+**鍵の入手方法（推定）:** アドバタイズの manufacturer data offset 3/4（§1.1）。
+本キャプチャの範囲内でアプリが本体から鍵を受け取った通信は存在しないため、
+アプリは (a) 過去のペアリング結果を DB から読んだ、または (b) 広告から取った、
+のどちらか。**(b) を先に試す価値がある**（電源ボタン押下が不要になる）。
+
+---
+
+## 5. Keep-alive / ping
+
+**観測されなかった（確定）。**
+
+* アプリの最後の TX は `t=+4.355`。以降 **99 秒間、書き込みゼロ**。
+* その間も本体は通知を送り続けた（`t=+11.878` / `+49.948`…`+75.179`）。
+* → **AC6000 MKIII BT に定期 ping は不要。**
+  `docs/PROTOCOL-apk-analysis.md` §10 の `_sendPing` / `_startPing` は
+  他機種（Bifrost 等）向けか、より長い無通信でのみ動くとみられる。
+
+## 5.1 切断シーケンス
+
+**アプリからの切断は行われていない（確定）。**
+
+```
+t=+103.202  RX  00                      ← 1 バイトだけの通知（ATT: 0x1b, handle 0x0010, value 長 1）
+t=+103.966      HCI Disconnection Complete, reason 0x08 = Connection Timeout
+```
+
+`00` の 0.764 秒後に supervision timeout（720 ms）でリンクが落ちている。
+
+> **既存ドキュメントの訂正**: `docs/PROTOCOL-dart-aot.md` §8 は、以前のサニファ実験で
+> 観測された「1 バイト `00` → 0.77 秒後に切断」を**「不正フレームに対する NAK」**と
+> 解釈していた。本キャプチャでは**正規のハンドシェイクが成立し 5 発の計測まで
+> 成功した後**に、まったく同じ `00` + 0.76 秒 → timeout が起きている。
+> したがってこれは **NAK ではなく「本体の電源 OFF シグネチャ」**である。
+> 自作クライアントは `00` を受けたら「本体が落ちる」と解釈してよい。
+
+---
+
+## 6. Packet formats
+
+### 6.1 RX パケット一覧（本キャプチャで観測された全種）
+
+| cmd | 名前 | L | 件数 | 例 | 意味 |
+|---|---|---|---|---|---|
+| `0x41` | ACK | 5 | 1 | `aa 05 41 4b 93` | payload = 応答対象の cmd。ここでは `0x4B` |
+| `0x47` | AMMO_PRESET | 11 | 6 | `aa 0b 47 00 41 01 58 02 14 00 04` | プリセットスロットの内容（§6.3） |
+| `0x52` | **FIRE_REPORT** | 10 | 5 | `aa 0a 52 00 00 1a 01 00 00 79` | 1 発の計測結果（§7） |
+| `0x5A` | CURRENT_AMMO | 10 | 2 | `aa 0a 5a 01 01 58 02 14 00 d6` | 現在選択中の弾（§6.2） |
+| `0x62` | LOG_COUNT | 6 | 1 | `aa 06 62 00 01 6b` | 本体内ログ件数 = 1 |
+| —  | （切断直前の 1 バイト） | — | 1 | `00` | 本体電源 OFF（§5.1） |
+
+**観測されなかった**（＝静的解析由来のまま **未検証**）:
+`0x24` / `0x27`（device settings）、`0x2C` / `0x64`（バッテリー）、
+`0x63`（ログレコード）、`0x50` / `0x51`、`0x53`、`0x61`、`0x81`、`0xD4`。
+とくに **バッテリー通知は 104 秒間 1 度も来なかった**。
+AceSoft はバッテリーを別経路で取っているか、AC6000 では使っていない。
+
+### 6.2 `0x5A` READ_CURRENT_AMMO
+
+```
+TX : aa 05 5a 00 <cks>              payload = [0x5A, 0x00]     ; 0x00 = read
+RX : aa 0a 5a 01 <slot> <ammo:4> <cks>
+     aa 0a 5a 01 01  58 02 14 00  d6
+              ^^ ^^  ^^^^^^^^^^^
+              |  |   ammo record（§6.4）
+              |  slot = 現在選択中のプリセット番号（1 始まり）
+              payload[1] = 0x01（意味不明。read 応答の識別子と推定）
+```
+
+`t=+75.179` に**同一フレームが自発的に再送**されている（TX なし）。
+本体側の状態変化通知と推定（トリガは不明）。
+
+### 6.3 `0x47` READ_AMMO_PRESET
+
+```
+TX : aa 06 47 01 <idx> <cks>        payload = [0x47, 0x01, idx]   ; 0x01 = read preset
+RX : aa 0b 47 00 41 <idx> <ammo:4> <cks>
+     aa 0b 47 00 41 01  58 02 14 00  04
+              ^^ ^^ ^^  ^^^^^^^^^^^
+              |  |  |   ammo record（§6.4）
+              |  |  echo された idx
+              |  0x41 = ACK マーカ
+              payload[1] = 0x00（status = OK と推定）
+```
+
+観測された `idx` は **1..5**。アプリは 5 スロットを順に読んでいる。
+
+`t=+11.878` に **idx=1 のフレームが自発的に再送**されている（TX なし）。
+
+静的解析の `[0x47, 0x00]`（`docs/PROTOCOL-apk-analysis.md` §3.4）は本キャプチャには現れず、
+サブコマンド `0x00` の意味は **未検証**。
+
+### 6.4 ammo record（4 バイト・LE16 ×2）— **推定**
+
+```
+offset 0..1 : u16 LE  直径  = mm × 100
+offset 2..3 : u16 LE  重量  = g  × 100
+```
+
+| slot | bytes | u16[0] | u16[1] | 解釈 |
+|---|---|---|---|---|
+| 1 | `58 02 14 00` | 600 | 20 | 6.00 mm / 0.20 g |
+| 2 | `58 02 19 00` | 600 | 25 | 6.00 mm / 0.25 g |
+| 3 | `58 02 2b 00` | 600 | 43 | 6.00 mm / 0.43 g |
+| 4 | `58 02 2d 00` | 600 | 45 | 6.00 mm / 0.45 g |
+| 5 | `58 02 58 00` | 600 | 88 | 6.00 mm / 0.88 g |
+
+根拠:
+
+* `20 / 25 / 43 / 45 / 88` は **実在する 6 mm BB 重量（0.20/0.25/0.43/0.45/0.88 g）と完全一致**。
+  ×10 だと 2.0 g / 8.8 g となり実在しない。→ **×100 固定小数点で確定に近い**。
+* 第 1 フィールドが全スロットで `600` = 6.00 mm。同じ ×100 スケール。
+* 静的解析の関数名 `ac6000DiameterWireFromMm` / `ac6000WeightWireFromGram` /
+  `ac6000WeightWireFromGramAsGrain` と整合（物理量 → 整数ワイヤ表現）。
+* grain 表記の場合にワイヤ値が変わるか（`ac6000ResolveUnitPairForWrite`）は **未検証**。
+
+### 6.5 `0x62` READ_LOG_COUNT
+
+```
+TX : aa 05 62 00 <cks>              payload = [0x62, 0x00]
+RX : aa 06 62 00 01 <cks>           payload = [0x62, 0x00, 0x01]
+                ^^ ^^
+                |  count = 1 と推定
+                status = OK と推定
+```
+
+`00 01` を BE16 の件数（= 1）と読むこともできる。**この 1 サンプルでは区別できない。**
+本プロトコルの他の多バイト値は全て LE なので `payload[1]=status, payload[2]=count` を推す。
+本体に 2 件以上ログを溜めてから再取得すれば確定する。
+
+---
+
+## 7. FIRE_REPORT（`0x52`）
+
+### 7.1 レイアウト（**確定**）
+
+L = 10 固定、payload 7 バイト。
+
+```
+offset  size  内容
+  0      1    0xAA        header
+  1      1    0x0A        L
+  2      1    0x52        cmd = FIRE_REPORT
+  3..4   2    u16 LE      常に 0x0000（意味不明。ショット index / flags と推定）
+  5..6   2    u16 LE      rawSpeed          ★
+  7..8   2    u16 LE      rawRev  (ROF)     ★  単発では常に 0
+  9      1    checksum
+```
+
+観測された全 5 発:
+
+| t | hex | b[3..4] | **rawSpeed** | **rawRev** |
+|---|---|---|---|---|
+| +49.948 | `aa 0a 52 00 00 1a 01 00 00 79` | 0 | **282** | 0 |
+| +55.378 | `aa 0a 52 00 00 fa 00 00 00 58` | 0 | **250** | 0 |
+| +57.328 | `aa 0a 52 00 00 0b 01 00 00 6a` | 0 | **267** | 0 |
+| +60.448 | `aa 0a 52 00 00 0a 01 00 00 69` | 0 | **266** | 0 |
+| +63.509 | `aa 0a 52 00 00 31 01 00 00 90` | 0 | **305** | 0 |
+
+* 静的解析の「最小長 7 バイト」は **フレーム全体ではなく妥当**（実測 10 バイト）。
+* `docs/PROTOCOL-dart-aot.md` §7.3 の候補 A / B は**どちらも外れ**。正解は上表。
+* **フルオートは未収録**のため `rawRev` は 5 発とも 0。
+  スケール（RPS / RPM / ×10）は **未検証**。
+
+### 7.2 rawSpeed は「速度」であって「通過時間カウント」ではない（**確定**）
+
+`docs/PROTOCOL-apk-analysis.md` §8 の未解決点に決着がつく。
+
+手投げ（＝**低速**）の BB で raw = 250..305 だった。
+もし raw が光ゲート間の通過時間カウントなら、低速ほど**大きな**値になるはずで、
+250 前後という小さな値は取り得ない。仮に「250 = 低速の通過時間」だとすると、
+実弾（100 m/s 級、約 30 倍速い）では raw ≈ 8 となり分解能が破綻する。
+→ **rawSpeed は速度に比例した値。単純なスケーリングで換算できる。**
+
+### 7.3 スケール（**推定** — 確度 中〜高）
+
+```
+speed_mps = rawSpeed / 100.0
+```
+
+| 発 | raw | ÷100 → m/s | ÷10 → m/s | ÷10 → fps（= m/s） |
+|---|---|---|---|---|
+| 1 | 282 | **2.82** | 28.2 | 28.2 (8.60) |
+| 2 | 250 | **2.50** | 25.0 | 25.0 (7.62) |
+| 3 | 267 | **2.67** | 26.7 | 26.7 (8.14) |
+| 4 | 266 | **2.66** | 26.6 | 26.6 (8.11) |
+| 5 | 305 | **3.05** | 30.5 | 30.5 (9.30) |
+
+`÷100 → m/s` を採る根拠:
+
+1. **同一ファーム内の固定小数点規約が ×100。** ammo record（§6.4）は直径 mm・重量 g とも
+   ×100 で、うち重量は実在 BB 重量と完全一致するため ×100 は**独立に確定している**。
+2. **単位は m/s（メートル法）** と考えられる。アプリで m/s ⇄ ft/s を切り替えても
+   **BLE トラフィックは一切発生しなかった**（§8）ため、ワイヤは単位非依存の生値。
+   ammo record が UI 単位に関わらずメートル法だったことから、速度もメートル法と推定。
+3. u16 × ÷100 の上限は 655.35 m/s（≈ 2150 fps）で、エアソフト／実射の全域をカバーする。
+   妥当な設計。
+4. ユーザ申告（手で BB を投げ入れた／「数 m/s」）と 2.50–3.05 m/s が整合する。
+
+**否定できていない対抗仮説**: `÷10 → m/s`（25.0–30.5 m/s）。
+手投げとしてはやや速いが不可能ではない。**§10 の 1 発テストで確定させること。**
+
+### 7.4 参照実装
+
+```swift
+struct FireReport {
+    let rawSpeed: UInt16      // frame[5] | frame[6] << 8
+    let rawRev: UInt16        // frame[7] | frame[8] << 8
+
+    /// ★ スケールは推定（§7.3）。実弾 1 発で検証するまで定数を 1 箇所に閉じ込めておくこと。
+    static let speedScale: Double = 100.0
+    var metersPerSecond: Double { Double(rawSpeed) / Self.speedScale }
+}
+```
+
+---
+
+## 8. 単位切替（m/s ⇄ ft/s）
+
+**アプリ内の表示切替のみ。BLE トラフィックは発生しない（確定）。**
+
+ユーザはキャプチャ中に 1 度単位を切り替えているが、
+`t=+4.355`（最後の TX）以降 `t=+103.966`（切断）まで **TX は 1 本も無い**。
+本体への設定書き込みも、本体からの再送も無い。
+
+→ `0x24` WRITE_DEVICE_SETTINGS の書き込みレイアウトは**このキャプチャからは得られなかった**。
+静的解析（`docs/PROTOCOL-apk-analysis.md` §9.2）のまま **未検証**。
+
+→ 実装方針: **速度・エネルギーの単位換算は全てクライアント側で行う。**
+
+---
+
+## 9. RX チェックサム
+
+**RX も TX と完全に同じ式（確定）。** §3.1。
+`docs/PROTOCOL-dart-aot.md` §9-2 / `docs/PROTOCOL-ble-tx.md` §7-5 の
+「RX にチェックサムが付くか不明」は解決済み。
+
+受信側は次を全て検証すべき:
+
+1. `frame[0] == 0xAA`
+2. `frame[1] == frame.count`
+3. `(Σ frame[0..count-2] + key1 + key2) & 0xFF == frame[count-1]`
+
+長さ 1 の `00` は 1〜3 に全て掛からない。**エラーではなく電源 OFF として扱う**（§5.1）。
+
+---
+
+## 10. Known unknowns / 次に確かめること
+
+| # | 項目 | 決着のさせ方 |
+|---|---|---|
+| 1 | **rawSpeed のスケール（÷100 か ÷10 か）** | 実弾 1 発。本体 LCD の m/s 表示と raw を突き合わせる。最優先 |
+| 2 | `rawRev` のスケール / 単位（RPS・RPM） | フルオートで 5 発ほど。連射間隔（実測 ms）と raw を比較 |
+| 3 | 初回ペアリング（鍵未知）の実バイト列 | 別スマホ/アプリ再インストール後にキャプチャ。`aa 06 4b 00 00 fb` → ボタン押下 → 応答 |
+| 4 | 鍵は広告 manufacturer data から取れるか | 広告の `c4 94` をそのまま `0x4B` に載せて接続してみる |
+| 5 | `0x62` 応答の `00 01` が status+count か BE16 count か | 本体にログを 2 件以上溜めて再取得 |
+| 6 | `0x63` ログレコードの取得と形式 | `0x62` の後に index 指定で要求（**`0x61` は絶対に送らない**） |
+| 7 | バッテリー（`0x2C` / `0x64`）が AC6000 で使えるか | `aa 05 2c 00 <cks>` を送って応答を見る |
+| 8 | `0x24` / `0x27` device settings のレイアウト | `aa 05 27 00 <cks>` を送って応答を見る |
+| 9 | `t=+11.878` の `0x47` / `t=+75.179` の `0x5A` 自発再送のトリガ | 本体のボタン操作と対応付ける |
+| 10 | FIRE_REPORT の `b[3..4]`（常に 0）の意味 | 多数発射して変化するか見る |
+| 11 | 広告 manufacturer data の `08` / `52 04` | 別個体と比較 |
+
+---
+
+## 11. Safety
+
+> ### 🚫 `F7BF3564-FB6D-4E53-88A4-5E37E0326063` には絶対に書き込まないこと
+>
+> handle `0x0017`、サービス `1D14D6EE-FD63-4FA1-BFA4-8F47B42119F0` は
+> **Silicon Labs OTA（DFU）コントロール**である。ここへの書き込みは MCU を
+> **OTA ブートローダへ再起動**させる。復旧には正規のファームウェアイメージが必要で、
+> **文鎮化のリスクがある。**
+>
+> **AceSoft は探索するだけで一切書き込んでいない**（本キャプチャで確定）。
+> 自作クライアント / サニファも **enumerate のみ・書き込み禁止**とすること。
+> 書き込み先は `9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C` のみを許可するホワイトリスト実装にする。
+
+> ### ⚠️ `0x61` CLEAR_LOG を安易に送らない
+>
+> `0x61` は本体内の計測ログを消去する（`AC6000_BT_CLEAR_LOG`）。
+> ログ吸い上げ（`0x62` / `0x63`）の実装と検証が終わるまで送信しないこと。
+> 探索的なコマンド掃引を行う場合は **`0x61` を明示的に除外**すること。
+
+> ### ⚠️ 未知コマンドの総当たりをしない
+>
+> `docs/PROTOCOL-dart-aot.md` §4.3 に 28 個の未文書コマンドがある。
+> この中には `CALIBRATION` / `SET_TOURNAMENT_LOCK` / `ERASE_APP_SETTINGS` /
+> `RESET_INTO_FIRMWARE_LOADER` に相当するものが含まれ得る。
+> **読み取り系と当たりの付いているものだけを、1 本ずつ意図的に送ること。**
+
+---
+
+## 12. 実装チェックリスト
+
+* [ ] スキャンは広告名 `AC6000BT-` の前方一致（`0x2A00` は識別に使わない）
+* [ ] notify `3337E46E-…`（svc `5CDE0C3D-…`）の CCCD に `01 00`
+* [ ] write は `9C6AA1EE-…`（svc `53C47FE1-…`）に **Write With Response**
+* [ ] CCCD 有効化から最初の書き込みまで **500 ms 程度待つ**（アプリは 564 ms）
+* [ ] コマンドは **1 本ずつ、前の応答を待って ~300 ms 間隔**で送る
+* [ ] `key1`/`key2` を永続化し、以降の全フレームのチェックサムに加算する
+* [ ] 受信フレームは header / 長さ / チェックサムの 3 点を検証
+* [ ] 1 バイト `00` の通知は「本体電源 OFF」として扱う（エラーにしない）
+* [ ] keep-alive は**送らない**（不要であることを確認済み）
+* [ ] 速度スケール定数は 1 箇所に定義（§7.3 が未確定のため）
+* [ ] OTA characteristic への書き込みをコードレベルで禁止
