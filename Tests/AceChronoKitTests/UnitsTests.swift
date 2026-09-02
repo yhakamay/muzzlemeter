@@ -33,6 +33,19 @@ struct UnitsTests {
         #expect(SpeedUnit.feetPerSecond.formatted(metersPerSecond: 91.24) == "299 fps")
     }
 
+    @Test("m/s は本体 LCD に合わせて切り捨て表示する")
+    func metersPerSecondTruncates() {
+        // 実機での対応（raw 325 / 278 / 375 → LCD 3.2 / 2.7 / 3.7）。
+        #expect(SpeedUnit.metersPerSecond.format(metersPerSecond: 3.25) == "3.2")
+        #expect(SpeedUnit.metersPerSecond.format(metersPerSecond: 2.78) == "2.7")
+        #expect(SpeedUnit.metersPerSecond.format(metersPerSecond: 3.75) == "3.7")
+        // 端数が無い値は落ちない（浮動小数の誤差で 2.7 にならないこと）。
+        #expect(SpeedUnit.metersPerSecond.format(metersPerSecond: 2.8) == "2.8")
+        #expect(SpeedUnit.metersPerSecond.format(metersPerSecond: 91.0) == "91.0")
+        // fps は本体に表示が無いので従来どおり四捨五入。
+        #expect(SpeedUnit.feetPerSecond.format(metersPerSecond: 91.24) == "299")
+    }
+
     @Test("SpeedUnit は Codable かつ rawValue で識別できる")
     func speedUnitCodable() throws {
         #expect(SpeedUnit.allCases.count == 2)

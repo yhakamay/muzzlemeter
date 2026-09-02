@@ -20,6 +20,10 @@ final class ChronoService {
     private(set) var currentShots: [Shot] = []
     private(set) var stats: SessionStats = .empty()
     private(set) var discoveredPeripherals: [DiscoveredPeripheral] = []
+    /// 本体が報告したバッテリー残量（%）。AC6000 では届かない可能性が高い（未検証コマンド）。
+    private(set) var batteryPercent: Int?
+    /// 本体が選択している弾。重量スケールが未確定なのでジュール計算には使わない。
+    private(set) var deviceAmmo: AmmoRecord?
     /// リプレイ（デモ）モードで動いているか。
     let isReplaying: Bool
 
@@ -75,7 +79,7 @@ final class ChronoService {
 
     init(defaults: UserDefaults = .standard, forceReplay: Bool? = nil) {
         self.defaults = defaults
-        self.isReplaying = forceReplay ?? DemoReplay.isEnabled
+        self.isReplaying = forceReplay ?? ReplaySupport.isEnabled
 
         self.speedUnit = defaults.string(forKey: Keys.speedUnit)
             .flatMap(SpeedUnit.init(rawValue:)) ?? .metersPerSecond
@@ -83,16 +87,17 @@ final class ChronoService {
             .flatMap(RateOfFireUnit.init(rawValue:)) ?? .rps
         self.autoReconnect = defaults.object(forKey: Keys.autoReconnect) as? Bool ?? true
 
-        // 実機トランスポート (CoreBluetoothTransport) は BLE プロトコル解析が
-        // 終わるまで存在しない。それまではリプレイのみで動かす。
-        let transport = DemoReplay.makeTransport()
+        // 実機では CoreBluetooth、シミュレータ / `--replay` では記録済みパケットの再生。
+        // **デコーダと設定は両方で同じもの**を使う。再生でも鍵ハンドシェイクまで
+        // 実機と同じ経路を通るので、UI から見て挙動が変わらない。
+        let transport: any ChronoTransport = self.isReplaying
+            ? ReplaySupport.makeTransport()
+            : CoreBluetoothTransport()
         self.device = ChronoDevice(
             transport: transport,
-            decoder: DemoDecoder(),
+            decoder: AceChronoDecoder(),
             store: UserDefaultsKeyValueStore(defaults: defaults),
-            configuration: .init(
-                nameFilter: nil,
-                notifyCharacteristics: [DemoProtocol.characteristic],
+            configuration: .ac6000(
                 autoReconnect: defaults.object(forKey: Keys.autoReconnect) as? Bool ?? true
             )
         )
@@ -146,8 +151,16 @@ final class ChronoService {
         case .connectionState(let state):
             connectionState = state
             if state == .scanning { discoveredPeripherals = [] }
-        case .battery, .deviceInfo, .raw:
-            // プロトコル未確定のうちは届かない。届いても無視して問題ない。
+        case .battery(let percent):
+            batteryPercent = percent
+        case .ammo(let record):
+            // 本体が選んでいる弾。要求していなくても飛んでくる（`docs/PROTOCOL.md` §6.2）。
+            // 重量のスケールが未確定なので、アプリの計算には使わず表示情報として持つだけ。
+            if record.isCurrent { deviceAmmo = record }
+        case .powerOff:
+            // 本体の電源 OFF。接続状態は ChronoDevice 側が落としてくれる。
+            break
+        case .ack, .logCount, .deviceInfo, .raw:
             break
         }
     }

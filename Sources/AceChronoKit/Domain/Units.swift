@@ -39,9 +39,33 @@ public enum SpeedUnit: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    /// 表示時に四捨五入ではなく**切り捨て**るか。
+    ///
+    /// AC6000 本体の LCD は m/s を**切り捨てて**小数 1 桁で出す（実機で確認:
+    /// raw 325 / 278 / 375 → LCD 3.2 / 2.7 / 3.7）。同じ弾を撃って
+    /// 本体とアプリで表示がずれると「どちらが壊れているのか」で悩ませてしまうため、
+    /// m/s の表示だけは本体に合わせる。**内部値と CSV は常にフル精度のまま。**
+    public var truncatesDisplay: Bool {
+        switch self {
+        case .metersPerSecond: true
+        case .feetPerSecond: false   // 本体は fps を持たない。ここは通常の四捨五入。
+        }
+    }
+
     /// m/s の値を、この単位の数値文字列に整形する（単位記号なし）。
     public func format(metersPerSecond: Double) -> String {
-        String(format: "%.\(fractionDigits)f", value(fromMetersPerSecond: metersPerSecond))
+        let converted = value(fromMetersPerSecond: metersPerSecond)
+        let shown = truncatesDisplay ? Self.truncate(converted, digits: fractionDigits) : converted
+        return String(format: "%.\(fractionDigits)f", shown)
+    }
+
+    /// 指定桁で切り捨てる。
+    ///
+    /// `2.78` が二進浮動小数で `2.7799…` になるような誤差で 1 桁落ちないよう、
+    /// ごく小さい値を足してから切り捨てる。
+    static func truncate(_ value: Double, digits: Int) -> Double {
+        let factor = pow(10.0, Double(digits))
+        return ((value * factor) + 1e-9).rounded(.down) / factor
     }
 
     /// 単位記号付きで整形する。例: `"91.2 m/s"` / `"299 fps"`

@@ -62,6 +62,7 @@ extension SniffCommand {
             abstract: "デバイスに接続し GATT を列挙して notify を全購読・ダンプする",
             discussion: """
                 例:
+                  acechrono-sniff dump --name AC6000BT- --handshake
                   acechrono-sniff dump --name AC6000
                   acechrono-sniff dump --id 1234ABCD-... --log tools/re/captures/shot1.log
                   acechrono-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
@@ -132,6 +133,15 @@ extension SniffCommand {
         )
         var interactive: Bool = false
 
+        @Flag(
+            name: .long,
+            help: ArgumentHelp(
+                "広告の manufacturer data から鍵を取り出し、購読後に READ_KEY (0x4B) を自動送信する。"
+                    + " ACK (0x41) が返れば以降のフレームは鍵付きで検証・復号される。"
+            )
+        )
+        var handshake: Bool = false
+
         func validate() throws {
             guard (name == nil) != (id == nil) else {
                 throw ValidationError("--name か --id のどちらか一方を指定してください。")
@@ -166,7 +176,8 @@ extension SniffCommand {
                     writes: writes,
                     writeDelay: Double(writeDelay) / 1000,
                     writeType: writeType,
-                    interactive: interactive
+                    interactive: interactive,
+                    handshake: handshake
                 ),
                 serviceFilter: filter,
                 logger: LogWriter(path: logPath)

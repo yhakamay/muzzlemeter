@@ -1,3 +1,4 @@
+import AceChronoKit
 @preconcurrency import CoreBluetooth
 import Foundation
 
@@ -35,12 +36,15 @@ enum SniffMode: Sendable {
     ///     ものか対応付けられるように、既定でも 0 にはしない。
     ///   - writeType: `--write-type`。対話モードで種別を明示しなかった write の既定値。
     ///   - interactive: 購読・初期 write 完了後に stdin から追加コマンドを受け付けるか。
+    ///   - handshake: 広告の manufacturer data から鍵を取り出し、購読後に
+    ///     `0x4B` READ_KEY を自動で送るか（`--handshake`）。
     case dump(
         matcher: PeripheralMatcher,
         writes: [PendingWrite],
         writeDelay: Double,
         writeType: WriteTypePreference,
-        interactive: Bool
+        interactive: Bool,
+        handshake: Bool
     )
 }
 
@@ -61,6 +65,10 @@ final class BLESniffer: NSObject, @unchecked Sendable {
     private var lastPacketAt: Date?
     private var didStartSession = false
 
+    /// 広告の manufacturer data から取り出したチェックサム鍵（`--handshake` 用）。
+    /// 取れなければ 0/0 のまま。受信フレームの復号にも使う。
+    private var keys: DeviceKeys = .zero
+
     // MARK: 対話モードの状態（すべて `queue` 上でのみ触る）
 
     /// stdin リーダースレッドを起動済みか（再接続で二重に起動しないため）。
@@ -76,14 +84,20 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 
     /// `--write-delay`（秒）。dump 以外では使わない。
     private var writeDelay: Double {
-        if case .dump(_, _, let delay, _, _) = mode { return delay }
+        if case .dump(_, _, let delay, _, _, _) = mode { return delay }
         return 0
     }
 
     /// `--write-type`。対話モードで種別を明示しなかった write に使う。
     private var defaultWriteType: WriteTypePreference {
-        if case .dump(_, _, _, let type, _) = mode { return type }
+        if case .dump(_, _, _, let type, _, _) = mode { return type }
         return .auto
+    }
+
+    /// `--handshake`。購読後に鍵付き `0x4B` を自動送信するか。
+    private var wantsHandshake: Bool {
+        if case .dump(_, _, _, _, _, let handshake) = mode { return handshake }
+        return false
     }
 
     init(mode: SniffMode, serviceFilter: [CBUUID]?, logger: LogWriter) {
@@ -209,7 +223,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
                 exit(0)
             }
 
-        case .dump(let matcher, _, _, _, _):
+        case .dump(let matcher, _, _, _, _, _):
             switch matcher {
             case .name(let n): print("\"\(n)\" を含む名前のデバイスを探しています…")
             case .identifier(let id): print("identifier \(id) のデバイスを探しています…")
@@ -304,11 +318,45 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 
     /// `--write` を `writeDelay` 間隔で 1 件ずつ送り、終わったら対話モードへ入る。
     private func performWrites(_ peripheral: CBPeripheral) {
-        guard case .dump(_, let writes, let delay, _, _) = mode else { return }
-        // 購読が確定してから送るため少し待つ。
+        guard case .dump(_, let writes, let delay, _, _, _) = mode else { return }
+        // 購読が確定してから送るため少し待つ（AceSoft は CCCD 応答の 564 ms 後に送っていた）。
         queue.asyncAfter(deadline: .now() + 0.7) { [weak self] in
-            self?.runWrite(at: 0, of: writes, delay: delay, on: peripheral)
+            guard let self else { return }
+            self.sendHandshakeIfNeeded(peripheral)
+            let extra = self.wantsHandshake ? max(delay, 0.3) : 0
+            self.queue.asyncAfter(deadline: .now() + extra) { [weak self] in
+                self?.runWrite(at: 0, of: writes, delay: delay, on: peripheral)
+            }
         }
+    }
+
+    /// `--handshake`: 広告から取った鍵を載せた `0x4B` を write characteristic へ送る。
+    ///
+    /// 実機で確認済みの手順（`docs/PROTOCOL.md` §4.3）:
+    /// `aa 06 4b <k1> <k2> <cks>` → 数十 ms 後に `aa 05 41 4b <cks>`（ACK）。
+    /// 鍵が広告に載っていなければ 0/0 で送る（初回ペアリング。本体の電源ボタン押下が要る）。
+    private func sendHandshakeIfNeeded(_ peripheral: CBPeripheral) {
+        guard wantsHandshake else { return }
+        let target = findCharacteristic(
+            UUIDText.canonical(ChronoUUIDs.writeCharacteristic.uuidString),
+            in: peripheral
+        ) ?? defaultWriteCharacteristic(in: peripheral)
+        guard let target else {
+            out("handshake: 書き込める characteristic がありません（スキップ）")
+            return
+        }
+        if keys.isZero {
+            out("handshake: 広告に鍵が見つかりませんでした。0/0 で送ります（本体の電源ボタン押下が必要です）")
+        } else {
+            out("handshake: 広告から鍵を取得しました \(keys)")
+        }
+        // READ_KEY は鍵確立前のフレームなので 0/0 で署名される（ChronoRequest が面倒を見る）。
+        _ = send(
+            ChronoCommand.readKey(keys: keys),
+            to: target,
+            on: peripheral,
+            preference: .with   // 実機の AceSoft は全フレームを Write Request で送っていた
+        )
     }
 
     private func runWrite(
@@ -374,6 +422,9 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         out(
             "[\(Timestamp.iso8601(Date()))] write -> \(characteristic.uuid.uuidString) (\(kind)) len=\(payload.count) hex: \(Hex.string(payload))"
         )
+        if let decoded = FrameDescription.describe(payload, keys: keys) {
+            out("  -> \(decoded)")
+        }
         peripheral.writeValue(payload, for: characteristic, type: type)
         if type == .withoutResponse {
             out("  -> withoutResponse のため応答はありません（送信済み）")
@@ -471,7 +522,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 extension BLESniffer {
     /// 購読と `--write` が済んだ後に呼ばれる。stdin リーダーは 1 回だけ起動する。
     private func startInteractiveIfNeeded(_ peripheral: CBPeripheral) {
-        guard case .dump(_, _, _, _, let interactive) = mode, interactive else { return }
+        guard case .dump(_, _, _, _, let interactive, _) = mode, interactive else { return }
         guard !interactiveStarted else {
             // 再接続後。既定の write 先を出し直してプロンプトに戻る。
             announceDefaultWriteCharacteristic(peripheral)
@@ -706,10 +757,15 @@ extension BLESniffer: CBCentralManagerDelegate {
             seenPeripherals[peripheral.identifier] = Date()
             print(describeAdvertisement(advertisementData, rssi: RSSI, peripheral: peripheral))
 
-        case .dump(let matcher, _, _, _, _):
+        case .dump(let matcher, _, _, _, _, _):
             guard target == nil else { return }
             guard matcher.matches(peripheral: peripheral, advertisementData: advertisementData) else { return }
             central.stopScan()
+            // 鍵は広告にしか載っていない。接続してからでは取れないのでここで拾う。
+            if let mfg = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data,
+               let advertised = DeviceKeys(manufacturerData: mfg) {
+                keys = advertised
+            }
             target = peripheral
             out("見つかりました: \(describeAdvertisement(advertisementData, rssi: RSSI, peripheral: peripheral))")
             out("接続中…")
@@ -808,6 +864,9 @@ extension BLESniffer: CBPeripheralDelegate {
         lastPacketAt = now
         let deltaText = delta.map { String(format: "[+%.1f ms]", $0) } ?? "[+---- ms]"
         out("[\(Timestamp.iso8601(now))] \(deltaText) \(characteristic.uuid.uuidString) len=\(data.count) hex: \(Hex.string(data)) ascii: \(Hex.ascii(data))")
+        if let decoded = FrameDescription.describe(data, keys: keys) {
+            out("  -> \(decoded)")
+        }
     }
 
     func peripheral(
