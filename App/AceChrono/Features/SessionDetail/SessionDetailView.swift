@@ -19,7 +19,9 @@ struct SessionDetailView: View {
                     .listRowInsets(EdgeInsets(top: 12, leading: 8, bottom: 12, trailing: 16))
             }
 
-            Section("統計") {
+            // StatsCard 自身が「セッション統計」の見出しを持っているので、
+            // Section 側に見出しを付けると同じ意味の行が 2 段重なる。
+            Section {
                 StatsCard(
                     stats: stats,
                     speedUnit: service.speedUnit,
@@ -40,12 +42,13 @@ struct SessionDetailView: View {
                         Text(service.speedUnit.formatted(metersPerSecond: shot.velocityMetersPerSecond))
                             .font(.body.monospacedDigit())
                         Spacer()
-                        Text(String(format: "%.2f J", shot.joules(massGrams: session.bbWeightGrams)))
+                        Text(JouleFormat.labeled(shot.joules(massGrams: session.bbWeightGrams)))
                             .font(.callout.monospacedDigit())
                             .foregroundStyle(.secondary)
                         Text(shot.timestamp, format: .dateTime.hour().minute().second())
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.tertiary)
+                            .padding(.leading, 8)   // ジュール値と時刻がくっつかないように
                     }
                 }
             }
@@ -96,10 +99,14 @@ struct SessionDetailView: View {
                     RuleMark(y: .value("平均", mean))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                         .foregroundStyle(.secondary)
-                        .annotation(position: .top, alignment: .leading) {
+                        .annotation(position: .top, alignment: .leading, spacing: 2) {
+                            // データ線と重なると読めなくなるので、地の色を敷いて浮かせる。
                             Text("平均 \(unit.format(metersPerSecond: stats.meanMetersPerSecond ?? 0)) \(unit.symbol)")
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(.background, in: .rect(cornerRadius: 4))
                         }
                 }
                 ForEach(values, id: \.index) { point in
@@ -116,6 +123,9 @@ struct SessionDetailView: View {
                     .foregroundStyle(.blue)
                 }
             }
+            // 既定だと Y 軸が 0 を含むため、90 m/s 前後のばらつきが一本の直線に潰れる。
+            // 見たいのは「どれだけ散っているか」なので、データの範囲だけを取る。
+            .chartYScale(domain: .automatic(includesZero: false))
             .chartYAxisLabel(unit.symbol)
             .chartXAxisLabel("発目")
         }

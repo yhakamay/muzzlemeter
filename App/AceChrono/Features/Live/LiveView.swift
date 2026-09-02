@@ -48,11 +48,11 @@ struct LiveView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button("セッションを終了して保存", systemImage: "checkmark.circle") {
+                        Button("終了して保存", systemImage: "checkmark.circle") {
                             service.endSession()
                         }
                         .disabled(service.currentShots.isEmpty)
-                        Button("このセッションを破棄", systemImage: "trash", role: .destructive) {
+                        Button("破棄する", systemImage: "trash", role: .destructive) {
                             service.discardSession()
                         }
                         .disabled(service.currentShots.isEmpty)
@@ -80,7 +80,7 @@ struct LiveView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.secondary)
                 HStack(spacing: 12) {
-                    Text(String(format: "%.2f J", service.joules(shot.velocityMetersPerSecond)))
+                    Text(JouleFormat.labeled(service.joules(shot.velocityMetersPerSecond)))
                     Text("·")
                     Text("\(service.gunName)  \(GunProfile.weightLabel(service.massGrams))")
                 }
@@ -120,7 +120,7 @@ struct LiveView: View {
                         Text(service.formattedSpeedWithUnit(shot.velocityMetersPerSecond))
                             .font(.body.monospacedDigit())
                         Spacer()
-                        Text(String(format: "%.2f J", service.joules(shot.velocityMetersPerSecond)))
+                        Text(JouleFormat.labeled(service.joules(shot.velocityMetersPerSecond)))
                             .font(.callout.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
@@ -213,9 +213,9 @@ struct StatsCard: View {
             if let joules = stats.meanJoules {
                 Divider()
                 HStack {
-                    Text("平均 \(String(format: "%.2f", joules)) J")
+                    Text("平均 \(JouleFormat.labeled(joules))")
                     if let maxJ = stats.maxJoules {
-                        Text("· 最大 \(String(format: "%.2f", maxJ)) J")
+                        Text("· 最大 \(JouleFormat.labeled(maxJ))")
                     }
                     Spacer()
                     Text(GunProfile.weightLabel(stats.massGrams))

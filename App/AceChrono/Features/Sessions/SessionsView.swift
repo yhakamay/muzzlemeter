@@ -87,7 +87,7 @@ struct SessionRow: View {
                     Text("平均 \(speedUnit.formatted(metersPerSecond: mean))")
                 }
                 if let joules = stats.meanJoules {
-                    Text(String(format: "%.2f J", joules))
+                    Text(JouleFormat.labeled(joules))
                 }
             }
             .font(.caption)

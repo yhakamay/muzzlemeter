@@ -17,17 +17,21 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("表示単位") {
-                    Picker("弾速", selection: $service.speedUnit) {
-                        Text("m/s").tag(SpeedUnit.metersPerSecond)
-                        Text("fps").tag(SpeedUnit.feetPerSecond)
+                    // `.segmented` は Picker のラベルを描かないので、何を切り替えているのか
+                    // 分かるように見出しを自前で出す（「RPS / RPM」だけでは意味が読めない）。
+                    segmented("弾速") {
+                        Picker("弾速", selection: $service.speedUnit) {
+                            Text("m/s").tag(SpeedUnit.metersPerSecond)
+                            Text("fps").tag(SpeedUnit.feetPerSecond)
+                        }
                     }
-                    .pickerStyle(.segmented)
 
-                    Picker("連射速度", selection: $service.rateOfFireUnit) {
-                        Text("RPS").tag(RateOfFireUnit.rps)
-                        Text("RPM").tag(RateOfFireUnit.rpm)
+                    segmented("連射速度") {
+                        Picker("連射速度", selection: $service.rateOfFireUnit) {
+                            Text("RPS").tag(RateOfFireUnit.rps)
+                            Text("RPM").tag(RateOfFireUnit.rpm)
+                        }
                     }
-                    .pickerStyle(.segmented)
                 }
 
                 Section {
@@ -63,7 +67,9 @@ struct SettingsView: View {
                 } header: {
                     Text("銃プロファイル")
                 } footer: {
-                    Text("選択中のプロファイルの BB 重量でジュールを計算します。タップで編集、左スワイプで選択。")
+                    // スワイプの向きは実装と一致させる: 選択は leading（右スワイプ）、
+                    // 削除は onDelete（左スワイプ）。逆に書くと破壊的操作に誘導してしまう。
+                    Text("選択中のプロファイルの BB 重量でジュールを計算します。タップで編集、右スワイプで選択、左スワイプで削除。")
                 }
 
                 Section {
@@ -71,11 +77,16 @@ struct SettingsView: View {
                     Button("この機器を忘れる", systemImage: "xmark.circle", role: .destructive) {
                         service.forgetDevice()
                     }
+                    // role: .destructive はラベルだけ赤くしてアイコンはアクセントカラーのまま
+                    // なので、赤字＋青アイコンのちぐはぐな行になる。まとめて赤にする。
+                    .foregroundStyle(.red)
                 } header: {
                     Text("接続")
                 } footer: {
                     if service.isReplaying {
-                        Text("シミュレータ／`--replay` 起動のため、記録済みパケットのデモ再生で動作しています。実機の BLE プロトコル解析が終わるまで実機接続はできません。")
+                        // プロトコル解析は完了済み（README / docs/PROTOCOL.md）。
+                        // 再生になるのはシミュレータに BLE が無いか --replay を付けたときだけ。
+                        Text("シミュレータ／`--replay` 起動のため、記録済みパケットのデモ再生で動作しています。実機の AC6000 に繋ぐときは、iPhone 実機で `--replay` を付けずに起動してください。")
                     } else {
                         Text("最後に接続した機器を覚えて、アプリを開いたら自動で繋ぎ直します。")
                     }
@@ -98,6 +109,18 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    /// セグメンテッドピッカーに見出しを添えた 1 行。
+    private func segmented(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline)
+            content()
+                .pickerStyle(.segmented)
+                .labelsHidden()
+        }
+        .padding(.vertical, 2)
     }
 
     private func deleteProfiles(at offsets: IndexSet) {

@@ -107,6 +107,7 @@ final class ChronoService {
     func start(modelContext: ModelContext) {
         if self.modelContext == nil { self.modelContext = modelContext }
         restoreSelectedProfileIfNeeded()
+        closeSessionsLeftOpen(in: modelContext)
         guard eventTask == nil else { return }
 
         let stream = device.events
@@ -179,6 +180,21 @@ final class ChronoService {
         session.shots.append(record)
         try? modelContext.save()
         recomputeStats()
+    }
+
+    /// 前回の起動で「終了して保存」を押さずに終わったセッションを閉じる。
+    ///
+    /// セッションは 1 発目で自動的に始まるが、終わりを明示するのはユーザーの操作だけだった。
+    /// そのためアプリを落とすたびに `endedAt == nil` のセッションが残り、履歴の**全行が
+    /// 「進行中」**になって、いま計測しているのがどれか分からなくなる。
+    /// 起動時（まだ 1 発も受け取っていない時点）に、最後のショットの時刻で閉じてしまう。
+    private func closeSessionsLeftOpen(in modelContext: ModelContext) {
+        let descriptor = FetchDescriptor<Session>(predicate: #Predicate { $0.endedAt == nil })
+        guard let open = try? modelContext.fetch(descriptor), !open.isEmpty else { return }
+        for session in open {
+            session.endedAt = session.orderedShots.last?.timestamp ?? session.startedAt
+        }
+        try? modelContext.save()
     }
 
     /// 最初の 1 発でセッションを自動開始する。
