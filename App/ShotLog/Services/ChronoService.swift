@@ -19,7 +19,8 @@ final class ChronoService {
     /// 進行中セッションのショット（新しい順ではなく時刻順）。
     private(set) var currentShots: [Shot] = []
     private(set) var stats: SessionStats = .empty()
-    private(set) var discoveredPeripherals: [DiscoveredPeripheral] = []
+    /// スキャンで見つかっている機器（前回接続の印つき）。接続ピルのシートに出す。
+    private(set) var discovery = DiscoveryList()
     /// 本体が報告したバッテリー残量（%）。AC6000 では届かない可能性が高い（未検証コマンド）。
     private(set) var batteryPercent: Int?
     /// 本体が選択している弾。重量スケールが未確定なのでジュール計算には使わない。
@@ -346,6 +347,26 @@ final class ChronoService {
         Task { await device.start() }
     }
 
+    /// 一覧から選んだ機器に繋ぐ。
+    ///
+    /// 自動接続（覚えている機器 / 最初に見つかった機器）はそのまま生きていて、
+    /// これは**それを上書きする明示的な操作**。複数台が同時に電源が入っている場面で、
+    /// 意図しない 1 台に繋がったときに選び直せるようにするために要る。
+    func connect(to peripheral: DiscoveredPeripheral) {
+        let device = self.device
+        let id = peripheral.id
+        Task { await device.connect(to: id) }
+    }
+
+    /// スキャンをやり直す（一覧に出てこない機器を探し直すとき）。
+    func rescan() {
+        let device = self.device
+        Task {
+            await device.stop()
+            await device.start()
+        }
+    }
+
     // MARK: - イベント処理
 
     private func handle(_ event: ChronoEvent) {
@@ -354,7 +375,6 @@ final class ChronoService {
             append(shot)
         case .connectionState(let state):
             connectionState = state
-            if state == .scanning { discoveredPeripherals = [] }
         case .battery(let percent):
             batteryPercent = percent
         case .ammo(let record):
@@ -372,6 +392,11 @@ final class ChronoService {
         case .powerOff:
             // 本体の電源 OFF。接続状態は ChronoDevice 側が落としてくれる。
             break
+        case .discovered(let list):
+            // 一覧は `ChronoDevice` が持つものをそのまま映す（並べ替えの規則も含めて
+            // キット側に 1 つだけ置く）。変化したときだけ届くので、ここでは代入だけ。
+            discovery = list
+
         case .ack, .logCount, .deviceInfo, .raw:
             break
         }

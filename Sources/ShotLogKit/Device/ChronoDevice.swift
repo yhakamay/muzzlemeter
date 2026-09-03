@@ -127,7 +127,13 @@ public actor ChronoDevice {
     }
 
     /// 直近に見つかった機器（未接続時にユーザーへ選択させるため）。
-    public private(set) var discovered = [DiscoveredPeripheral]()
+    ///
+    /// 変わったときだけ `ChronoEvent.discovered` として配信する。UI はこの一覧を
+    /// そのまま出せばよく、並べ替え（前回接続 → 電波の強い順）は `DiscoveryList` が決める。
+    public private(set) var discovery = DiscoveryList()
+
+    /// 見つかった機器の配列。`discovery.peripherals` の別名（既存の呼び出し向け）。
+    public var discovered: [DiscoveredPeripheral] { discovery.peripherals }
     public private(set) var connectedPeripheral: UUID?
 
     public nonisolated let events: AsyncStream<ChronoEvent>
@@ -260,7 +266,9 @@ public actor ChronoDevice {
     }
 
     private func beginScan() async {
-        discovered.removeAll()
+        discovery.removeAll()
+        discovery.rememberedID = rememberedPeripheral
+        continuation.yield(.discovered(discovery))
         state = .scanning
         do {
             try await transport.scan(
@@ -278,8 +286,11 @@ public actor ChronoDevice {
     private func handle(_ event: TransportEvent) async {
         switch event {
         case .discovered(let peripheral):
-            if !discovered.contains(where: { $0.id == peripheral.id }) {
-                discovered.append(peripheral)
+            // RSSI は広告ごとに動くので、**同じ機器でも上書きして最新にする**。
+            // 変わっていなければイベントを流さない（毎秒 UI を作り直さないため）。
+            discovery.rememberedID = rememberedPeripheral
+            if discovery.upsert(peripheral) {
+                continuation.yield(.discovered(discovery))
             }
             await autoConnectIfAppropriate(to: peripheral)
 
@@ -475,7 +486,7 @@ public actor ChronoDevice {
 
     private func resolveKeys() -> DeviceKeys {
         if let peripheral = connectedPeripheral {
-            if let advertised = discovered.first(where: { $0.id == peripheral })?.keys {
+            if let advertised = discovery.peripherals.first(where: { $0.id == peripheral })?.keys {
                 return advertised
             }
             if let stored = store.string(forKey: Self.keysKey(for: peripheral)),

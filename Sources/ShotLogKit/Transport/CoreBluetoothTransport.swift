@@ -198,9 +198,13 @@ public final class CoreBluetoothTransport: NSObject, ChronoTransport, @unchecked
 
     private func startScanIfPossible() {
         guard wantsScan, let central, central.state == .poweredOn else { return }
+        // **重複した広告も受け取る。** 同じ機器の広告を 1 本しか受け取らないと
+        // RSSI が最初の 1 回で固まり、「近づけたら強くなる」という一覧の使いかた
+        // （複数台から手元の 1 台を選ぶ）が成立しない。
+        // スキャンは接続が成立した時点で止まるので、鳴りっぱなしにはならない。
         central.scanForPeripherals(
             withServices: scanServices,
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
         )
     }
 

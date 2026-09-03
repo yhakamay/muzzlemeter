@@ -35,6 +35,23 @@
         }
       }
     },
+    "%lld 台": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld found"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 台"
+          }
+        }
+      }
+    },
     "%lld 発": {
       "extractionState": "manual",
       "localizations": {
@@ -698,6 +715,23 @@
         }
       }
     },
+    "もう一度探す": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search again"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度探す"
+          }
+        }
+      }
+    },
     "インナーバレル長": {
       "extractionState": "manual",
       "localizations": {
@@ -1034,6 +1068,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッション統計"
+          }
+        }
+      }
+    },
+    "デモ再生では、記録済みの広告から作った擬似的な機器が 1 台だけ見えます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In demo replay there is only one simulated device, built from the recorded advertisement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモ再生では、記録済みの広告から作った擬似的な機器が 1 台だけ見えます。"
           }
         }
       }
@@ -1684,6 +1735,23 @@
         }
       }
     },
+    "前回接続": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last used"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回接続"
+          }
+        }
+      }
+    },
     "区分": {
       "extractionState": "manual",
       "localizations": {
@@ -2024,6 +2092,23 @@
         }
       }
     },
+    "探しています…": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searching…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "探しています…"
+          }
+        }
+      }
+    },
     "接続": {
       "extractionState": "manual",
       "localizations": {
@@ -2330,6 +2415,23 @@
         }
       }
     },
+    "機器の一覧を開きます": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the list of devices"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機器の一覧を開きます"
+          }
+        }
+      }
+    },
     "機器を探しています": {
       "extractionState": "manual",
       "localizations": {
@@ -2343,6 +2445,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "機器を探しています"
+          }
+        }
+      }
+    },
+    "機器を選ぶ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a device"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "機器を選ぶ"
           }
         }
       }
@@ -2806,6 +2925,40 @@
         }
       }
     },
+    "見つかった機器": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devices found"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見つかった機器"
+          }
+        }
+      }
+    },
+    "見つかっていません": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing found yet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見つかっていません"
+          }
+        }
+      }
+    },
     "見本の場所": {
       "extractionState": "manual",
       "localizations": {
@@ -3244,6 +3397,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "電動"
+          }
+        }
+      }
+    },
+    "電波が強いほど近くにあります。前回つないだ機器には印が付きます。タップするとその機器に繋ぎ直します。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A stronger signal means the device is closer. The one you connected to last is marked. Tap a device to connect to it."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電波が強いほど近くにあります。前回つないだ機器には印が付きます。タップするとその機器に繋ぎ直します。"
+          }
+        }
+      }
+    },
+    "電波強度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signal strength"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電波強度"
           }
         }
       }

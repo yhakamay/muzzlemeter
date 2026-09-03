@@ -365,6 +365,21 @@ xcodebuild -project ShotLog.xcodeproj -scheme ShotLog \
 `ReplayScript` は **`shotlog-sniff dump` のログ形式もそのまま読める**ので、
 新しくキャプチャを取ったらそのファイルを置くだけで再生できる。
 
+#### 目視確認用の起動引数（Debug かつシミュレータのみ）
+
+規制上限の色分けや N 発モードは「特定の値が入っている状態」でないと見えない。
+シミュレータを手で操作せずにその状態を作れるよう、`ScreenshotSupport` が
+**Debug ビルドのシミュレータでだけ**次の引数を解釈する（リリースビルドでは
+引数の解釈自体を行わないので、製品の挙動には関わらない）。
+
+```sh
+xcrun simctl launch <udid> com.yhakamay.shotlog --replay-capture \
+  --demo-energy-limit 0.001 \   # 選択中プロファイルの規制上限を上書き（J）
+  --demo-target-shots 5 \       # 目標発数を上書き（0 で手動に戻す）
+  --demo-tab settings \         # 起動時のタブ（live / sessions / settings）
+  --demo-scan-sheet             # 起動直後に機器選択シートを開く
+```
+
 ### 環境（気温・湿度・気圧）
 
 セッションの 1 発目で、WeatherKit と CoreLocation から現況を 1 回だけ取って

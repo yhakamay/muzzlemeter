@@ -15,6 +15,7 @@ struct LiveView: View {
 
     @State private var isAddingProfile = false
     @State private var isEditingVariables = false
+    @State private var isChoosingDevice = ScreenshotSupport.opensScanSheet
 
     var body: some View {
         @Bindable var service = service
@@ -24,7 +25,7 @@ struct LiveView: View {
                 if service.currentShots.isEmpty {
                     // 待機中は項目が少ないので、スクロールさせずに画面の中央へ置く。
                     VStack(spacing: 20) {
-                        ConnectionPill(state: service.connectionState, isReplaying: service.isReplaying)
+                        connectionPill
                         ammoMismatchBanner
                         Spacer()
                         idleState(selection: $service.selectedProfile)
@@ -35,7 +36,7 @@ struct LiveView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
-                            ConnectionPill(state: service.connectionState, isReplaying: service.isReplaying)
+                            connectionPill
                             ammoMismatchBanner
 
                             lastVelocity(selection: $service.selectedProfile)
@@ -102,6 +103,12 @@ struct LiveView: View {
                     service.selectedProfile = profile
                 }
             }
+            .sheet(isPresented: $isChoosingDevice) {
+                DeviceScanSheet()
+                    .environment(service)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
             .sheet(isPresented: $isEditingVariables) {
                 // 中くらいの高さ。後ろの Live 画面（弾速）が見えたままになるので、
                 // 「作業を止めるモーダル」に見えない。
@@ -111,6 +118,24 @@ struct LiveView: View {
                     .presentationDragIndicator(.visible)
             }
         }
+    }
+
+    /// 接続状態のピル。**タップで機器の一覧を開く。**
+    ///
+    /// 状態表示と「繋ぎ直す」操作が同じ場所にあるのが自然で、
+    /// 「いま何に繋がっているのか怪しい」と思った瞬間に押せる位置はここしかない。
+    private var connectionPill: some View {
+        Button {
+            isChoosingDevice = true
+        } label: {
+            ConnectionPill(
+                state: service.connectionState,
+                isReplaying: service.isReplaying,
+                foundCount: service.discovery.count
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(Text("機器の一覧を開きます"))
     }
 
     /// N 発モードの進捗「7 / 10」。目標が無いセッションでは何も出さない。
@@ -370,6 +395,9 @@ struct ProfileMenu: View {
 struct ConnectionPill: View {
     let state: ConnectionState
     let isReplaying: Bool
+    /// スキャンで見つかっている台数。1 台より多いときだけ出す
+    /// （**取り違えが起こり得る状況かどうか**が一目で分かる）。
+    var foundCount: Int = 0
 
     var body: some View {
         HStack(spacing: 8) {
@@ -378,9 +406,15 @@ struct ConnectionPill: View {
                 .frame(width: 9, height: 9)
             Text(label)
                 .font(.footnote.weight(.medium))
+            if foundCount > 1 {
+                Text("\(foundCount) 台")
+                    .font(.caption2.weight(.semibold).monospacedDigit())
+            }
             if state.isBusy {
                 ProgressView().controlSize(.mini)
             }
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.semibold))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 7)

@@ -114,6 +114,11 @@ public enum ChronoEvent: Sendable {
     case powerOff
     case raw(characteristic: UUID, data: Data)
     case connectionState(ConnectionState)
+    /// スキャンで見つかっている機器の一覧が**変わった**。
+    ///
+    /// 同じ機器の広告は 1 秒に何本も届くので、`DiscoveryList.upsert` が
+    /// 「中身が変わった」と答えたときだけ流す。
+    case discovered(DiscoveryList)
 }
 
 /// 生バイト列を `ChronoEvent` へ変換する差し替え可能なデコーダ。
