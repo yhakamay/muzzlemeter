@@ -1,28 +1,32 @@
 import Foundation
 
-/// 弾速計 1 台との付き合いをまとめた actor。
+/// The actor that manages the relationship with one chronograph.
 ///
-/// 責務:
-/// - スキャン → 接続 → 購読 の状態機械
-/// - 受信バイト列を `ChronoPacketDecoder` に通して `ChronoEvent` として配信
-/// - 最後に接続した機器を覚えて **自動再接続**（公式アプリで一番不満が出やすい部分）
+/// Responsibilities:
+/// - The scan -> connect -> subscribe state machine
+/// - Running received bytes through `ChronoPacketDecoder` and delivering them as
+///   `ChronoEvent`
+/// - Remembering the last-connected device and **auto-reconnecting** (the part users
+///   complain about most with the official app)
 ///
-/// トランスポート（BLE / リプレイ）とデコーダ（プロトコル）の両方を差し替え可能に
-/// してあるので、プロトコル未確定の今でもアプリ側を完成させられる。
+/// Both the transport (BLE / replay) and the decoder (protocol) are swappable, so the
+/// app side can be finished even before the protocol is fully confirmed.
 public actor ChronoDevice {
-    /// 鍵ハンドシェイク（`0x4B`）の詰め方。`docs/PROTOCOL.md` §4。
+    /// How the key handshake (`0x4B`) is paced. `docs/PROTOCOL.md` §4.
     public struct HandshakeOptions: Sendable {
-        /// CCCD 有効化から最初の書き込みまでの待ち。AceSoft は 564 ms 待っていた。
+        /// The wait from CCCD enable to the first write. AceSoft waited 564 ms.
         public var initialDelay: TimeInterval
-        /// ACK を待つ時間。実測の応答は 55–63 ms なので 3 秒あれば十分。
+        /// How long to wait for the ACK. Measured responses take 55-63 ms, so 3 seconds
+        /// is plenty.
         public var ackTimeout: TimeInterval
-        /// タイムアウト時の再送回数。
+        /// How many times to retry on timeout.
         public var retryCount: Int
-        /// 続けてコマンドを送るときの間隔。AceSoft は 300–360 ms 間隔だった。
+        /// The gap between consecutive commands. AceSoft used a 300-360 ms interval.
         public var commandGap: TimeInterval
-        /// ハンドシェイク後に現在の弾を読むか（best-effort）。
+        /// Whether to read the current BB after the handshake (best-effort).
         public var readsCurrentAmmo: Bool
-        /// ハンドシェイク後にバッテリーを読むか（**未検証コマンド**。best-effort）。
+        /// Whether to read the battery after the handshake (**unverified command**;
+        /// best-effort).
         public var readsBattery: Bool
 
         public init(
@@ -43,23 +47,26 @@ public actor ChronoDevice {
     }
 
     public struct Configuration: Sendable {
-        /// スキャン時に絞り込むサービス UUID。AC6000 はサービスを広告しないので `nil`。
+        /// The service UUIDs to filter on while scanning. `nil` since the AC6000 doesn't
+        /// advertise a service.
         public var serviceUUIDs: [UUID]?
-        /// 機器名の部分一致フィルタ。AC6000 は `AC6000BT-xxxxxx`。
+        /// A partial match filter on the device name. The AC6000 is `AC6000BT-xxxxxx`.
         public var nameFilter: String?
-        /// 接続後に購読する characteristic。
+        /// The characteristics subscribed to after connecting.
         public var notifyCharacteristics: [UUID]
-        /// コマンドの書き込み先。`nil` ならハンドシェイクを行わない。
+        /// The characteristic commands are written to. `nil` means no handshake is
+        /// performed.
         public var writeCharacteristic: UUID?
-        /// 購読完了後に送る任意の初期化コマンド（ハンドシェイクより前に送られる）。
+        /// Optional initialization commands sent once subscription completes (sent
+        /// before the handshake).
         public var initialWrites: [(characteristic: UUID, data: Data, withResponse: Bool)]
-        /// 鍵ハンドシェイクの設定。`nil` で無効（テスト・デモ用）。
+        /// The key handshake settings. `nil` disables it (for tests / demos).
         public var handshake: HandshakeOptions?
         public var autoReconnect: Bool
-        /// 再接続バックオフの初期値と上限。
+        /// The initial value and cap for reconnect backoff.
         public var reconnectBaseDelay: TimeInterval
         public var reconnectMaxDelay: TimeInterval
-        /// 再接続の最大試行回数。`nil` で無制限。
+        /// The maximum number of reconnect attempts. `nil` for unlimited.
         public var maxReconnectAttempts: Int?
 
         public init(
@@ -86,13 +93,14 @@ public actor ChronoDevice {
             self.maxReconnectAttempts = maxReconnectAttempts
         }
 
-        /// AC6000 MKIII BT の実機設定（`docs/PROTOCOL.md` §12 のチェックリストどおり）。
+        /// The real-hardware configuration for the AC6000 MKIII BT (matches the checklist
+        /// in `docs/PROTOCOL.md` §12).
         public static func ac6000(
             autoReconnect: Bool = true,
             handshake: HandshakeOptions? = HandshakeOptions()
         ) -> Configuration {
             Configuration(
-                serviceUUIDs: nil,                       // サービスは広告されない
+                serviceUUIDs: nil,                       // No service is advertised
                 nameFilter: ChronoUUIDs.primaryNamePrefix,
                 notifyCharacteristics: [ChronoUUIDs.notifyCharacteristic],
                 writeCharacteristic: ChronoUUIDs.writeCharacteristic,
@@ -102,14 +110,15 @@ public actor ChronoDevice {
         }
     }
 
-    /// 「最後に繋いだ機器」を覚えるためのキー。
+    /// The key used to remember "the last connected device."
     public static let lastPeripheralKey = "muzzlemeter.lastPeripheralIdentifier"
 
-    /// 機器ごとのチェックサム鍵を覚えるためのキー。
+    /// The key used to remember each device's own checksum key.
     ///
-    /// 鍵は広告の manufacturer data から取れるのが基本だが、広告を取り逃した状態で
-    /// 再接続する経路（`retrievePeripherals` 直結）では広告が手に入らない。
-    /// そのため一度成立した鍵は peripheral ごとに永続化する。
+    /// The key normally comes from the advertisement's manufacturer data, but on the
+    /// reconnect path that skips advertisements (going straight through
+    /// `retrievePeripherals`), there's no advertisement to read it from. Because of that,
+    /// once a key is established it's persisted per peripheral.
     public static func keysKey(for peripheral: UUID) -> String {
         "muzzlemeter.deviceKeys.\(peripheral.uuidString)"
     }
@@ -126,13 +135,16 @@ public actor ChronoDevice {
         }
     }
 
-    /// 直近に見つかった機器（未接続時にユーザーへ選択させるため）。
+    /// The most recently discovered devices (so the user can choose one before
+    /// connecting).
     ///
-    /// 変わったときだけ `ChronoEvent.discovered` として配信する。UI はこの一覧を
-    /// そのまま出せばよく、並べ替え（前回接続 → 電波の強い順）は `DiscoveryList` が決める。
+    /// Delivered as `ChronoEvent.discovered` only when it changes. The UI can display
+    /// this list as-is; the ordering (last-connected first, then by signal strength) is
+    /// decided by `DiscoveryList`.
     public private(set) var discovery = DiscoveryList()
 
-    /// 見つかった機器の配列。`discovery.peripherals` の別名（既存の呼び出し向け）。
+    /// The array of discovered devices. An alias for `discovery.peripherals` (for
+    /// existing call sites).
     public var discovered: [DiscoveredPeripheral] { discovery.peripherals }
     public private(set) var connectedPeripheral: UUID?
 
@@ -140,23 +152,27 @@ public actor ChronoDevice {
     private nonisolated let continuation: AsyncStream<ChronoEvent>.Continuation
 
     private var pumpTask: Task<Void, Never>?
-    /// 購読〜ハンドシェイクを走らせるタスク（イベントポンプとは別に動く）。
+    /// The task that runs subscribe-through-handshake (runs separately from the event
+    /// pump).
     private var setupTask: Task<Void, Never>?
     private var reconnectTask: Task<Void, Never>?
     private var reconnectAttempt = 0
-    /// ユーザーが明示的に切ったのか、勝手に切れたのかを区別する（前者では再接続しない）。
+    /// Distinguishes whether the user explicitly disconnected, or it dropped on its own
+    /// (no reconnect in the former case).
     private var stoppedIntentionally = false
 
-    /// 現在のチェックサム鍵。広告 → 永続化値 → 0/0 の順に解決する。
+    /// The current checksum key. Resolved in order: advertisement -> persisted value ->
+    /// 0/0.
     public private(set) var keys: DeviceKeys = .zero
-    /// ACK 待ち。`handle(_:)` 側から解決される。
+    /// The pending ACK wait. Resolved from the `handle(_:)` side.
     private var handshakeContinuation: CheckedContinuation<Bool, Never>?
     private var handshakeTimeoutTask: Task<Void, Never>?
-    /// この接続で `ACK(0x4B)` を見たか。
+    /// Whether `ACK(0x4B)` has been seen for this connection.
     ///
-    /// ACK が「待ち始める前」に届くことがある（記録済みフレームを一気に流すリプレイ、
-    /// あるいは実機で書き込み完了より先に通知が処理された場合）。取りこぼすと
-    /// ハンドシェイクが無意味にタイムアウトするので、接続ごとにフラグで覚えておく。
+    /// The ACK can arrive **before waiting for it starts** (e.g. a replay that plays back
+    /// recorded frames all at once, or on real hardware if the notification is processed
+    /// before the write completes). Missing it would make the handshake time out for no
+    /// reason, so it's remembered in a flag for each connection.
     private var sawReadKeyAck = false
 
     public init(
@@ -174,7 +190,7 @@ public actor ChronoDevice {
         self.continuation = continuation
     }
 
-    /// 覚えている「最後に接続した機器」。
+    /// The remembered "last connected device."
     public var rememberedPeripheral: UUID? {
         store.uuid(forKey: Self.lastPeripheralKey)
     }
@@ -189,10 +205,11 @@ public actor ChronoDevice {
         }
     }
 
-    /// 覚えている機器を忘れる。以降のスキャンでは最初に見つかった機器に繋ぐ。
+    /// Forgets the remembered device. Future scans connect to whichever device is found
+    /// first instead.
     ///
-    /// 永続化した鍵も一緒に捨てる。機器を忘れたのに鍵だけ残っていると、別個体に
-    /// 誤った鍵でハンドシェイクを試みることになるため。
+    /// Also discards the persisted key. If the device were forgotten but the key kept
+    /// around, a handshake could be attempted against a different unit with the wrong key.
     public func forgetDevice() {
         if let remembered = rememberedPeripheral {
             store.set(nil as String?, forKey: Self.keysKey(for: remembered))
@@ -204,16 +221,16 @@ public actor ChronoDevice {
         keys = .zero
     }
 
-    // MARK: - ライフサイクル
+    // MARK: - Lifecycle
 
-    /// トランスポートのイベント購読を始め、スキャンを開始する。
+    /// Starts subscribing to transport events and begins scanning.
     public func start() async {
         stoppedIntentionally = false
         await startPumpIfNeeded()
         await beginScan()
     }
 
-    /// 切断し、再接続もしない。イベントストリームは生きたまま。
+    /// Disconnects and doesn't reconnect. The event stream stays alive.
     public func stop() async {
         stoppedIntentionally = true
         completeHandshake(false)
@@ -227,7 +244,7 @@ public actor ChronoDevice {
         state = .idle
     }
 
-    /// 完全に終了する。イベントストリームも閉じる。
+    /// Shuts down completely. Also closes the event stream.
     public func shutdown() async {
         stoppedIntentionally = true
         completeHandshake(false)
@@ -242,7 +259,7 @@ public actor ChronoDevice {
         continuation.finish()
     }
 
-    /// 特定の機器に繋ぐ（ユーザーがリストから選んだ場合）。
+    /// Connects to a specific device (when the user picked one from the list).
     public func connect(to peripheral: UUID) async {
         stoppedIntentionally = false
         await startPumpIfNeeded()
@@ -283,13 +300,14 @@ public actor ChronoDevice {
         }
     }
 
-    // MARK: - トランスポートイベント
+    // MARK: - Transport events
 
     private func handle(_ event: TransportEvent) async {
         switch event {
         case .discovered(let peripheral):
-            // RSSI は広告ごとに動くので、**同じ機器でも上書きして最新にする**。
-            // 変わっていなければイベントを流さない（毎秒 UI を作り直さないため）。
+            // RSSI moves with every advertisement, so **overwrite even for the same
+            // device to keep it current**. No event is delivered if nothing changed
+            // (so the UI isn't rebuilt every second).
             discovery.rememberedID = rememberedPeripheral
             if discovery.upsert(peripheral) {
                 continuation.yield(.discovered(discovery))
@@ -302,10 +320,11 @@ public actor ChronoDevice {
             sawReadKeyAck = false
             store.set(peripheral, forKey: Self.lastPeripheralKey)
             await transport.stopScan()
-            // **別タスクで走らせる。**
-            // ハンドシェイクは ACK（= 受信イベント）を待つが、この `handle(_:)` は
-            // イベントポンプの中から呼ばれている。ここで待つとポンプが止まり、
-            // 待っている当の ACK が永遠に届かない（デッドロック）。
+            // **Run this in a separate task.**
+            // The handshake waits for an ACK (i.e. a received event), but this
+            // `handle(_:)` is itself being called from inside the event pump. Waiting
+            // here would stall the pump, and the very ACK being waited for would never
+            // arrive (deadlock).
             setupTask?.cancel()
             setupTask = Task { [weak self] in
                 await self?.subscribeAndInitialize()
@@ -313,10 +332,10 @@ public actor ChronoDevice {
 
         case .disconnected(_, let reason):
             connectedPeripheral = nil
-            // 切断をまたいで半端なフレームが残らないようにする。
+            // Make sure no half-built frame survives across the disconnect.
             (decoder as? MuzzlemeterDecoder)?.reset()
             completeHandshake(false)
-            // 応答を待っている読み出しがあれば起こす（待ちっぱなしにしない）。
+            // Wake up any readout that's waiting on a response (don't leave it hanging).
             abortLogRead()
             state = .disconnected(reason: reason)
             scheduleReconnectIfNeeded()
@@ -339,7 +358,8 @@ public actor ChronoDevice {
 
     private func autoConnectIfAppropriate(to peripheral: DiscoveredPeripheral) async {
         guard state == .scanning else { return }
-        // 覚えている機器があればそれだけに繋ぐ。無ければ最初に見つかった機器。
+        // If a device is remembered, only connect to that one. Otherwise, whichever is
+        // found first.
         if let remembered = rememberedPeripheral, remembered != peripheral.id { return }
         state = .connecting
         do {
@@ -362,9 +382,10 @@ public actor ChronoDevice {
                     withResponse: write.withResponse
                 )
             }
-            // ここでリプレイの再生が始まる（実 BLE では何もしない）。
-            // **ハンドシェイクを待つ前に呼ぶ**のが重要で、記録済みフレームを流すだけの
-            // トランスポートでも ACK が届き、実機と同じ経路でハンドシェイクが成立する。
+            // Replay playback starts here (a no-op for real BLE).
+            // **Calling this before waiting for the handshake matters** — even a
+            // transport that just plays back recorded frames delivers an ACK this way,
+            // so the handshake completes through the same path as on real hardware.
             await transport.finishSetup()
 
             if let options = configuration.handshake, let writeCharacteristic = configuration.writeCharacteristic {
@@ -386,20 +407,24 @@ public actor ChronoDevice {
         }
     }
 
-    // MARK: - 鍵ハンドシェイク（0x4B）
+    // MARK: - Key handshake (0x4B)
 
-    /// 鍵を決めて `0x4B` を送り、`ACK(0x4B)` を待つ。
+    /// Resolves the key, sends `0x4B`, and waits for `ACK(0x4B)`.
     ///
-    /// 鍵の解決順:
-    /// 1. **広告の manufacturer data**（`00 05 08 <k1> <k2> …`）— 実機で成立を確認済み。
-    ///    ボタン押下は不要で、55 ms ほどで ACK が返る。
-    /// 2. 以前このペリフェラルで成立した鍵（`KeyValueStore`）— 広告を取り逃した再接続用。
-    /// 3. `0/0` — 初回ペアリング。本体の電源ボタン押下が要り、`0x4B` 応答で鍵が返ってくる
-    ///    （**未検証**）。この間 `.pairing` 状態のままにしてユーザーに操作を促す。
+    /// Key resolution order:
+    /// 1. **The advertisement's manufacturer data** (`00 05 08 <k1> <k2> ...`) — confirmed
+    ///    to work on real hardware. No button press needed; the ACK returns in about
+    ///    55 ms.
+    /// 2. A key previously established for this peripheral (`KeyValueStore`) — for
+    ///    reconnects that skipped the advertisement.
+    /// 3. `0/0` — first-time pairing. Requires pressing the device's power button, after
+    ///    which the key is said to come back in the `0x4B` response (**unverified**).
+    ///    Stays in the `.pairing` state throughout, prompting the user to act.
     private func performHandshake(options: HandshakeOptions, writeCharacteristic: UUID) async -> Bool {
         applyKeys(resolveKeys())
 
-        // CCCD 有効化直後は本体が受け付けないことがあるので少し待つ（AceSoft は 564 ms）。
+        // The device may not accept writes right after CCCD is enabled, so wait a bit
+        // (AceSoft waited 564 ms).
         await sleep(options.initialDelay)
 
         for attempt in 0...max(0, options.retryCount) {
@@ -419,14 +444,15 @@ public actor ChronoDevice {
         return false
     }
 
-    /// ハンドシェイク後の best-effort な読み出し。失敗しても `.ready` を妨げない。
+    /// Best-effort reads after the handshake. A failure here doesn't block reaching
+    /// `.ready`.
     private func runPostHandshakeQueries(options: HandshakeOptions, writeCharacteristic: UUID) async {
         var requests = [ChronoRequest]()
         if options.readsCurrentAmmo { requests.append(.readCurrentAmmo) }
         if options.readsBattery { requests.append(.readBattery) }
         for request in requests {
             await sleep(options.commandGap)
-            // 応答が無くても構わない（バッテリーは未検証コマンド）。
+            // It's fine if there's no response (battery is an unverified command).
             try? await transport.write(
                 request.encoded(keys: keys),
                 to: writeCharacteristic,
@@ -435,10 +461,11 @@ public actor ChronoDevice {
         }
     }
 
-    /// 受信イベントからハンドシェイクの成立を拾う。
+    /// Picks up handshake completion from received events.
     ///
-    /// **予期しないフレームをエラーにしない**のが要点。本体は要求していない `0x47` / `0x5A` を
-    /// 自発的に送ってくるので、ACK 待ちの最中に別のフレームが挟まっても無視して待ち続ける。
+    /// The key point: **an unexpected frame is never treated as an error.** The device
+    /// sends `0x47` / `0x5A` spontaneously without being asked, so if one of those shows
+    /// up while waiting for the ACK, it's ignored and the wait continues.
     private func observeForHandshake(_ event: ChronoEvent) {
         switch event {
         case .ack(let command) where command == ChronoCommand.readKey.rawValue:
@@ -446,7 +473,8 @@ public actor ChronoDevice {
             completeHandshake(true)
 
         case .raw(_, let data):
-            // 鍵未知のときの応答: `<aa> <L> 4b <k1> <k2> …`（data[3], data[4] が鍵）。
+            // The response when the key is unknown: `<aa> <L> 4b <k1> <k2> ...` (the key
+            // is in data[3], data[4]).
             let bytes = [UInt8](data)
             guard bytes.count >= 5, bytes[0] == ChronoFrame.header,
                   bytes[2] == ChronoCommand.readKey.rawValue
@@ -458,8 +486,9 @@ public actor ChronoDevice {
             completeHandshake(true)
 
         case .powerOff:
-            // 本体の電源 OFF。約 0.76 秒後にリンクが落ちる（`docs/PROTOCOL.md` §5.1）。
-            // エラーではないので再接続はトランスポートの切断イベントに任せる。
+            // The device powered off. The link drops about 0.76 s later
+            // (`docs/PROTOCOL.md` §5.1). Not an error, so reconnecting is left to the
+            // transport's own disconnect event.
             completeHandshake(false)
             state = .disconnected(reason: "本体の電源が切れました")
 
@@ -469,7 +498,7 @@ public actor ChronoDevice {
     }
 
     private func waitForHandshakeAck(timeout: TimeInterval) async -> Bool {
-        // 待ち始める前に届いていた ACK を取りこぼさない。
+        // Don't miss an ACK that arrived before the wait started.
         if sawReadKeyAck { return true }
         return await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
             handshakeContinuation = continuation
@@ -517,30 +546,34 @@ public actor ChronoDevice {
         try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
     }
 
-    // MARK: - 本体内ログの読み出し（0x62 / 0x63）
+    // MARK: - Reading the device's internal log (0x62 / 0x63)
     //
-    // ⚠️ **`0x61`（CLEAR_LOG）は送らない。** ビルダも用意していない（`ChronoRequest`）。
-    //    読み出しが確定するまで消してはいけないし、確定しても消す機能は要らない。
+    // Warning: **never send `0x61` (CLEAR_LOG).** No builder is provided for it either
+    //    (`ChronoRequest`). It must not be sent until the readout is fully confirmed,
+    //    and even once it is, an erase feature isn't needed.
 
-    /// ログ読み出し中に他の読み出しを走らせない（要求と応答の対応が崩れるため）。
+    /// Never run another readout while a log readout is in progress (it would break the
+    /// request/response pairing).
     private var isReadingLog = false
     private var logCountContinuation: CheckedContinuation<Int?, Never>?
     private var logCountTimeoutTask: Task<Void, Never>?
     private var logRecordContinuation: CheckedContinuation<DeviceLogRecordResponse?, Never>?
     private var logRecordTimeoutTask: Task<Void, Never>?
 
-    /// `0x63` の応答 1 件（応答に載っていた index・生 payload・読めたときの 1 発）。
+    /// One `0x63` response (the index and raw payload it carried, plus the shot it
+    /// parsed into if any).
     private struct DeviceLogRecordResponse: Sendable {
         let index: Int
         let payload: [UInt8]
         let shot: Shot?
-        /// 全ゼロレコード（ログの終端。§6.6）。
+        /// An all-zero record (end of log; §6.6).
         let isEmpty: Bool
     }
 
-    /// 本体内のログ件数を読む（`0x62`）。応答が無ければ `nil`。
+    /// Reads the device's internal log record count (`0x62`). `nil` if there's no
+    /// response.
     ///
-    /// **best-effort。** 失敗しても接続にも計測にも影響させない。
+    /// **Best-effort.** A failure here doesn't affect the connection or measurement.
     public func readLogCount(timeout: TimeInterval = 3.0) async -> Int? {
         guard state.isReady, let writeCharacteristic = configuration.writeCharacteristic else {
             return nil
@@ -551,16 +584,21 @@ public actor ChronoDevice {
         return await requestLogCount(timeout: timeout, writeCharacteristic: writeCharacteristic)
     }
 
-    /// 件数を読んでから 1 件ずつレコードを読む。
+    /// Reads the count, then reads records one at a time.
     ///
-    /// 方針（**実機確定**の `docs/PROTOCOL.md` §6.6 に基づく）:
-    /// * **1 件ずつ、応答を待ってから次を送る。** 応答には index が載っているので
-    ///   本来は並列化できるが、実測の初期化シーケンスに合わせて 1 本ずつ ~300 ms 間隔を守る。
-    /// * `options.startIndex`（既定 1）から `count` まで読む。ログは volatile なので、
-    ///   前回の続きだけを読みたいときは呼び出し側が `startIndex` を進めて渡す。
-    /// * 応答が解釈できない（未知のファームウェア差異）レコードが出たらそこで止める。
-    ///   全ゼロのレコード（§6.6 の「ログの終端」シグネチャ）は**エラーではなく正常終了**。
-    /// * 進捗は `progress` で逐次知らせる（UI を止めないため）。
+    /// The policy (based on the **confirmed-on-real-hardware** behavior in
+    /// `docs/PROTOCOL.md` §6.6):
+    /// * **One at a time, waiting for the response before sending the next.** The
+    ///   response carries the index, so this could in principle be parallelized, but the
+    ///   measured initialization sequence is followed instead: one request every
+    ///   ~300 ms.
+    /// * Reads from `options.startIndex` (default 1) through `count`. Since the log is
+    ///   volatile, when the caller only wants to continue from last time, it advances
+    ///   `startIndex` and passes that in.
+    /// * Stops as soon as a record can't be parsed (unknown firmware variance). An
+    ///   all-zero record (the "end of log" signature from §6.6) is **not an error — it's
+    ///   a normal completion**.
+    /// * Progress is reported incrementally via `progress` (so the UI isn't blocked).
     public func readDeviceLog(
         options: DeviceLogReadOptions = DeviceLogReadOptions(),
         progress: (@Sendable (DeviceLogProgress) -> Void)? = nil
@@ -589,11 +627,11 @@ public actor ChronoDevice {
         ) else {
             return DeviceLogReadResult(reportedCount: 0, records: [], outcome: .timedOut(index: nil))
         }
-        // index は 1 byte（1 始まり）なので 255 が上限。
+        // The index is 1 byte (1-based), so 255 is the ceiling.
         let lastIndex = min(count, 255)
         let firstIndex = min(options.startIndex, lastIndex + 1)
         guard firstIndex <= lastIndex else {
-            // 追加分なし（既に読んだところまでしか無い）。
+            // Nothing new to add (already read up to this point).
             return DeviceLogReadResult(reportedCount: count, records: [], outcome: .completed)
         }
         let cappedLastIndex = min(lastIndex, firstIndex + max(0, options.maximumRecords) - 1)
@@ -619,11 +657,13 @@ public actor ChronoDevice {
                 )
             }
             guard !response.isEmpty else {
-                // 全ゼロ = ログの終端。エラーではない（§6.6）。ここまでの分で正常終了とする。
+                // All-zero = end of log. Not an error (§6.6). Treated as a normal
+                // completion for what's been read so far.
                 return DeviceLogReadResult(reportedCount: count, records: records, outcome: .completed)
             }
             guard let shot = response.shot else {
-                // 実機では通常起きないはずの防御的フォールバック（未知のファームウェア差異）。
+                // A defensive fallback that shouldn't normally happen on real hardware
+                // (unknown firmware variance).
                 records.append(DeviceLogRecord(index: response.index, payload: response.payload, shot: nil))
                 return DeviceLogReadResult(
                     reportedCount: count, records: records, outcome: .unsupportedFormat(index: index)
@@ -670,16 +710,19 @@ public actor ChronoDevice {
         }
     }
 
-    /// `.logRecordRaw` から `.logRecord` / `.logRecordEmpty` までの間だけ持つ一時置き場。
-    /// デコーダは同じ `0x63` 応答に対してこの 2 つを**同じ decode 呼び出しの中で**
-    /// 順番に返すので、ここでの一時保持に競合は起きない（`ChronoDevice` はアクターで、
-    /// `decoder.decode` の結果を 1 件ずつ同期的に処理してから次のイベントへ進む）。
+    /// A temporary holding spot, held only between `.logRecordRaw` and
+    /// `.logRecord` / `.logRecordEmpty`. The decoder returns these two for the same
+    /// `0x63` response in order, **within the same `decode` call**, so there's no race
+    /// on this temporary storage (`ChronoDevice` is an actor and processes each result
+    /// from `decoder.decode` synchronously, one at a time, before moving to the next
+    /// event).
     private var pendingLogRecordPayload: [UInt8]?
 
-    /// 受信イベントから読み出しの応答を拾う。
+    /// Picks up readout responses from received events.
     ///
-    /// ハンドシェイクと同じく**予期しないフレームで慌てない**。ログを読んでいる最中でも
-    /// 射撃（`0x52`）や自発通知（`0x47` / `0x5A`）は普通に届くので、関係するものだけ拾う。
+    /// Just like the handshake, **an unexpected frame is never a cause for alarm**. Even
+    /// while a log readout is in progress, shots (`0x52`) and spontaneous notifications
+    /// (`0x47` / `0x5A`) still arrive as normal — only the relevant ones are picked up.
     private func observeForLogRead(_ event: ChronoEvent) {
         switch event {
         case .logCount(let count):
@@ -699,9 +742,11 @@ public actor ChronoDevice {
                 DeviceLogRecordResponse(index: index, payload: payload, shot: nil, isEmpty: true)
             )
         case .raw(_, let data):
-            // 待っている最中に来た `0x63` 応答が、デコーダの `DeviceLogWireRecord` として
-            // 読める最小長（5 バイト）に届かなかった場合（未知のファームウェア差異への保険）。
-            // フレーム自体（header/長さ/チェックサム）は正しいので `.raw` として届く。
+            // A `0x63` response that arrived while waiting, but fell short of the
+            // minimum length (5 bytes) the decoder needs to parse it as a
+            // `DeviceLogWireRecord` (a hedge against unknown firmware variance). The
+            // frame itself (header/length/checksum) is valid, so it still arrives as
+            // `.raw`.
             guard logRecordContinuation != nil else { break }
             let bytes = [UInt8](data)
             guard bytes.count >= 4, bytes[0] == ChronoFrame.header,
@@ -740,7 +785,7 @@ public actor ChronoDevice {
         completeLogRecord(nil)
     }
 
-    // MARK: - 自動再接続
+    // MARK: - Auto-reconnect
 
     private func scheduleReconnectIfNeeded() {
         guard configuration.autoReconnect, !stoppedIntentionally else { return }
@@ -749,7 +794,7 @@ public actor ChronoDevice {
 
         let attempt = reconnectAttempt
         reconnectAttempt += 1
-        // 指数バックオフ: base * 2^attempt（上限あり）。
+        // Exponential backoff: base * 2^attempt (capped).
         let delay = min(
             configuration.reconnectMaxDelay,
             configuration.reconnectBaseDelay * pow(2.0, Double(attempt))
@@ -770,7 +815,7 @@ public actor ChronoDevice {
                 try await transport.connect(to: remembered)
                 return
             } catch {
-                // 直接接続に失敗したらスキャンからやり直す。
+                // If direct connection fails, start over from scanning.
             }
         }
         await beginScan()

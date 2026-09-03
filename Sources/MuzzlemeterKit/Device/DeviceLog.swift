@@ -1,16 +1,17 @@
 import Foundation
 
-/// 本体内ログ 1 件。
+/// One record from the device's internal log.
 ///
-/// **実機確定の形式**（`docs/PROTOCOL.md` §6.6）だが、生 payload も必ず持ち歩く。
-/// `shot` が `nil` のレコードは応答が解釈できなかったことを意味し、上位はそこで
-/// 読み出しを止めて生データを保存する（未知のファームウェア差異への保険）。
+/// The format is **confirmed on real hardware** (`docs/PROTOCOL.md` §6.6), but the raw
+/// payload is always carried alongside it too. A record whose `shot` is `nil` means the
+/// response couldn't be interpreted, and the caller stops reading there and saves the
+/// raw data (a hedge against unknown firmware variance).
 public struct DeviceLogRecord: Sendable, Hashable {
-    /// 応答が載せていた index（1 始まり）。
+    /// The index carried in the response (1-based).
     public let index: Int
-    /// `0x63` フレームの payload（cmd の次から checksum の手前まで）。
+    /// The `0x63` frame's payload (from right after cmd up to just before the checksum).
     public let payload: [UInt8]
-    /// 読めた 1 発（速度が乗っていたレコード）。**実機確定**。
+    /// The shot this parsed into, if it carried a speed. **Confirmed on real hardware.**
     public let shot: Shot?
 
     public init(index: Int, payload: [UInt8], shot: Shot?) {
@@ -21,36 +22,41 @@ public struct DeviceLogRecord: Sendable, Hashable {
 
     public var isParsed: Bool { shot != nil }
 
-    /// デバッグ用の 1 行。`<index> <payload hex>`。
+    /// A one-line debug form: `<index> <payload hex>`.
     ///
-    /// ユーザーがそのまま貼って送り返せる形にしておく。**これが唯一の
-    /// 「実物の 0x63 応答」を手に入れる経路**なので、解釈に失敗しても必ず残す。
+    /// Kept in a form the user can paste and send back as-is. **This is the only path to
+    /// getting an actual "real `0x63` response"**, so it's always kept even when parsing
+    /// fails.
     public var hexLine: String {
         let hex = payload.map { String(format: "%02x", $0) }.joined(separator: " ")
         return "\(index) \(hex)"
     }
 }
 
-/// 読み出しがどこで終わったか。
+/// Where a readout ended.
 public enum DeviceLogOutcome: Sendable, Hashable {
-    /// 要求した範囲を最後まで読めた（0 件だった場合、および全ゼロレコードで
-    /// ログの終端に達した場合を含む。§6.6 の「全ゼロ＝終端」はエラーではない）。
+    /// Read through the whole requested range (including the case of 0 records, and the
+    /// case of reaching the end of the log via an all-zero record — §6.6's "all-zero
+    /// means end" isn't an error).
     case completed
-    /// このレコードが `0x63` の応答として読めなかったので**そこで止めた**。
-    /// 生データを保存してユーザーに送り返してもらう。実機確定後は通常起きないはずだが、
-    /// 未知のファームウェア差異に対する保険として残してある。
+    /// This record couldn't be parsed as a `0x63` response, so reading **stopped right
+    /// there**. The raw data is saved so the user can send it back. Shouldn't normally
+    /// happen once the format is confirmed on real hardware, but kept as a hedge against
+    /// unknown firmware variance.
     case unsupportedFormat(index: Int)
-    /// 応答が来なかった。`index` が `nil` なら件数（`0x62`）の段階で来なかった。
+    /// No response arrived. If `index` is `nil`, it didn't even arrive at the count
+    /// (`0x62`) stage.
     case timedOut(index: Int?)
-    /// 読み出しを始められなかった（未接続 / 書き込み先が無い / 既に読み出し中）。
+    /// The readout couldn't be started (not connected / no write target / already
+    /// reading).
     case unavailable(String)
 }
 
-/// 本体内ログの読み出し結果。
+/// The result of reading the device's internal log.
 public struct DeviceLogReadResult: Sendable, Hashable {
-    /// `0x62` が答えた件数。読めなかったときは 0。
+    /// The count `0x62` reported. 0 if it couldn't be read.
     public let reportedCount: Int
-    /// 受け取れたレコード（先頭から順。読めなかった 1 件も末尾に含む）。
+    /// The records received (in order; includes an unparseable one at the end too).
     public let records: [DeviceLogRecord]
     public let outcome: DeviceLogOutcome
 
@@ -60,35 +66,38 @@ public struct DeviceLogReadResult: Sendable, Hashable {
         self.outcome = outcome
     }
 
-    /// 1 発として読めたぶん。**セッションに保存してよいのはこれだけ。**
+    /// The ones that parsed as a shot. **Only these may be saved into a session.**
     public var shots: [Shot] { records.compactMap(\.shot) }
 
     public var isComplete: Bool { outcome == .completed }
 
-    /// 何も受け取れなかったか（保存するものが無い）。
+    /// Whether nothing was received at all (nothing to save).
     public var isEmpty: Bool { shots.isEmpty }
 
-    /// 実際に読めた末尾の index。ボラタイルなログを差分で読むとき、
-    /// 「どこまで取り込んだか」の印を進めるのに使う（`nil` なら 1 件も読めなかった）。
+    /// The last index actually read. Used to advance the "how far has been imported"
+    /// marker when reading a volatile log incrementally (`nil` if nothing was read).
     public var lastReadIndex: Int? { records.last?.index }
 }
 
-/// 本体内ログ読み出しの詰め方。
+/// How device-log reads are paced.
 ///
-/// 実測の初期化シーケンス（`docs/PROTOCOL.md` §4.2）に合わせて
-/// **1 本ずつ・応答を待って ~300 ms 間隔**で送る。まとめて投げない。
+/// Matches the initialization sequence observed in measurements
+/// (`docs/PROTOCOL.md` §4.2): sent **one at a time, waiting for the response, about
+/// 300 ms apart**. Never sent in a batch.
 public struct DeviceLogReadOptions: Sendable, Hashable {
-    /// 1 件あたりの応答待ち。実測の応答は 45–63 ms なので 3 秒あれば十分。
+    /// The wait for each response. Measured responses take 45-63 ms, so 3 seconds is
+    /// plenty.
     public var responseTimeout: TimeInterval
-    /// 次のコマンドまでの間隔。
+    /// The gap before the next command.
     public var commandGap: TimeInterval
-    /// 安全弁。本体が壊れた件数を返しても、この数で打ち切る。
+    /// A safety valve: even if the device reports a broken count, stop at this many.
     public var maximumRecords: Int
-    /// 読み出しを始める 1 始まりの index。
+    /// The 1-based index to start reading from.
     ///
-    /// 本体内ログは **volatile**（電源を切ると 0 件に戻る）。同じ電源サイクルの間に
-    /// 既に取り込んだぶんを読み直さないよう、呼び出し側（`ChronoService`）が
-    /// 「前回どこまで読んだか」を覚えておいて、その続きから渡す。既定は 1（先頭から全部）。
+    /// The device's internal log is **volatile** (resets to 0 records on power-off). To
+    /// avoid re-reading records already imported during the same power cycle, the caller
+    /// (`ChronoService`) remembers "how far it read last time" and passes in where to
+    /// continue from. Defaults to 1 (read everything from the start).
     public var startIndex: Int
 
     public init(
@@ -104,7 +113,7 @@ public struct DeviceLogReadOptions: Sendable, Hashable {
     }
 }
 
-/// 読み出しの進み具合（`done / total`）。
+/// How far a readout has progressed (`done / total`).
 public struct DeviceLogProgress: Sendable, Hashable {
     public let done: Int
     public let total: Int

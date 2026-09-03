@@ -1,10 +1,10 @@
 import Foundation
 
-/// 弾速計との接続状態。
+/// The connection state with the chronograph.
 ///
-/// 本体は接続直後に鍵ハンドシェイク（`docs/PROTOCOL.md` §4.3）を要求するため、
-/// `pairing` はその段階を表現するために用意してある。
-/// 実際の遷移はハンドシェイクを実装した時点で使い始める。
+/// The device requires a key handshake right after connecting (`docs/PROTOCOL.md` §4.3),
+/// so `pairing` is provided to represent that stage. The actual transition into it
+/// starts being used once the handshake is implemented.
 public enum ConnectionState: Sendable, Equatable {
     case idle
     case scanning
@@ -15,7 +15,8 @@ public enum ConnectionState: Sendable, Equatable {
 
     public var isReady: Bool { self == .ready }
 
-    /// 何らかの接続動作中（＝ユーザーに「接続中…」と見せてよい状態）。
+    /// Whether some connection activity is in progress (i.e. it's OK to show the user
+    /// "Connecting...").
     public var isBusy: Bool {
         switch self {
         case .scanning, .connecting, .pairing: true
@@ -24,28 +25,34 @@ public enum ConnectionState: Sendable, Equatable {
     }
 }
 
-/// 本体が持つ「弾」の設定 1 件。
+/// One "BB" setting held by the device.
 ///
-/// `0x5A`（現在選択中の弾）と `0x47`（プリセットスロット）の両方がこの 4 バイトを載せる
-/// （`docs/PROTOCOL.md` §6.4）。
+/// Both `0x5A` (the currently selected BB) and `0x47` (a preset slot) carry these same
+/// 4 bytes (`docs/PROTOCOL.md` §6.4).
 ///
-/// **スケールは推定のまま**なので、`rawDiameter` / `rawWeight` を必ず併せて公開する:
-/// * キャプチャのプリセットは `20 / 25 / 43 / 45 / 88` で、×100 と読むと実在する
-///   6 mm BB 重量（0.20〜0.88 g）に完全一致した。
-/// * しかし実機の自発通知では同じスロット 1 に `0x00c8 = 200` が現れた。×100 なら 2.00 g で
-///   実在しない重量になる（×1000 なら 0.20 g）。**単位系が 2 種類ある可能性がある。**
-///   このため UI は `weightGrams` を鵜呑みにせず、必要なら raw を見て判断すること。
+/// **The scale is still a guess**, so `rawDiameter` / `rawWeight` are always exposed
+/// alongside the converted value:
+/// * The captured presets were `20 / 25 / 43 / 45 / 88`, and reading them as ×100 lines
+///   up exactly with real 6 mm BB weights (0.20-0.88 g).
+/// * But a spontaneous notification on real hardware showed `0x00c8 = 200` for that same
+///   slot 1. At ×100 that's 2.00 g, not a real weight (at ×1000 it's 0.20 g).
+///   **There may be two different unit systems in play.** Because of that, the UI must
+///   not take `weightGrams` at face value, and should fall back to the raw value when it
+///   needs to decide.
 public struct AmmoRecord: Sendable, Hashable, Codable {
-    /// プリセット番号（1 始まり）。
+    /// The preset number (1-based).
     public let slot: Int
-    /// 直径のワイヤ値。mm × 100 と推定（実測は全スロット 600 = 6.00 mm）。
+    /// The diameter's wire value. Presumed to be mm x 100 (measured as 600 = 6.00 mm on
+    /// every slot).
     public let rawDiameter: UInt16
-    /// 重量のワイヤ値。g × 100 と推定（上記の但し書きを参照）。
+    /// The weight's wire value. Presumed to be g x 100 (see the caveat above).
     public let rawWeight: UInt16
-    /// `0x5A`（現在選択中）由来なら `true`、`0x47`（プリセット読み出し）なら `false`。
+    /// `true` if this came from `0x5A` (currently selected), `false` if from `0x47`
+    /// (preset readout).
     public let isCurrent: Bool
-    /// `0x47` の payload[1]。キャプチャでは 0x41、実機の自発通知では 0x40 だった。
-    /// 「読み出し応答 / 自発通知」の区別と推定（**未検証**）。`0x5A` では payload[0]。
+    /// `0x47`'s payload[1]. Was 0x41 in the capture, but 0x40 in a spontaneous
+    /// notification on real hardware. Presumed (**unverified**) to distinguish "read
+    /// response" from "spontaneous notification." For `0x5A` this is payload[0].
     public let marker: UInt8
 
     public init(
@@ -62,29 +69,31 @@ public struct AmmoRecord: Sendable, Hashable, Codable {
         self.marker = marker
     }
 
-    /// `0x47` の payload[1] が取る値のうち、**自発通知**と推定されるもの。
-    /// 実機追試（`docs/PROTOCOL.md` §6.3）で観測。読み出し応答は `0x41`。
+    /// The value `0x47`'s payload[1] takes when presumed to be a **spontaneous
+    /// notification**. Observed during on-device testing (`docs/PROTOCOL.md` §6.3). A
+    /// read response is `0x41`.
     public static let spontaneousMarker: UInt8 = 0x40
 
-    /// 直径（mm）。スケールは**推定**（実測は全スロット 600 = 6.00 mm）。
+    /// Diameter (mm). The scale is **presumed** (measured as 600 = 6.00 mm on every slot).
     public var diameterMm: Double { Double(rawDiameter) / 100.0 }
 
-    /// 重量（g）。**スケールが 1 つに決まっていないので寛容に読む。**
+    /// Weight (g). **Read leniently, since the scale isn't settled to just one value.**
     ///
-    /// キャプチャのプリセットは `20 / 25 / 43 / 45 / 88`（×100 で 0.20〜0.88 g）だったが、
-    /// 実機の自発通知では同じスロット 1 に `200` が来た（×1000 で 0.20 g）。
-    /// 6 mm BB の実在重量は 0.12〜1.0 g 程度で、
+    /// The captured presets were `20 / 25 / 43 / 45 / 88` (0.20-0.88 g at ×100), but a
+    /// spontaneous notification on real hardware showed `200` for that same slot 1
+    /// (0.20 g at ×1000). Real 6 mm BB weights run roughly 0.12-1.0 g, and
     ///
-    /// * ×100 で意味を成す値は 12〜100 の範囲
-    /// * ×1000 で意味を成す値は 120〜1000 の範囲
+    /// * values that make sense at ×100 fall in the range 12-100
+    /// * values that make sense at ×1000 fall in the range 120-1000
     ///
-    /// と重ならない。そこで **100 以上なら ×1000、未満なら ×100** と読む。
-    /// この境目（100 = 1.00 g か 0.10 g か）はどちらも実在しない重量なので、
-    /// 誤読しても実害のある範囲に入らない。
+    /// which don't overlap. So this reads **×1000 if the value is 100 or more, ×100
+    /// otherwise**. The boundary itself (is 100 = 1.00 g or 0.10 g?) isn't a real weight
+    /// either way, so misreading it there doesn't land on a value that matters.
     ///
-    /// 0（未設定）と、読み替えても実在しない重量になる値は `nil` を返す。
-    /// **判断が付かないときに黙って数字を出さない**のが要点で、この値は
-    /// 「本体の設定と食い違っていませんか」という警告の根拠に使われる。
+    /// Returns `nil` for 0 (unset), and for any value that doesn't become a real weight
+    /// under either reading. **Staying silent rather than guessing a number** is the
+    /// point — this value is used as the basis for the "does this not match the device's
+    /// own setting?" warning.
     public var weightGrams: Double? {
         guard rawWeight > 0 else { return nil }
         let grams = rawWeight >= 100
@@ -95,66 +104,75 @@ public struct AmmoRecord: Sendable, Hashable, Codable {
     }
 }
 
-/// 弾速計から流れてくるアプリ向けのイベント。
+/// An event delivered to the app from the chronograph.
 ///
-/// `ChronoPacketDecoder` が生バイト列をこれに変換し、`ChronoDevice` が
-/// `AsyncStream<ChronoEvent>` として配信する。
+/// `ChronoPacketDecoder` converts raw bytes into these, and `ChronoDevice` delivers them
+/// as an `AsyncStream<ChronoEvent>`.
 public enum ChronoEvent: Sendable, Equatable {
     case shot(Shot)
     case battery(percent: Int)
     case deviceInfo(model: String, firmware: String?)
-    /// `0x41` ACK。`command` は応答対象の cmd（ハンドシェイクでは `0x4B`）。
+    /// `0x41` ACK. `command` is the cmd being acknowledged (`0x4B` during the handshake).
     case ack(command: UInt8)
-    /// `0x4E` NAK。未知コマンドへの拒否応答。**実機確定**（`docs/PROTOCOL.md` §6.7）。
+    /// `0x4E` NAK. A rejection response to an unknown command. **Confirmed on real
+    /// hardware** (`docs/PROTOCOL.md` §6.7).
     case nak
-    /// 弾の設定（`0x5A` / `0x47`）。**要求していなくても本体から自発的に飛んでくる**。
+    /// A BB setting (`0x5A` / `0x47`). **Arrives spontaneously from the device even when
+    /// not requested.**
     case ammo(AmmoRecord)
-    /// 本体内のログ件数（`0x62`）。payload[0]（**実機確定**。`docs/PROTOCOL.md` §6.5）。
-    /// このログは volatile（本体の電源を切ると 0 件に戻る）。
+    /// The device log's record count (`0x62`). payload[0] (**confirmed on real
+    /// hardware**. `docs/PROTOCOL.md` §6.5). This log is volatile (resets to 0 records
+    /// when the device is powered off).
     case logCount(Int)
-    /// 本体内ログ 1 件の**生ペイロード**（`0x63`。`[index, rev0, rev1, speed0, speed1]`）。
+    /// The **raw payload** of one device log record (`0x63`.
+    /// `[index, rev0, rev1, speed0, speed1]`).
     ///
-    /// 解釈できたかどうかに関わらず必ずこれを流す（未知ファームウェア差異への保険）。
-    /// `index` は応答に載っている番号（1 始まり。**実機確定**）。
+    /// Always delivered regardless of whether it could be interpreted (a hedge against
+    /// unknown firmware variance). `index` is the number carried in the response
+    /// (1-based. **Confirmed on real hardware**).
     case logRecordRaw(index: Int, payload: [UInt8])
-    /// 上記のうち、速度が乗っていた（＝実弾）ものを 1 発として読んだもの。
-    /// velocity = `speed` raw ÷ 100 m/s、`shot.rawRateOfFire` = `rev` raw（意味は未確定）。
-    /// **実機確定**（`docs/PROTOCOL.md` §6.6）。
+    /// The above, read as one shot for the cases where a speed was present (i.e. an
+    /// actual shot). velocity = raw `speed` / 100 m/s, `shot.rawRateOfFire` = raw `rev`
+    /// (meaning not yet confirmed). **Confirmed on real hardware**
+    /// (`docs/PROTOCOL.md` §6.6).
     case logRecord(index: Int, shot: Shot)
-    /// 全ゼロの `0x63` 応答。件数を超える index、または電源投入後まだ記録が無い index に
-    /// 返ってくる。**エラーではなく「ここでログが終わり」を意味する**（§6.6）。
+    /// An all-zero `0x63` response. Returned for an index past the record count, or an
+    /// index with no record yet since power-on. **Not an error — it means "the log ends
+    /// here"** (§6.6).
     case logRecordEmpty(index: Int)
-    /// 1 バイト `00` の通知 = **本体の電源 OFF**（`docs/PROTOCOL.md` §5.1）。
-    /// エラーではない。約 0.76 秒後にリンクが supervision timeout で落ちる。
+    /// A 1-byte `00` notification = **the device powering off** (`docs/PROTOCOL.md`
+    /// §5.1). Not an error. The link drops via supervision timeout about 0.76 s later.
     case powerOff
     case raw(characteristic: UUID, data: Data)
     case connectionState(ConnectionState)
-    /// スキャンで見つかっている機器の一覧が**変わった**。
+    /// The list of devices found while scanning **has changed**.
     ///
-    /// 同じ機器の広告は 1 秒に何本も届くので、`DiscoveryList.upsert` が
-    /// 「中身が変わった」と答えたときだけ流す。
+    /// The same device's advertisement arrives many times per second, so this is only
+    /// delivered when `DiscoveryList.upsert` reports that the contents actually changed.
     case discovered(DiscoveryList)
 }
 
-/// 生バイト列を `ChronoEvent` へ変換する差し替え可能なデコーダ。
+/// A swappable decoder that turns raw bytes into `ChronoEvent`.
 ///
-/// 実機プロトコルが確定するまでは `PassthroughDecoder` を使い、確定後に
-/// `AC6000PacketDecoder`（仮）を追加して差し替える。デコーダは状態を持ってよい
-/// （ストリームの分割・結合に対応するため）が、`Sendable` である必要がある。
+/// `PassthroughDecoder` is used until the real protocol is confirmed; once confirmed, an
+/// `AC6000PacketDecoder` (working name) is added and swapped in. A decoder may hold state
+/// (to handle a stream being split or joined), but it must be `Sendable`.
 public protocol ChronoPacketDecoder: Sendable {
     func decode(characteristic: UUID, data: Data) -> [ChronoEvent]
 }
 
-/// チェックサム鍵を後から受け取れるデコーダ。
+/// A decoder that can receive the checksum key after the fact.
 ///
-/// AC6000 のチェックサムは鍵に依存する（`docs/PROTOCOL.md` §3.1）。鍵はアドバタイズの
-/// manufacturer data から取るため、デコーダを作る時点ではまだ分からないことがある。
-/// `ChronoDevice` は接続時に鍵が確定したらこの口で流し込む。
+/// The AC6000's checksum depends on the key (`docs/PROTOCOL.md` §3.1). The key comes
+/// from the advertisement's manufacturer data, so it may still be unknown at the point
+/// the decoder is created. `ChronoDevice` feeds it in through this once the key is
+/// established at connect time.
 public protocol ChronoKeyAwareDecoder: ChronoPacketDecoder {
     func updateKeys(_ keys: DeviceKeys)
 }
 
-/// 何も解釈せず `.raw` をそのまま流すデコーダ。プロトコル解析中の既定値。
+/// A decoder that interprets nothing and just passes `.raw` through as-is. The default
+/// while the protocol is still being reverse-engineered.
 public struct PassthroughDecoder: ChronoPacketDecoder {
     public init() {}
 

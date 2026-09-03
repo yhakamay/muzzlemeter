@@ -1,32 +1,40 @@
 import Foundation
 
-/// セッションのタグ（「ホップ強め」「フィールド」など）を扱う純粋なロジック。
+/// Pure logic for handling session tags (e.g. "heavy hop", "outdoor field").
 ///
-/// タグは `Session` では**改行区切りの 1 列**として持っている（別テーブルにするほどの
-/// 数ではない）。文字列と配列の行き来、重複の潰しかた、検索の当てかたを 1 箇所に
-/// 集めておかないと、保存側と絞り込み側で「同じタグ」の判定がずれる。
+/// `Session` stores tags as **a single newline-separated column** (not enough of them to
+/// warrant a separate table). Unless the conversion between string and array, the
+/// dedup rule, and how search matches are all kept in one place, "the same tag" ends up
+/// judged differently between the save path and the filter path.
 public enum SessionTags {
-    /// 保存時の区切り。タグ自体に改行は入れられない。
+    /// The separator used when saving. A tag itself can't contain a newline.
     public static let separator = "\n"
-    /// CSV に出すときの区切り。カンマは CSV の区切りと衝突するのでセミコロンにする。
+    /// The separator used in CSV output. Comma would collide with the CSV delimiter, so
+    /// semicolon is used instead.
     public static let csvSeparator = ";"
 
-    /// 1 つのタグとして通す形に整える。前後の空白を落とし、改行は空白に潰す。
+    /// Normalizes a string into a form usable as a single tag: trims surrounding
+    /// whitespace and collapses newlines to spaces.
     public static func normalized(_ tag: String) -> String {
         tag.replacingOccurrences(of: "\n", with: " ")
             .replacingOccurrences(of: "\r", with: " ")
             .trimmingCharacters(in: .whitespaces)
     }
 
-    /// 同じタグかどうかを判定するための鍵。
+    /// The key used to decide whether two tags are "the same."
     ///
-    /// 大文字小文字と全角半角を無視する。「HOP」と「hop」、「ﾌｨｰﾙﾄﾞ」と「フィールド」は
-    /// 同じタグ。**濁点の違いは無視しない**（日本語では「ハス」と「バス」が別の語なので、
-    /// 濁点まで潰すと違うタグが 1 つに混ざる）。
+    /// Case and full-width/half-width forms are ignored — e.g. "HOP" and "hop", or a
+    /// half-width and full-width katakana spelling of the same word, are the same tag.
+    /// **Dakuten (voicing marks) are not ignored**: in Japanese, e.g. "ハス" (hasu,
+    /// "lotus") and "バス" (basu, "bus") are different words, so folding away the
+    /// voicing mark would merge tags that mean different things.
     ///
-    /// 半角の「ﾞ」「ﾟ」は幅を揃えただけでは**結合しない印**（U+309B / U+309C）に
-    /// なって前の文字とくっつかないので、結合用（U+3099 / U+309A）へ置き換えてから
-    /// 合成する。これをしないと「ﾄﾞ」が「ト」＋印のままで「ド」と一致しない。
+    /// A half-width dakuten/handakuten mark on its own is a **non-combining** character
+    /// (U+309B / U+309C) that doesn't attach to the preceding character just by
+    /// width-normalizing it, so it's remapped to the combining form (U+3099 / U+309A)
+    /// before composing. Without this step, a half-width "do" spelled as
+    /// base-kana-plus-mark would stay as "the base kana + a separate mark" and never
+    /// match the precomposed voiced kana.
     public static func key(_ tag: String) -> String {
         let folded = normalized(tag).folding(options: [.caseInsensitive, .widthInsensitive], locale: nil)
         return folded
@@ -35,7 +43,8 @@ public enum SessionTags {
             .precomposedStringWithCanonicalMapping
     }
 
-    /// 保存された文字列をタグの配列にする。空要素と重複は落とす（**先に出たほうを残す**）。
+    /// Turns a saved string into an array of tags. Drops empty elements and duplicates
+    /// (**keeping whichever occurrence came first**).
     public static func parse(_ raw: String) -> [String] {
         var seen = Set<String>()
         var result: [String] = []
@@ -47,17 +56,18 @@ public enum SessionTags {
         return result
     }
 
-    /// 配列を保存用の 1 列に畳む。`parse` を通してから繋ぐので、往復しても増えない。
+    /// Folds an array back into the single-column form used for saving. Runs through
+    /// `parse` first, so round-tripping never grows the list.
     public static func joined(_ tags: [String]) -> String {
         parse(tags.joined(separator: separator)).joined(separator: separator)
     }
 
-    /// CSV の 1 セルに出す形（`ホップ強め;屋内`）。
+    /// The form written into a single CSV cell (e.g. `heavy hop;outdoor`).
     public static func csvField(_ tags: [String]) -> String {
         parse(tags.joined(separator: separator)).joined(separator: csvSeparator)
     }
 
-    /// タグを足す。既にあるもの（表記ゆれ込み）は足さない。
+    /// Adds a tag. Does nothing if it's already present (including spelling variants).
     public static func adding(_ tag: String, to tags: [String]) -> [String] {
         let candidate = normalized(tag)
         guard !candidate.isEmpty else { return tags }
@@ -65,7 +75,7 @@ public enum SessionTags {
         return tags + [candidate]
     }
 
-    /// タグを外す。表記ゆれも一致とみなす。
+    /// Removes a tag. Spelling variants count as a match too.
     public static func removing(_ tag: String, from tags: [String]) -> [String] {
         tags.filter { key($0) != key(tag) }
     }
@@ -74,10 +84,10 @@ public enum SessionTags {
         tags.contains { key($0) == key(tag) }
     }
 
-    /// これまでに使われたタグを、**よく使う順 → 名前順**で並べる。
+    /// Orders every tag ever used by **frequency first, then name**.
     ///
-    /// 新しい順ではなく頻度順にするのは、候補として出したときに
-    /// 「いつも付けているタグ」が上に来るほうが打鍵が減るため。
+    /// Frequency rather than recency, because when shown as suggestions, putting "the
+    /// tags you always use" near the top saves keystrokes.
     public static func used(in tagLists: [[String]]) -> [String] {
         var counts: [String: Int] = [:]
         var display: [String: String] = [:]
@@ -97,12 +107,13 @@ public enum SessionTags {
             .compactMap { display[$0] }
     }
 
-    /// 入力候補。**既に付いているものは出さない**（押しても何も起きない候補は邪魔）。
+    /// Suggested tags to offer as input. **Already-applied tags are excluded** (a
+    /// suggestion that does nothing when tapped just gets in the way).
     ///
     /// - Parameters:
-    ///   - existing: これまでに使ったタグ（`used(in:)` の結果）
-    ///   - starters: 何も無いときのための既定の候補
-    ///   - current: いま付いているタグ
+    ///   - existing: tags used before (the result of `used(in:)`)
+    ///   - starters: default suggestions to fall back on when there's no history
+    ///   - current: the tags already applied
     public static func suggestions(
         existing: [String],
         starters: [String],
@@ -121,17 +132,18 @@ public enum SessionTags {
     }
 }
 
-/// 履歴の絞り込み条件。文字検索・タグ（AND）・銃の名前。
+/// History filter conditions: text search, tags (AND), and gun name.
 ///
-/// 述語を SwiftData に渡さず**取得済みの配列に対して**当てる前提の値。件数は
-/// 高々数百で、タグは 1 列の文字列なので、`#Predicate` に落とすより読みやすく、
-/// 何より**テストできる**。
+/// A value meant to be applied to **an already-fetched array**, not turned into a
+/// SwiftData predicate. The row count is at most a few hundred and tags are a single
+/// string column, so this reads more clearly than a `#Predicate` — and, more importantly,
+/// **it can be tested**.
 public struct SessionFilter: Sendable, Equatable {
-    /// タイトル・メモ・タグを横断する文字検索。
+    /// Text search across title, notes, and tags.
     public var searchText: String
-    /// 選んだタグ。**全部付いているセッションだけ**を残す（AND）。
+    /// The selected tags. Keeps **only sessions that have all of them** (AND).
     public var tags: [String]
-    /// 銃の名前（セッションに記録されたスナップショット）。`nil` は全部。
+    /// Gun name (the snapshot recorded on the session). `nil` means all.
     public var gunName: String?
 
     public init(searchText: String = "", tags: [String] = [], gunName: String? = nil) {
@@ -140,7 +152,7 @@ public struct SessionFilter: Sendable, Equatable {
         self.gunName = gunName
     }
 
-    /// 何か絞り込んでいるか。UI の「解除」ボタンを出すかどうかに使う。
+    /// Whether any filter is active. Used to decide whether the UI shows a "clear" button.
     public var isActive: Bool {
         !trimmedSearchText.isEmpty || !tags.isEmpty || gunName != nil
     }
@@ -149,10 +161,11 @@ public struct SessionFilter: Sendable, Equatable {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// この条件に合うか。
+    /// Whether this matches the given criteria.
     ///
-    /// タグは **AND**（絞り込みは「条件を足すほど狭くなる」のが直感に合う）。
-    /// 文字検索はタイトル・メモ・タグの**どれかに含まれれば通る**（OR）。
+    /// Tags are **AND**ed (matches the intuition that adding conditions should narrow
+    /// the result). Text search matches **if it's found in any** of title, notes, or
+    /// tags (OR).
     public func matches(
         title: String,
         notes: String?,
@@ -170,7 +183,7 @@ public struct SessionFilter: Sendable, Equatable {
         return haystacks.contains { SessionTags.key($0).contains(folded) }
     }
 
-    /// 選んだタグを入れ替える（付いていれば外す）。
+    /// Toggles a tag in the selection (removes it if present, adds it otherwise).
     public mutating func toggle(tag: String) {
         if SessionTags.contains(tag, in: tags) {
             tags = SessionTags.removing(tag, from: tags)

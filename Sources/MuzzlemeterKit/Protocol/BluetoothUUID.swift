@@ -1,16 +1,16 @@
 import Foundation
 
-/// Bluetooth の 16bit / 32bit 短縮 UUID を 128bit の `Foundation.UUID` に正規化する。
+/// Normalizes Bluetooth 16-bit / 32-bit short UUIDs into a 128-bit `Foundation.UUID`.
 ///
-/// `MuzzlemeterKit` は CoreBluetooth に依存しない（テスト・Linux・将来の別トランスポートのため）。
-/// そのため characteristic の識別子は `CBUUID` ではなく `UUID` で扱い、
-/// `"FFE1"` のような短縮表記はここで Bluetooth Base UUID
-/// `0000xxxx-0000-1000-8000-00805F9B34FB` に展開する。
+/// `MuzzlemeterKit` doesn't depend on CoreBluetooth (for testing, Linux, and future
+/// alternate transports). Because of that, characteristic identifiers are handled as
+/// `UUID` rather than `CBUUID`, and a short form like `"FFE1"` is expanded here to the
+/// Bluetooth Base UUID `0000xxxx-0000-1000-8000-00805F9B34FB`.
 public enum BluetoothUUID {
-    /// Bluetooth Base UUID のサフィックス。
+    /// The suffix of the Bluetooth Base UUID.
     public static let baseSuffix = "-0000-1000-8000-00805F9B34FB"
 
-    /// `"FFE1"` / `"0000FFE1"` / 完全な 128bit 文字列を `UUID` に変換する。
+    /// Converts `"FFE1"` / `"0000FFE1"` / a full 128-bit string into a `UUID`.
     public static func parse(_ text: String) -> UUID? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         switch trimmed.count {
@@ -25,13 +25,14 @@ public enum BluetoothUUID {
         }
     }
 
-    /// 16bit 短縮 UUID から `UUID` を作る。
+    /// Builds a `UUID` from a 16-bit short UUID value.
     public static func short(_ value: UInt16) -> UUID {
-        // 16bit 値は必ず有効な Base UUID になるため、失敗しない。
+        // A 16-bit value always produces a valid Base UUID, so this never fails.
         parse(String(format: "%04X", value)) ?? UUID()
     }
 
-    /// Bluetooth Base UUID に属する場合、短縮表記（`"FFE1"`）を返す。そうでなければ完全表記。
+    /// Returns the short form (`"FFE1"`) if the UUID belongs to the Bluetooth Base UUID
+    /// range, otherwise the full form.
     public static func displayString(_ uuid: UUID) -> String {
         let text = uuid.uuidString.uppercased()
         guard text.hasSuffix(baseSuffix.uppercased()),
@@ -47,9 +48,9 @@ public enum BluetoothUUID {
     }
 }
 
-/// hex 文字列 ⇄ `Data`。リプレイスクリプトとログの読み書きに使う。
+/// Hex string <-> `Data` conversion. Used when reading and writing replay scripts and logs.
 public enum HexBytes {
-    /// `"aa 55 01"` / `"aa5501"` / `"0xAA,0x55"` を `Data` に変換する。
+    /// Converts `"aa 55 01"` / `"aa5501"` / `"0xAA,0x55"` into `Data`.
     public static func parse(_ text: String) -> Data? {
         var cleaned = text.lowercased()
         for token in ["0x", " ", "\t", ",", ":", "-", "_"] {
@@ -68,7 +69,7 @@ public enum HexBytes {
         return Data(bytes)
     }
 
-    /// `Data` を `"aa 55 01"` に整形する。
+    /// Formats `Data` as `"aa 55 01"`.
     public static func string(_ data: Data) -> String {
         data.map { String(format: "%02x", $0) }.joined(separator: " ")
     }

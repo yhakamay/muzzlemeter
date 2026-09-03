@@ -1,6 +1,6 @@
 import Foundation
 
-/// Apple Watch アプリの「最近 10 発」に出す 1 行。
+/// One row shown in the Apple Watch app's "last 10 shots" list.
 public struct WatchShotEntry: Sendable, Hashable, Codable, Identifiable {
     public let id: UUID
     public let timestamp: Date
@@ -24,26 +24,28 @@ public struct WatchShotEntry: Sendable, Hashable, Codable, Identifiable {
     }
 }
 
-/// Apple Watch アプリが表示する、進行中セッションの状態。
+/// The state of an in-progress session as shown by the Apple Watch app.
 ///
-/// **BLE の中心（central）は iPhone のまま**（`docs/UX-ROADMAP.md` Round E の方針）。
-/// Watch は本体に直接繋がず、iPhone アプリが `WatchConnectivity` 経由でこの値を渡すだけ。
-/// そのため、ここに置くのは「渡す値そのもの」と「渡す値をショット列から作る計算」で、
-/// `WCSession` のような通信の詳細はアプリ側（`WatchConnectivityService`）に置く
-/// （キットを watchOS だけでなく macOS の CLI もビルド対象にしているため、
-/// `WatchConnectivity` に依存するコードをここへ持ち込めない）。
+/// **The BLE central stays the iPhone** (per the `docs/UX-ROADMAP.md` Round E policy).
+/// The watch never connects to the device directly; the iPhone app just hands it this
+/// value over `WatchConnectivity`. Because of that, what lives here is only "the value
+/// being passed" and "the calculation that builds that value from the shot list" —
+/// communication details like `WCSession` live on the app side
+/// (`WatchConnectivityService`) instead (the kit also targets the macOS CLI, not just
+/// watchOS, so code depending on `WatchConnectivity` can't live here).
 public struct WatchLiveState: Sendable, Hashable, Codable {
     public let gunName: String
     public let isSessionActive: Bool
     public let shotCount: Int
-    /// N 発モードの目標。`nil` なら手動で締めるセッション。
+    /// The N-shot mode target. `nil` means the session is stopped manually.
     public let targetCount: Int?
     public let latestSpeedMetersPerSecond: Double?
     public let latestJoules: Double?
-    /// 直近 1 発の規制上限に対する段階。まだ 1 発も無ければ `.safe`。
+    /// The most recent shot's stage relative to the regulation limit. `.safe` if there's
+    /// no shot yet.
     public let margin: EnergyMargin
     public let speedUnit: SpeedUnit
-    /// 新しい順、最大 10 件。
+    /// Newest first, at most 10 entries.
     public let recentShots: [WatchShotEntry]
     public let updatedAt: Date
 
@@ -71,7 +73,7 @@ public struct WatchLiveState: Sendable, Hashable, Codable {
         self.updatedAt = updatedAt
     }
 
-    /// 接続前 / セッション未開始の既定状態。
+    /// The default state before connecting / before a session has started.
     public static func idle(speedUnit: SpeedUnit = .metersPerSecond) -> WatchLiveState {
         WatchLiveState(
             gunName: "",
@@ -87,8 +89,9 @@ public struct WatchLiveState: Sendable, Hashable, Codable {
         )
     }
 
-    /// ショット列から Watch へ渡す状態を作る。iPhone 側（`ChronoService`）の
-    /// `currentShots` / `massGrams` / `variables.target` をそのまま渡せばよい。
+    /// Builds the state handed to the watch from a shot list. The iPhone side
+    /// (`ChronoService`) can pass its `currentShots` / `massGrams` /
+    /// `variables.target` straight through.
     public static func derive(
         shots: [Shot],
         massGrams: Double,
@@ -125,12 +128,12 @@ public struct WatchLiveState: Sendable, Hashable, Codable {
     }
 }
 
-/// 1 発ごとに `WCSession.sendMessage` で送る、軽量な通知。
+/// A lightweight notification sent via `WCSession.sendMessage` for each individual shot.
 ///
-/// `WatchLiveState` 全体（最大 10 発ぶん）を毎発送るとフルオートで通信量が無駄に増える。
-/// 発射のたびに送るのはこの小さい方だけにし、`updateApplicationContext` による
-/// `WatchLiveState` 全体の同期は「セッションの区切り（開始・終了）」でだけ行う
-/// （詳細は該当コミットの ADR）。
+/// Sending the full `WatchLiveState` (holding up to 10 shots) on every single shot would
+/// waste bandwidth needlessly during full-auto. Only this small message is sent on every
+/// shot; syncing the full `WatchLiveState` via `updateApplicationContext` happens only at
+/// "session boundaries" (start/end) (see the ADR on that commit for details).
 public struct WatchShotMessage: Sendable, Hashable, Codable {
     public let shot: WatchShotEntry
     public let shotCount: Int
@@ -155,7 +158,7 @@ public struct WatchShotMessage: Sendable, Hashable, Codable {
         self.gunName = gunName
     }
 
-    /// 直近のショットが無い状態（＝まだ何も送るものが無い）からは作れない。
+    /// Can't be built when there's no recent shot (i.e. nothing to send yet).
     public init?(state: WatchLiveState) {
         guard let latest = state.recentShots.first else { return nil }
         self.init(
@@ -169,12 +172,13 @@ public struct WatchShotMessage: Sendable, Hashable, Codable {
     }
 }
 
-/// `WCSession` の `[String: Any]` ペイロードと `Codable` 型の間を仲立ちする。
+/// Bridges between `WCSession`'s `[String: Any]` payload and `Codable` types.
 ///
-/// `WatchConnectivity` そのものへは依存しない（macOS でもビルドされるキットに
-/// `import WatchConnectivity` を持ち込めない）ので、辞書 1 個に JSON を 1 個詰める、
-/// という**辞書の形だけ**をここで決める。実際に `sendMessage` / `updateApplicationContext`
-/// を呼ぶのはアプリ側・Watch 側それぞれの `WatchConnectivityService`。
+/// Doesn't depend on `WatchConnectivity` itself (the kit also builds for macOS, so
+/// `import WatchConnectivity` can't be brought in here) — this only decides **the shape
+/// of the dictionary**: one JSON blob packed into one dictionary entry. Actually calling
+/// `sendMessage` / `updateApplicationContext` is done by each side's own
+/// `WatchConnectivityService` (app side and watch side).
 public enum WatchPayloadCoding {
     private static let payloadKey = "muzzlemeter.json"
 

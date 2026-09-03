@@ -1,45 +1,51 @@
 import Foundation
 
-/// 記録済みパケットを時間軸どおりに流す `ChronoTransport`。
+/// A `ChronoTransport` that plays back recorded packets along their original timeline.
 ///
-/// 用途:
-/// - **シミュレータ / SwiftUI Preview**: 実機が無くても Live 画面を作り込める
-/// - **テスト**: `speed = 0` にすると一切待たずに全パケットを順番どおり流すので、
-///   タイミングに依存しない決定的なテストが書ける
+/// Uses:
+/// - **Simulator / SwiftUI Preview**: builds out the Live screen without real hardware
+/// - **Tests**: with `speed = 0`, every packet is delivered in order with no waiting at
+///   all, so deterministic tests can be written that don't depend on timing
 ///
-/// 再生は「最初の `subscribe(to:)`」で始まる。実機の流れ（scan → connect → subscribe →
-/// 受信開始）と同じ順序にすることで、`ChronoDevice` 側のコードをトランスポートの
-/// 実装で分岐させずに済む。購読していない characteristic のエントリは捨てる。
+/// Playback starts on the **first `subscribe(to:)`**. Matching the same order as real
+/// hardware (scan -> connect -> subscribe -> receive) means `ChronoDevice`'s own code
+/// never needs to branch on which transport implementation is in use. Entries for a
+/// characteristic that isn't subscribed to are dropped.
 public actor ReplayTransport: ChronoTransport {
-    /// 書き込みの記録（テストで初期化コマンドの送信を検証するため）。
+    /// A record of a write (so tests can verify initialization commands were sent).
     public struct RecordedWrite: Sendable, Hashable {
         public let characteristic: UUID
         public let data: Data
         public let withResponse: Bool
     }
 
-    /// 書き込まれたフレームに**その場で応答する**擬似ファームウェア。
+    /// Mock firmware that **responds on the spot** to a written frame.
     ///
-    /// 記録済みパケットの再生だけでは「要求 → 応答」の往復（`0x62` / `0x63` の
-    /// ログ読み出しなど）を通せない。要求 1 本に対して返すフレームを組み立てる
-    /// 関数を差し込めるようにして、**アプリ側は実機と同じ経路**（write → notify）を
-    /// 通れるようにする。応答が無い要求には空配列を返す。
+    /// Playing back recorded packets alone can't carry a "request -> response"
+    /// round trip (e.g. `0x62` / `0x63` log reads). This lets a function that builds the
+    /// response frame for a given request be plugged in, so **the app side goes through
+    /// the same path as real hardware** (write -> notify). A request with no response
+    /// returns an empty array.
     ///
-    /// 現在の `deviceLogResponder`（下）は **実機確定の 0x62 / 0x63 応答形式**
-    /// （`docs/PROTOCOL.md` §6.5 / §6.6）で答える。
+    /// The current `deviceLogResponder` (below) answers using the **response format
+    /// confirmed on real hardware** for 0x62 / 0x63 (`docs/PROTOCOL.md` §6.5 / §6.6).
     public typealias Responder = @Sendable (Data) -> [Data]
 
     private let script: ReplayScript
-    /// 再生速度。1.0 で実時間、2.0 で 2 倍速。**0 なら一切待たない**。
+    /// The playback speed. 1.0 is real time, 2.0 is double speed. **0 means no waiting
+    /// at all.**
     private let speed: Double
     private let peripheral: DiscoveredPeripheral
-    /// 末尾まで再生したら先頭から繰り返すか（デモ用）。`speed == 0` のときは無視される。
+    /// Whether to loop back to the start after playing through to the end (for demos).
+    /// Ignored when `speed == 0`.
     private let repeats: Bool
     private let loopGap: TimeInterval
     private let responder: Responder?
-    /// 応答を返すまでの遅れ。実機の応答は 45–63 ms だった（`docs/PROTOCOL.md` §4.2）。
+    /// The delay before a response is delivered. Real hardware responses measured
+    /// 45-63 ms (`docs/PROTOCOL.md` §4.2).
     private let responseDelay: TimeInterval
-    /// 応答を流す characteristic（実機と同じ notify 側）。
+    /// The characteristic responses are delivered on (the same notify side as real
+    /// hardware).
     private let responseCharacteristic: UUID
 
     public nonisolated let events: AsyncStream<TransportEvent>
@@ -75,11 +81,12 @@ public actor ReplayTransport: ChronoTransport {
         self.continuation = continuation
     }
 
-    /// 再生用の擬似ペリフェラル。
+    /// The mock peripheral used for playback.
     ///
-    /// manufacturer data には**実機の広告そのまま**（`00 05 08 c4 94 52 04`）を載せてある。
-    /// こうしておくと `ChronoDevice` が実機と同じ経路で鍵 `c4/94` を取り出せるので、
-    /// 記録済みフレームのチェックサム検証まで含めて本番と同じコードが走る。
+    /// Its manufacturer data carries **the real device's own advertisement**
+    /// (`00 05 08 c4 94 52 04`) as-is. That lets `ChronoDevice` extract the key
+    /// `c4/94` through the same path as real hardware, so even checksum validation of
+    /// the recorded frames runs through the same code as production.
     public static let demoPeripheral = DiscoveredPeripheral(
         id: UUID(uuidString: "00000000-0000-0000-0000-ACEC40000000") ?? UUID(),
         name: "AC6000BT-DEMO",
@@ -91,7 +98,8 @@ public actor ReplayTransport: ChronoTransport {
     // MARK: - ChronoTransport
 
     public func scan(services: [UUID]?, nameFilter: String?) async throws {
-        // 名前フィルタがあるときだけ照合する。サービスフィルタは再生では意味が無いので無視。
+        // Only matched when a name filter is given. The service filter has no meaning
+        // during playback, so it's ignored.
         if let nameFilter, !nameFilter.isEmpty {
             let name = peripheral.name?.lowercased() ?? ""
             guard name.contains(nameFilter.lowercased()) else { return }
@@ -124,7 +132,8 @@ public actor ReplayTransport: ChronoTransport {
         continuation.yield(.subscribed(characteristic: characteristic))
     }
 
-    /// 購読が出揃ってから再生を始める。`ChronoDevice` が購読・初期化書き込みの後に呼ぶ。
+    /// Starts playback only once every subscription is in place. Called by
+    /// `ChronoDevice` after subscribing and sending any initialization writes.
     public func finishSetup() async {
         startReplayIfNeeded()
     }
@@ -135,11 +144,13 @@ public actor ReplayTransport: ChronoTransport {
         respond(to: data)
     }
 
-    /// 擬似ファームウェアの応答を流す。
+    /// Delivers the mock firmware's response.
     ///
-    /// **別タスクで流す**のが要点。`write` の呼び出し元は応答を待っているので、
-    /// ここで直接 yield しても構わないが、実機の「少し遅れて notify が来る」順序に
-    /// 合わせておくと、待ち始める前に応答が来る取りこぼしを実装側で踏める。
+    /// The key point is **delivering it from a separate task**. The caller of `write`
+    /// is waiting for the response, so yielding directly here would technically work
+    /// too, but matching real hardware's "notify arrives a little later" ordering means
+    /// the implementation also exercises the case where a response arrives before the
+    /// wait has even started.
     private func respond(to request: Data) {
         guard let responder else { return }
         let responses = responder(request)
@@ -169,7 +180,7 @@ public actor ReplayTransport: ChronoTransport {
         continuation.finish()
     }
 
-    // MARK: - 再生
+    // MARK: - Playback
 
     private func startReplayIfNeeded() {
         guard replayTask == nil else { return }
@@ -179,7 +190,7 @@ public actor ReplayTransport: ChronoTransport {
     }
 
     private func runReplay() async {
-        // speed == 0（テスト）では無限ループを避けるため repeats を無効にする。
+        // With speed == 0 (tests), repeats is disabled to avoid an infinite loop.
         let shouldRepeat = repeats && speed > 0
         repeat {
             var previousOffset: TimeInterval = 0
@@ -191,7 +202,7 @@ public actor ReplayTransport: ChronoTransport {
                         try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
                     }
                 } else {
-                    // 待たない場合でも協調的にスケジューリングの機会を与える。
+                    // Even without waiting, still yield cooperatively for scheduling.
                     await Task.yield()
                 }
                 previousOffset = entry.offsetSeconds
@@ -207,23 +218,25 @@ public actor ReplayTransport: ChronoTransport {
     }
 }
 
-// MARK: - 擬似ファームウェア
+// MARK: - Mock firmware
 
 extension ReplayTransport {
-    /// 本体内ログの読み出し（`0x62` / `0x63`）に応答する擬似ファームウェア。
+    /// Mock firmware that responds to device-log reads (`0x62` / `0x63`).
     ///
-    /// **実機確定の応答形式**（`docs/PROTOCOL.md` §6.5 / §6.6, 2026-09-03/04 実機追試）で答える:
-    /// * `0x62` → `[count, 0x01]`
-    /// * `0x63`（1 byte・1 始まり index）→ `[index, rev0, rev1, speed0, speed1]`。
-    ///   index 0 には応答しない。`count` を超える index には全ゼロレコードを返す
-    ///   （エラーではなく「ログの終端」）。
+    /// Answers using the **response format confirmed on real hardware**
+    /// (`docs/PROTOCOL.md` §6.5 / §6.6, from on-device testing on 2026-09-03/04):
+    /// * `0x62` -> `[count, 0x01]`
+    /// * `0x63` (1-byte, 1-based index) -> `[index, rev0, rev1, speed0, speed1]`.
+    ///   Doesn't respond to index 0. An index past `count` returns an all-zero record
+    ///   (not an error — it means "end of log").
     ///
     /// - Parameters:
-    ///   - count: `0x62` が答える件数。
-    ///   - brokenIndex: この番号のレコードだけ**読めない形**（短すぎる payload）で返す。
-    ///     未知のファームウェア差異に対する防御的フォールバック経路を
-    ///     実機なしで確かめるために要る。実機では通常起きない。
-    ///   - speeds: レコードの速度（m/s）。足りなければ巡回して使う。
+    ///   - count: the record count `0x62` answers with.
+    ///   - brokenIndex: only this record number is returned in an **unparseable form**
+    ///     (a too-short payload). Needed to exercise the defensive fallback path for
+    ///     unknown firmware variance without real hardware. Shouldn't normally happen on
+    ///     real hardware.
+    ///   - speeds: the records' speeds (m/s). Cycled through if there aren't enough.
     public static func deviceLogResponder(
         count: Int,
         keys: DeviceKeys = DeviceKeys(key1: 0xC4, key2: 0x94),
@@ -235,23 +248,26 @@ extension ReplayTransport {
             guard bytes.count >= 4, bytes[0] == ChronoFrame.header else { return [] }
             switch bytes[2] {
             case ChronoCommand.logCount.rawValue:
-                // aa 06 62 <count> <0x01 固定> cks（§6.5・実機確定）
+                // aa 06 62 <count> <fixed 0x01> cks (§6.5, confirmed on real hardware)
                 return [
                     ChronoFrame(command: .logCount, payload: [UInt8(clamping: count), 0x01])
                         .encode(keys: keys)
                 ]
 
             case ChronoCommand.logRecord.rawValue:
-                // 1 byte・1 始まりの index。index 0 には応答しない（実機確定）。
+                // A 1-byte, 1-based index. No response for index 0 (confirmed on real
+                // hardware).
                 guard bytes.count >= 5 else { return [] }
                 let index = Int(bytes[3])
                 guard index > 0 else { return [] }
                 if index == brokenIndex {
-                    // 5 バイトに満たない = 応答レイアウトとして読めない（防御的フォールバック用）。
+                    // Fewer than 5 bytes = unparseable as the response layout (for the
+                    // defensive fallback path).
                     return [ChronoFrame(command: .logRecord, payload: [UInt8(index), 0x00]).encode(keys: keys)]
                 }
                 guard index <= count else {
-                    // 件数を超える index には全ゼロレコード（ログの終端。エラーではない）。
+                    // An index past the record count gets an all-zero record (end of
+                    // log; not an error).
                     return [
                         ChronoFrame(command: .logRecord, payload: [UInt8(index), 0x00, 0x00, 0x00, 0x00])
                             .encode(keys: keys)

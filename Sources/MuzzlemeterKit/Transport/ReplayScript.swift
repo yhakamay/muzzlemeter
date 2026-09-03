@@ -1,8 +1,8 @@
 import Foundation
 
-/// リプレイスクリプトの 1 行 = ある時刻に届いた 1 パケット。
+/// One line of a replay script = one packet that arrived at a given time.
 public struct ReplayEntry: Sendable, Hashable {
-    /// スクリプト先頭からの経過秒。
+    /// Seconds elapsed from the start of the script.
     public let offsetSeconds: TimeInterval
     public let characteristic: UUID
     public let data: Data
@@ -28,24 +28,26 @@ public enum ReplayScriptError: Error, Sendable, Equatable, CustomStringConvertib
     }
 }
 
-/// 記録済みパケット列。`ReplayTransport` が時間軸どおりに再生する。
+/// A recorded packet sequence. `ReplayTransport` plays it back along its own timeline.
 ///
-/// 2 つのテキスト形式を読める。
+/// Two text formats can be read.
 ///
-/// **1. 手書き用の簡易形式** — 先頭が `+` の行:
+/// **1. A simple hand-written format** — lines starting with `+`:
 /// ```
 /// +0     FFE1  a0 23 00 00
 /// +1500  FFE1  b4 23 00 00
 /// ```
-/// `+<ミリ秒>` は**スクリプト先頭からの絶対オフセット**。`#` 始まりと空行は無視。
+/// `+<milliseconds>` is the **absolute offset from the start of the script**. Lines
+/// starting with `#` and blank lines are ignored.
 ///
-/// **2. `muzzlemeter-sniff dump` のログ形式** — そのまま読み込める:
+/// **2. The `muzzlemeter-sniff dump` log format** — readable as-is:
 /// ```
 /// [2026-09-02T22:31:04.512+09:00] [+412.7 ms] FFE1 len=8 hex: aa 55 01 5a ascii: .U.Z
 /// ```
-/// オフセットは ISO8601 タイムスタンプの差（最初のパケット行を 0 とする）。
-/// タイムスタンプが読めない行では `[+N ms]` の差分を積み上げる。
-/// パケット行以外（GATT ツリー・`write ->`・`read ` などのログ行）は読み飛ばす。
+/// The offset is the difference between ISO8601 timestamps (the first packet line is
+/// treated as 0). For a line whose timestamp can't be read, the `[+N ms]` delta is
+/// accumulated instead. Non-packet lines (the GATT tree, `write ->`, `read `, and other
+/// log lines) are skipped.
 public struct ReplayScript: Sendable, Hashable {
     public var entries: [ReplayEntry]
 
@@ -55,7 +57,8 @@ public struct ReplayScript: Sendable, Hashable {
 
     public var duration: TimeInterval { entries.last?.offsetSeconds ?? 0 }
 
-    /// スクリプトに現れる characteristic の一覧（重複なし・出現順）。
+    /// The characteristics that appear in the script (deduplicated, in order of
+    /// appearance).
     public var characteristics: [UUID] {
         var seen = Set<UUID>()
         var result = [UUID]()
@@ -80,10 +83,11 @@ public struct ReplayScript: Sendable, Hashable {
             if line.isEmpty || line.hasPrefix("#") || line.hasPrefix("//") { continue }
 
             if line.hasPrefix("+") {
-                // 簡易形式。先頭が "+" なら必ずこの形式として扱い、壊れていればエラーにする。
+                // The simple format. If a line starts with "+" it's always treated as
+                // this format, and an error is raised if it's malformed.
                 entries.append(try parseSimpleLine(line, number: lineNumber))
             } else if line.hasPrefix("[") {
-                // sniffer ログ。パケット行でなければ黙って読み飛ばす。
+                // A sniffer log line. Silently skipped if it isn't a packet line.
                 guard let packet = try parseSnifferLine(line, number: lineNumber) else { continue }
                 let offset: TimeInterval
                 if let date = packet.date {
@@ -105,13 +109,13 @@ public struct ReplayScript: Sendable, Hashable {
                     )
                 )
             }
-            // それ以外の行は sniffer ログの雑多な出力とみなして無視する。
+            // Any other line is treated as miscellaneous sniffer log output and ignored.
         }
 
         return ReplayScript(entries: entries)
     }
 
-    /// スクリプトをテキスト（簡易形式）に書き出す。
+    /// Serializes the script back to text (the simple format).
     public func serialized() -> String {
         entries.map { entry in
             let ms = Int((entry.offsetSeconds * 1000).rounded())
@@ -120,7 +124,7 @@ public struct ReplayScript: Sendable, Hashable {
         .joined(separator: "\n")
     }
 
-    // MARK: - 行パーサ
+    // MARK: - Line parsers
 
     private static func parseSimpleLine(_ line: String, number: Int) throws -> ReplayEntry {
         // "+<ms> <uuid> <hex...>"
@@ -132,7 +136,7 @@ public struct ReplayScript: Sendable, Hashable {
         guard let uuid = BluetoothUUID.parse(String(fields[1])) else {
             throw ReplayScriptError.badUUID(number: number, text: String(fields[1]))
         }
-        // hex の後ろにコメントが付いていても落とせるようにする。
+        // Allow a trailing comment after the hex to be dropped.
         let hexText = String(fields[2]).components(separatedBy: "#")[0]
         guard let data = HexBytes.parse(hexText) else {
             throw ReplayScriptError.badHex(number: number, text: hexText)
@@ -147,14 +151,14 @@ public struct ReplayScript: Sendable, Hashable {
         let data: Data
     }
 
-    /// sniffer ログのパケット行を解釈する。パケット行でなければ `nil`。
+    /// Parses a sniffer log's packet line. `nil` if it isn't a packet line.
     private static func parseSnifferLine(_ line: String, number: Int) throws -> SnifferPacket? {
         // [<ts>] [+<delta> ms] <UUID> len=<n> hex: <bytes> [ascii: ...]
         guard let firstClose = line.firstIndex(of: "]") else { return nil }
         let timestampText = String(line[line.index(after: line.startIndex)..<firstClose])
 
         var rest = line[line.index(after: firstClose)...].trimmingCharacters(in: .whitespaces)
-        // 2 つ目のブラケットが "+... ms" でなければパケット行ではない（write 行など）。
+        // Not a packet line (e.g. a write line) if the second bracket isn't "+... ms".
         guard rest.hasPrefix("["), let secondClose = rest.firstIndex(of: "]") else { return nil }
         let deltaText = String(rest[rest.index(after: rest.startIndex)..<secondClose])
         guard deltaText.hasPrefix("+"), deltaText.hasSuffix("ms") else { return nil }
@@ -174,7 +178,7 @@ public struct ReplayScript: Sendable, Hashable {
             hexText = String(hexText[hexText.startIndex..<asciiRange.lowerBound])
         }
         hexText = hexText.trimmingCharacters(in: .whitespaces)
-        // len=0 のパケットもあり得るので、空 hex は空データとして通す。
+        // A len=0 packet is possible, so empty hex is treated as empty data.
         let data: Data
         if hexText.isEmpty {
             data = Data()
@@ -188,7 +192,7 @@ public struct ReplayScript: Sendable, Hashable {
             .dropFirst()               // "+"
             .dropLast(2)               // "ms"
             .trimmingCharacters(in: .whitespaces)
-        let delta = Double(deltaValue).map { $0 / 1000.0 }   // "----" は nil になる
+        let delta = Double(deltaValue).map { $0 / 1000.0 }   // "----" becomes nil
 
         return SnifferPacket(
             date: snifferDateFormatter.date(from: timestampText),
@@ -198,8 +202,7 @@ public struct ReplayScript: Sendable, Hashable {
         )
     }
 
-    /// `Sources/MuzzlemeterSniff/Commands.swift` の `Timestamp.iso8601` と同じ書式。
-    ///
+    /// The same format as `Timestamp.iso8601` in `Sources/MuzzlemeterSniff/Commands.swift`.
     private static let snifferDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")

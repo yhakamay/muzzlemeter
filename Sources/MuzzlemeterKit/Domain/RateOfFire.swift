@@ -1,24 +1,25 @@
 import Foundation
 
-/// 連射速度（ROF）のフォールバック推定。
+/// Fallback estimation of rate of fire (ROF).
 ///
-/// AC6000 は FIRE_REPORT に `rawRev`（連射速度の生値）を含めて送ってくるため、
-/// 通常は `Shot.rateOfFireRPS` をそのまま使う。ここにあるのは
-/// **本体が ROF を報告しない場合／報告値がまだデコードできない場合**のための
-/// タイムスタンプ差からの推定で、ショット時刻の差分だけを使う純粋関数。
+/// The AC6000 sends `rawRev` (the raw rate-of-fire value) as part of `FIRE_REPORT`, so
+/// `Shot.rateOfFireRPS` is normally used directly. What's here is a pure function that
+/// estimates ROF from the difference between shot timestamps, for the case **where the
+/// device doesn't report ROF, or the reported value can't be decoded yet**.
 public enum RateOfFire {
-    /// この秒数より大きい間隔が空いたらバーストが切れたとみなす。
+    /// A gap larger than this many seconds is treated as the end of a burst.
     public static let defaultBurstGapThreshold: TimeInterval = 1.0
 
-    /// 直近のバーストの発射速度（発/秒）を推定する。
+    /// Estimates the firing rate (rounds/sec) of the most recent burst.
     ///
-    /// 最後のショットから時間を遡り、直前のショットとの間隔が `burstGapThreshold`
-    /// 以下である限り同じバーストとみなす。バーストが 1 発しかない（＝単発）場合は
-    /// 速度を定義できないので `nil` を返す。
+    /// Walks backward in time from the last shot, treating shots as part of the same
+    /// burst as long as the interval to the previous shot is `<= burstGapThreshold`. If
+    /// the burst has only 1 shot (i.e. a single shot), a rate can't be defined, so this
+    /// returns `nil`.
     ///
     /// - Parameters:
-    ///   - shots: ショット列。順序は問わない（内部で時刻順にソートする）。
-    ///   - burstGapThreshold: バーストの切れ目とみなす間隔（秒）。
+    ///   - shots: the shot list. Order doesn't matter (sorted internally by time).
+    ///   - burstGapThreshold: the interval (seconds) treated as the end of a burst.
     public static func estimateRPS(
         shots: [Shot],
         burstGapThreshold: TimeInterval = defaultBurstGapThreshold
@@ -26,7 +27,8 @@ public enum RateOfFire {
         estimateRPS(timestamps: shots.map(\.timestamp), burstGapThreshold: burstGapThreshold)
     }
 
-    /// タイムスタンプ列から直近バーストの発射速度（発/秒）を推定する。
+    /// Estimates the firing rate (rounds/sec) of the most recent burst from a list of
+    /// timestamps.
     public static func estimateRPS(
         timestamps: [Date],
         burstGapThreshold: TimeInterval = defaultBurstGapThreshold
@@ -35,13 +37,13 @@ public enum RateOfFire {
         guard burst.count >= 2, let first = burst.first, let last = burst.last else { return nil }
         let duration = last.timeIntervalSince(first)
         guard duration > 0 else { return nil }
-        // n 発の間には n-1 個の間隔がある。
+        // n shots have n-1 intervals between them.
         return Double(burst.count - 1) / duration
     }
 
-    /// 直近のバーストに属するタイムスタンプを時刻昇順で返す。
+    /// Returns the timestamps belonging to the most recent burst, in ascending order.
     ///
-    /// 単発だった場合は要素 1 個の配列（空入力なら空配列）を返す。
+    /// For a single shot, returns an array with 1 element (an empty array for empty input).
     public static func latestBurst(
         timestamps: [Date],
         burstGapThreshold: TimeInterval = defaultBurstGapThreshold

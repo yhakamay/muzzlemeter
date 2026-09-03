@@ -1,25 +1,26 @@
 import Foundation
 
-/// ライブアクティビティ（ロック画面 / Dynamic Island）に出す状態。
+/// The state shown in the Live Activity (lock screen / Dynamic Island).
 ///
-/// `ActivityKit` は macOS では使えない（`muzzlemeter-sniff` は macOS もビルド対象）ので、
-/// `ActivityAttributes` / `ActivityAttributes.ContentState` そのものはここには置けない。
-/// 代わりに **「いま何を表示すべきか」を決める純粋な値と計算**だけをここへ置き、
-/// アプリ（`App/Shared/LiveActivityAttributes.swift`）側の `ContentState` が
-/// この型をそのまま持つ。ウィジェット拡張とアプリ本体の両方が同じロジックを通ることで、
-/// ロック画面の数字とアプリ内の数字がずれない。
+/// `ActivityKit` isn't available on macOS (`muzzlemeter-sniff` also targets macOS), so
+/// `ActivityAttributes` / `ActivityAttributes.ContentState` themselves can't live here.
+/// Instead, only the **pure value and calculation that decides what should currently be
+/// shown** lives here, and the app's (`App/Shared/LiveActivityAttributes.swift`)
+/// `ContentState` simply holds this type as-is. Because both the widget extension and the
+/// app run through the same logic, the numbers on the lock screen never drift from the
+/// numbers in the app.
 public struct LiveActivityContent: Sendable, Hashable, Codable {
-    /// 直近 1 発の速度。単位記号なし、表示単位の整形済み文字列（m/s は LCD 風に切り捨て済み）。
-    /// まだ 1 発も無ければ `"—"`。
+    /// The most recent shot's speed. No unit symbol; a formatted string in the display
+    /// unit (m/s is already truncated the way the LCD is). `"—"` if there's no shot yet.
     public let speedText: String
     public let speedUnitSymbol: String
-    /// 直近 1 発のジュール。まだ 1 発も無ければ `"—"`。
+    /// The most recent shot's joules. `"—"` if there's no shot yet.
     public let joulesText: String
-    /// 発数。N 発モードなら `"7 / 10"`、それ以外は `"12"`。
+    /// The shot count. `"7 / 10"` in N-shot mode, otherwise `"12"`.
     public let shotCountText: String
-    /// 平均速度（単位記号なし）。0 発なら `nil`。
+    /// Mean speed (no unit symbol). `nil` for 0 shots.
     public let meanSpeedText: String?
-    /// 直近 1 発の規制上限に対する段階。
+    /// The most recent shot's stage relative to the regulation limit.
     public let margin: EnergyMargin
     public let gunName: String
 
@@ -41,7 +42,7 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
         self.gunName = gunName
     }
 
-    /// 1 発も撃っていない状態（セッション開始直後の表示）。
+    /// The state before any shot has been fired (shown right after a session starts).
     public static func idle(gunName: String, speedUnit: SpeedUnit) -> LiveActivityContent {
         LiveActivityContent(
             speedText: "—",
@@ -54,8 +55,9 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
         )
     }
 
-    /// ショット列から表示状態を作る。`ChronoService` と同じ計算（`SessionStats` /
-    /// `EnergyLimit`）を通すので、アプリ本体の Live 画面と数字が一致する。
+    /// Builds the display state from a list of shots. Runs through the same calculations
+    /// as `ChronoService` (`SessionStats` / `EnergyLimit`), so the numbers match the
+    /// app's own Live screen.
     public static func derive(
         shots: [Shot],
         massGrams: Double,
@@ -84,21 +86,23 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
     }
 }
 
-/// フルオートでの更新頻度を抑える。
+/// Caps how often updates go out during full-auto.
 ///
-/// Live Activity の更新には ActivityKit 側のレート制限があり、1 秒間に何十発も来る
-/// フルオートでショットのたびに `update` を呼ぶと更新が捨てられたり、ロック画面が
-/// ちらつく。**直近の更新から最小間隔が経っているときだけ更新する**、という判定だけを
-/// ここに置く（日時を注入できる形にして、テストでは実時計を待たずに確かめる）。
+/// ActivityKit rate-limits Live Activity updates, and calling `update` on every shot
+/// during full-auto — dozens of shots per second — causes updates to be dropped or the
+/// lock screen to flicker. This holds only the decision **update only if the minimum
+/// interval has passed since the last update** (built so the current time can be
+/// injected, so tests can verify it without waiting on the real clock).
 public struct LiveActivityUpdateThrottle: Sendable {
-    /// 既定は 1 秒に 1 回まで（フルオートでも十分追える頻度で、ActivityKit の制限にも収まる）。
+    /// Defaults to at most once per second (frequent enough to keep up even during
+    /// full-auto, and within ActivityKit's own limit).
     public let minimumInterval: TimeInterval
 
     public init(minimumInterval: TimeInterval = 1.0) {
         self.minimumInterval = minimumInterval
     }
 
-    /// `lastUpdate` が無い（まだ 1 回も更新していない）ときは常に更新してよい。
+    /// Always allowed to update when there's no `lastUpdate` (i.e. it hasn't updated yet).
     public func shouldUpdate(now: Date, lastUpdate: Date?) -> Bool {
         guard let lastUpdate else { return true }
         return now.timeIntervalSince(lastUpdate) >= minimumInterval

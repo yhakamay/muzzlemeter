@@ -1,14 +1,15 @@
 import Foundation
 
 extension DiscoveredPeripheral {
-    /// 電波強度を 0〜4 本のバーに落としたもの。RSSI が無ければ 0。
+    /// Signal strength reduced to a 0-4 bar count. 0 if there's no RSSI.
     ///
-    /// dBm をそのまま出しても「−67 は強いのか弱いのか」が伝わらない。
-    /// 目的は**複数台あるときにどれが手元の 1 台か**を見分けることなので、
-    /// 絶対値ではなく相対的な強さが読めれば足りる。
+    /// Showing dBm directly doesn't convey "is -67 strong or weak?" The goal is to tell
+    /// **which of several nearby devices is the one in hand**, so a relative sense of
+    /// strength is enough — the absolute value doesn't matter.
     ///
-    /// 区切りは BLE の実測でよく使われる目安:
-    /// `≥ -55` 至近 / `≥ -67` 良好 / `≥ -80` 実用 / `≥ -90` 不安定 / それ未満 圏外に近い。
+    /// The thresholds are the common rules of thumb for BLE in practice: `>= -55` very
+    /// close / `>= -67` good / `>= -80` usable / `>= -90` unstable / below that,
+    /// effectively out of range.
     public var signalBars: Int {
         guard let rssi else { return 0 }
         if rssi >= -55 { return 4 }
@@ -19,15 +20,16 @@ extension DiscoveredPeripheral {
     }
 }
 
-/// スキャンで見つかっている機器の一覧。
+/// The list of devices found while scanning.
 ///
-/// `ChronoDevice` が持ち、変化したときだけ `ChronoEvent.discovered` として流す。
-/// 「同じ機器の広告が 1 秒に何本も届く」ので、**変化していないなら流さない**のが要点。
-/// 流しっぱなしにすると UI が毎秒作り直される。
+/// Held by `ChronoDevice`, delivered as `ChronoEvent.discovered` only when it changes.
+/// Since the same device's advertisement arrives many times per second, **not delivering
+/// an event when nothing changed** is the whole point — delivering one every time would
+/// rebuild the UI every second.
 public struct DiscoveryList: Sendable, Hashable, Codable {
-    /// 見つかった順の一覧。表示の並べ替えは `sorted` で行う。
+    /// The list in discovery order. Use `sorted` for the display order.
     public private(set) var peripherals: [DiscoveredPeripheral]
-    /// 「前回接続した機器」。一覧で目印を出し、先頭に並べるために使う。
+    /// "The device connected last time." Used to mark it in the list and place it first.
     public var rememberedID: UUID?
 
     public init(peripherals: [DiscoveredPeripheral] = [], rememberedID: UUID? = nil) {
@@ -42,10 +44,10 @@ public struct DiscoveryList: Sendable, Hashable, Codable {
         rememberedID != nil && peripheral.id == rememberedID
     }
 
-    /// 追加、または既にある機器の情報（RSSI・名前）を更新する。
+    /// Adds a device, or updates the info (RSSI / name) of one already present.
     ///
-    /// - Returns: 一覧の中身が変わったなら `true`。**変わっていなければ `false`** で、
-    ///   呼び出し側はイベントを流さずに済む。
+    /// - Returns: `true` if the list's contents changed. **`false` if nothing changed**,
+    ///   so the caller can skip delivering an event.
     @discardableResult
     public mutating func upsert(_ peripheral: DiscoveredPeripheral) -> Bool {
         guard let index = peripherals.firstIndex(where: { $0.id == peripheral.id }) else {
@@ -61,11 +63,13 @@ public struct DiscoveryList: Sendable, Hashable, Codable {
         peripherals.removeAll()
     }
 
-    /// 画面に出す順。
+    /// The order shown on screen.
     ///
-    /// 1. **前回接続した機器を最上段**（いつもの 1 台をいちばん押しやすい位置に置く）
-    /// 2. 電波の強い順（近い＝手元にある可能性が高い）
-    /// 3. 名前順（同点のときに順番がちらつかないよう、決定的に並べる）
+    /// 1. **The last-connected device goes on top** (so the usual one sits where it's
+    ///    easiest to tap).
+    /// 2. Then by signal strength (stronger likely means closer, i.e. more likely to be
+    ///    in hand).
+    /// 3. Then by name (a deterministic tiebreaker, so the order doesn't flicker on ties).
     public var sorted: [DiscoveredPeripheral] {
         peripherals.sorted { lhs, rhs in
             let lhsRemembered = isRemembered(lhs)

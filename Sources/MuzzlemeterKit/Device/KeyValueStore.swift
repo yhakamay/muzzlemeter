@@ -1,8 +1,10 @@
 import Foundation
 
-/// 小さな設定値の永続化。`ChronoDevice` が「最後に接続した機器」を覚えるために使う。
+/// Persistence for small settings values. Used by `ChronoDevice` to remember "the last
+/// device connected."
 ///
-/// `UserDefaults` を直接触らずここを挟むのは、テストでプロセス全体の状態を汚さないため。
+/// This sits in front of `UserDefaults` rather than touching it directly, so tests don't
+/// pollute process-wide state.
 public protocol KeyValueStore: Sendable {
     func string(forKey key: String) -> String?
     func set(_ value: String?, forKey key: String)
@@ -18,7 +20,7 @@ extension KeyValueStore {
     }
 }
 
-/// テスト・Preview 用のメモリ実装。
+/// An in-memory implementation for tests and previews.
 public final class InMemoryKeyValueStore: KeyValueStore, @unchecked Sendable {
     private var storage: [String: String]
     private let lock = NSLock()
@@ -40,7 +42,7 @@ public final class InMemoryKeyValueStore: KeyValueStore, @unchecked Sendable {
     }
 }
 
-/// `UserDefaults` 実装。アプリ本体はこちらを使う。
+/// The `UserDefaults`-backed implementation. Used by the app itself.
 public struct UserDefaultsKeyValueStore: KeyValueStore, @unchecked Sendable {
     private let defaults: UserDefaults
 

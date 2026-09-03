@@ -1,12 +1,12 @@
 import Foundation
 
-/// BB 弾の運動エネルギー計算。
+/// Kinetic energy calculation for a BB.
 public enum Energy {
-    /// 運動エネルギー E = 1/2 * m * v^2 （m は kg、v は m/s、戻り値は J）。
+    /// Kinetic energy E = 1/2 * m * v^2 (m in kg, v in m/s, returns J).
     /// - Parameters:
-    ///   - massGrams: BB 弾重量（グラム）。例: 0.20, 0.25, 0.28
-    ///   - velocityMetersPerSecond: 初速（m/s）
-    /// - Returns: ジュール
+    ///   - massGrams: BB weight in grams. e.g. 0.20, 0.25, 0.28
+    ///   - velocityMetersPerSecond: muzzle velocity (m/s)
+    /// - Returns: joules
     public static func joules(massGrams: Double, velocityMetersPerSecond: Double) -> Double {
         0.5 * (massGrams / 1000.0) * velocityMetersPerSecond * velocityMetersPerSecond
     }

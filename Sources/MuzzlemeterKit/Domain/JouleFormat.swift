@@ -1,27 +1,29 @@
 import Foundation
 
-/// ジュール表示の整形。
+/// Formatting for joule values.
 ///
-/// 固定 2 桁 (`%.2f`) にしていたが、実キャプチャのように弾速が数 m/s しか出ていない
-/// 場面では **全ての行が `0.00 J` になって情報が消える**（0.25 g・3.0 m/s = 0.0011 J）。
-/// 一方でエアソフトの実用域（0.5〜3 J）では 2 桁がちょうどよい。
-/// そこで桁数だけを値の大きさで切り替え、どの領域でも有効数字が 2 桁以上残るようにする。
+/// This used to be a fixed 2 digits (`%.2f`), but in scenes like a real capture where the
+/// velocity is only a few m/s, **every row collapses to `0.00 J` and the information is
+/// lost** (0.25 g at 3.0 m/s = 0.0011 J). Meanwhile, in airsoft's practical range
+/// (0.5-3 J) 2 digits is exactly right. So the digit count is switched based on the
+/// magnitude of the value, keeping at least 2 significant digits in every range.
 ///
-/// Round E でホーム画面ウィジェット・ライブアクティビティ・Apple Watch アプリが増え、
-/// **アプリ本体と全く同じ整形**が 3 か所で要るようになったので `MuzzlemeterKit` へ
-/// 移した（元は `App/Muzzlemeter/Features/JouleFormat.swift` にあった）。
+/// Round E added the Home Screen widget, Live Activity, and the Apple Watch app, and
+/// **the exact same formatting** was now needed in 3 places, so it was moved into
+/// `MuzzlemeterKit` (it originally lived in `App/Muzzlemeter/Features/JouleFormat.swift`).
 public enum JouleFormat {
-    /// 単位記号なしの数値部分。
+    /// The numeric part without a unit symbol.
     public static func value(_ joules: Double) -> String {
         String(format: "%.\(fractionDigits(for: joules))f", joules)
     }
 
-    /// `1.03 J` のように単位付きで返す。
+    /// Returns a value with its unit, e.g. `1.03 J`.
     public static func labeled(_ joules: Double) -> String {
         value(joules) + " J"
     }
 
-    /// 有効数字が 2 桁以上残る小数桁数。実用域（0.1〜10 J）は従来どおり 2 桁のまま。
+    /// The number of decimal digits that keeps at least 2 significant digits. The
+    /// practical range (0.1-10 J) stays at 2 digits as before.
     public static func fractionDigits(for joules: Double) -> Int {
         let magnitude = abs(joules)
         if magnitude == 0 { return 2 }

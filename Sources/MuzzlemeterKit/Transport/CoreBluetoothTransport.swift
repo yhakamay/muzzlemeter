@@ -2,35 +2,39 @@
 @preconcurrency import CoreBluetooth
 import Foundation
 
-/// CoreBluetooth による実機トランスポート（iOS / macOS 共通）。
+/// The real-hardware transport backed by CoreBluetooth (shared by iOS / macOS).
 ///
-/// `Sources/MuzzlemeterSniff/BLESniffer.swift` の実績あるコードを、`ChronoTransport` の
-/// 形に合わせて移植したもの。
+/// The proven code from `Sources/MuzzlemeterSniff/BLESniffer.swift`, ported into the
+/// shape of `ChronoTransport`.
+
+/// Concurrency design:
+/// * CoreBluetooth delegate callbacks run on a **dedicated serial queue**. All internal
+///   state is only ever touched on that queue, hence `@unchecked Sendable`.
+/// * Async APIs hop onto the queue before touching state, and results come back through
+///   `AsyncStream<TransportEvent>`.
+/// * `CBCentralManager` is **created only when a scan / connection is first requested**.
+///   Creating it is what triggers the OS's Bluetooth permission dialog, so replay mode
+///   is built to never create one at all.
 ///
-/// 並行性の設計:
-/// * CoreBluetooth のデリゲートは**専用の直列キュー**上で呼ばれる。内部状態はすべて
-///   このキュー上でしか触らないので `@unchecked Sendable` にしてある。
-/// * 非同期 API はキューへ hop してから状態を触り、結果は `AsyncStream<TransportEvent>` で返す。
-/// * `CBCentralManager` は**最初にスキャン / 接続を要求した時点で生成する**。
-///   生成した瞬間に OS の Bluetooth 許可ダイアログが出るため、リプレイモードでは
-///   一度も作られないようにしている。
-///
-/// 安全策:
-/// * 書き込み先は `ChronoUUIDs.forbiddenWriteCharacteristics` でホワイトリスト外を拒否する。
-///   OTA 制御 characteristic へ書くと本体が OTA ブートローダへ落ちる（`docs/PROTOCOL.md` §11）。
-/// * `.connected` は **service / characteristic の探索が終わってから**流す。
-///   これにより `ChronoDevice` は `.connected` 直後に `subscribe` / `write` してよい。
+/// Safety measures:
+/// * Write targets outside `ChronoUUIDs.forbiddenWriteCharacteristics`' allowlist are
+///   rejected. Writing to the OTA control characteristic drops the device into the OTA
+///   bootloader (`docs/PROTOCOL.md` §11).
+/// * `.connected` is delivered **only after service / characteristic discovery
+///   finishes**. That lets `ChronoDevice` call `subscribe` / `write` right after
+///   `.connected`.
 public final class CoreBluetoothTransport: NSObject, ChronoTransport, @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.yhakamay.muzzlemeter.kit.ble")
 
-    /// 探索するサービス。`nil` で全件探索。既定は notify / write の 2 つだけ
-    /// （OTA サービスは**列挙もしない**ので、間違って書き込みようがない）。
+    /// The services to discover. `nil` discovers everything. Defaults to just the notify
+    /// and write services (the OTA service isn't even **enumerated**, so there's no way
+    /// to accidentally write to it).
     private let servicesToDiscover: [CBUUID]?
 
     public nonisolated let events: AsyncStream<TransportEvent>
     private nonisolated let continuation: AsyncStream<TransportEvent>.Continuation
 
-    // MARK: 以下すべて `queue` 上でのみ触る
+    // MARK: everything below is only ever touched on `queue`
 
     private var central: CBCentralManager?
     private var wantsScan = false
@@ -57,8 +61,9 @@ public final class CoreBluetoothTransport: NSObject, ChronoTransport, @unchecked
         await onQueue {
             self.wantsScan = true
             self.scanNameFilter = nameFilter
-            // AC6000 はサービスをアドバタイズしないので、既定では services: nil で拾って
-            // 名前 / manufacturer data で絞る（`docs/PROTOCOL.md` §1.1）。
+            // The AC6000 doesn't advertise a service, so by default this scans with
+            // services: nil and filters by name / manufacturer data instead
+            // (`docs/PROTOCOL.md` §1.1).
             self.scanServices = services?.map { CBUUID(nsuuid: $0) }
             self.ensureCentral()
             self.startScanIfPossible()
@@ -89,7 +94,8 @@ public final class CoreBluetoothTransport: NSObject, ChronoTransport, @unchecked
             self.characteristics.removeAll()
             found.delegate = self
             guard central.state == .poweredOn else {
-                // 電源が入るのを待ってから繋ぐ（`centralManagerDidUpdateState` で再開）。
+                // Wait for power-on before connecting (resumed in
+                // `centralManagerDidUpdateState`).
                 return
             }
             central.connect(found, options: nil)
@@ -121,7 +127,8 @@ public final class CoreBluetoothTransport: NSObject, ChronoTransport, @unchecked
 
     public func write(_ data: Data, to characteristic: UUID, withResponse: Bool) async throws {
         try await onQueueThrowing {
-            // 🚫 OTA 制御への書き込みは何があっても通さない（文鎮化の防止）。
+            // A write to the OTA control point is never allowed through, no matter what
+            // (prevents bricking).
             guard !ChronoUUIDs.isForbiddenWriteTarget(characteristic) else {
                 assertionFailure("OTA characteristic への書き込みが試みられました: \(characteristic)")
                 throw ChronoTransportError.forbiddenCharacteristic(characteristic)
@@ -165,7 +172,7 @@ public final class CoreBluetoothTransport: NSObject, ChronoTransport, @unchecked
         }
     }
 
-    // MARK: - キューへの hop
+    // MARK: - Hopping onto the queue
 
     private func onQueue(_ body: @escaping @Sendable () -> Void) async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
@@ -189,7 +196,7 @@ public final class CoreBluetoothTransport: NSObject, ChronoTransport, @unchecked
         }
     }
 
-    // MARK: - 内部（すべて `queue` 上）
+    // MARK: - Internals (all on `queue`)
 
     private func ensureCentral() {
         guard central == nil, !isShutDown else { return }
@@ -198,21 +205,22 @@ public final class CoreBluetoothTransport: NSObject, ChronoTransport, @unchecked
 
     private func startScanIfPossible() {
         guard wantsScan, let central, central.state == .poweredOn else { return }
-        // **重複した広告も受け取る。** 同じ機器の広告を 1 本しか受け取らないと
-        // RSSI が最初の 1 回で固まり、「近づけたら強くなる」という一覧の使いかた
-        // （複数台から手元の 1 台を選ぶ）が成立しない。
-        // スキャンは接続が成立した時点で止まるので、鳴りっぱなしにはならない。
+        // **Also receive duplicate advertisements.** If only the first advertisement
+        // from a device were received, RSSI would freeze at that first reading, and the
+        // list's whole point — picking out the one device in hand from several — would
+        // break. Scanning stops once a connection is established, so this doesn't run
+        // forever.
         central.scanForPeripherals(
             withServices: scanServices,
             options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
         )
     }
 
-    /// 広告がこのスキャンの対象か。
+    /// Whether an advertisement matches this scan.
     ///
-    /// 名前フィルタが指定されていれば「名前の部分一致」**または**
-    /// 「manufacturer data が `00 05 08` で始まる」で拾う。名前が広告に載らない
-    /// 個体・タイミングがあり得るため、どちらか一方で通す。
+    /// If a name filter is given, this matches on "partial name match" **or**
+    /// "manufacturer data starts with `00 05 08`." There can be units or moments where
+    /// the name isn't in the advertisement, so either condition is accepted.
     private func matches(name: String?, manufacturerData: Data?) -> Bool {
         guard let filter = scanNameFilter, !filter.isEmpty else { return true }
         if let name, name.lowercased().contains(filter.lowercased()) { return true }
@@ -231,7 +239,7 @@ extension CoreBluetoothTransport: CBCentralManagerDelegate {
         switch central.state {
         case .poweredOn:
             startScanIfPossible()
-            // 電源待ちで保留していた接続を再開する。
+            // Resume a connection that was on hold waiting for power-on.
             if let pending = pendingConnect, let peripheral = discoveredPeripherals[pending],
                peripheral.state != .connected {
                 central.connect(peripheral, options: nil)
@@ -282,7 +290,8 @@ extension CoreBluetoothTransport: CBCentralManagerDelegate {
         characteristics.removeAll()
         pendingServiceCount = 0
         peripheral.delegate = self
-        // `.connected` は探索完了後に流す（`ChronoDevice` が直後に subscribe できるように）。
+        // `.connected` is delivered only after discovery finishes (so `ChronoDevice` can
+        // subscribe right away).
         peripheral.discoverServices(servicesToDiscover)
     }
 
@@ -378,7 +387,7 @@ extension CoreBluetoothTransport: CBPeripheralDelegate {
     }
 
     public func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
-        // 本体のファームが GATT を作り直した。探索からやり直す。
+        // The device's firmware rebuilt its GATT table. Start discovery over.
         characteristics.removeAll()
         peripheral.discoverServices(servicesToDiscover)
     }

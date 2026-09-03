@@ -1,42 +1,50 @@
 import Foundation
 
-/// AC6000 MKIII BT の既知 opcode。
+/// Known opcodes for the AC6000 MKIII BT.
 ///
-/// 出典は `docs/PROTOCOL.md` §6。**実測で観測されたもの**と
-/// **まだ観測できていない（未検証の）もの**をコメントで区別してある。
+/// Sourced from `docs/PROTOCOL.md` §6. Comments distinguish between **what's been
+/// confirmed by measurement** and **what hasn't been observed yet (unverified)**.
 ///
-/// > ⚠️ 破壊的・危険な opcode はここに**意図的に含めない**（`docs/PROTOCOL.md` §11）:
-/// > `0x61` CLEAR_LOG（本体のログを消す）、`0x24` WRITE_DEVICE_SETTINGS などの
-/// > 設定書き込み系。ビルダを用意しなければ誤って送りようがない。
+/// > Warning: destructive / dangerous opcodes are **deliberately excluded** here
+/// > (`docs/PROTOCOL.md` §11): `0x61` CLEAR_LOG (erases the device's log), `0x24`
+/// > WRITE_DEVICE_SETTINGS, and other settings-writing commands. Without a builder for
+/// > them, they can't be sent by accident.
 public enum ChronoCommand: UInt8, Sendable, Hashable, CaseIterable {
-    /// ACK。payload[0] = 応答対象の cmd。**実測**（`aa 05 41 4b 93`）。
+    /// ACK. payload[0] = the cmd being acknowledged. **Confirmed by measurement**
+    /// (`aa 05 41 4b 93`).
     case ack = 0x41
-    /// NAK。未知コマンドへの応答。payload = `0xFF` 固定。ACK(`0x41`)の対になる
-    /// 拒否応答。**実機確定**（`aa 05 4e ff 54`。`docs/PROTOCOL.md` §6.7）。
+    /// NAK. The response to an unknown command. payload is fixed at `0xFF`. The
+    /// rejection counterpart to ACK (`0x41`). **Confirmed on real hardware**
+    /// (`aa 05 4e ff 54`. `docs/PROTOCOL.md` §6.7).
     case nak = 0x4E
-    /// 鍵の照合 / 取得（READ_KEY / VERIFY_KEY）。TX payload = [key1, key2]。**実測**。
+    /// Key verification / retrieval (READ_KEY / VERIFY_KEY). TX payload = [key1, key2].
+    /// **Confirmed by measurement**.
     case readKey = 0x4B
-    /// 1 発の計測結果。**実測**（§7）。
+    /// One shot's measurement result. **Confirmed by measurement** (§7).
     case fireReport = 0x52
-    /// 現在選択中の弾。TX payload = [0x00]。**実測**（§6.2）。
+    /// The currently selected BB. TX payload = [0x00]. **Confirmed by measurement**
+    /// (§6.2).
     case currentAmmo = 0x5A
-    /// アモプリセットの読み出し。TX payload = [0x01, idx]。**実測**（§6.3）。
+    /// Reads an ammo preset. TX payload = [0x01, idx]. **Confirmed by measurement**
+    /// (§6.3).
     case ammoPreset = 0x47
-    /// 本体内ログ件数。TX payload = [0x00]。**実機確定**（§6.5）:
-    /// RX payload = [count, 0x01]（`count` = 記録件数、0 件のときも含む。
-    /// 2 バイト目は常に `0x01` で意味は不明・生のまま扱う）。
-    /// このログは **volatile**（本体の電源を切ると 0 件に戻る）。
+    /// The device log's record count. TX payload = [0x00]. **Confirmed on real
+    /// hardware** (§6.5): RX payload = [count, 0x01] (`count` = number of records,
+    /// including 0. The second byte is always `0x01`; its meaning is unknown and it's
+    /// kept as-is). This log is **volatile** (resets to 0 records when the device is
+    /// powered off).
     case logCount = 0x62
-    /// ログレコード本体。TX payload = [index]（1 byte・**1 始まり**）。**実機確定**（§6.6）。
-    /// RX payload = [index, rev0, rev1, speed0, speed1]（5 bytes）。
-    /// index 0 への要求には応答が来ない。件数を超える index には全ゼロのレコードが返る
-    /// （エラーではなく「そこで終わり」を意味する）。
+    /// One log record. TX payload = [index] (1 byte, **1-based**). **Confirmed on real
+    /// hardware** (§6.6). RX payload = [index, rev0, rev1, speed0, speed1] (5 bytes).
+    /// A request for index 0 gets no response. An index past the record count returns an
+    /// all-zero record (not an error — it signals "that's the end").
     case logRecord = 0x63
-    /// バッテリー問い合わせ。**未検証**（キャプチャ中 1 度も来なかった）。
+    /// Battery query. **Unverified** (never seen in any capture).
     case batteryQuery = 0x2C
-    /// バッテリー通知。**未検証**。
+    /// Battery report. **Unverified**.
     case batteryReport = 0x64
-    /// デバイス設定の読み出し。**未検証**（応答レイアウト不明のためビルダは用意しない）。
+    /// Reads device settings. **Unverified** (no builder provided, since the response
+    /// layout is unknown).
     case readDeviceSettings = 0x27
 
     public var name: String {
@@ -55,34 +63,39 @@ public enum ChronoCommand: UInt8, Sendable, Hashable, CaseIterable {
         }
     }
 
-    /// ログ表示用。未知 opcode は `0x??` と出す。
+    /// For log display. An unknown opcode is shown as `0x??`.
     public static func describe(_ cmd: UInt8) -> String {
         ChronoCommand(rawValue: cmd)?.name ?? String(format: "0x%02x", cmd)
     }
 }
 
-/// 本キットが送信する読み取り系リクエスト。
+/// The read-only requests this kit sends.
 ///
-/// **読み取り専用**。設定書き込み・ログ消去は含めない（`docs/PROTOCOL.md` §11）。
+/// **Read-only.** Settings writes and log erasure are intentionally not included
+/// (`docs/PROTOCOL.md` §11).
 public enum ChronoRequest: Sendable, Hashable {
-    /// 鍵の照合。広告 manufacturer data から取った鍵を載せる。
+    /// Verifies the key. Carries the key taken from the advertisement's manufacturer
+    /// data.
     ///
-    /// 鍵が合っていれば数十 ms で `ACK(0x4B)` が返る（実機で確認済み。ボタン押下は不要）。
-    /// 鍵が未知のときは `.zero` を載せて送り、本体の電源ボタン押下後に
-    /// `0x4B` 応答（data[3], data[4] に鍵）が返るとされる（**未検証**）。
+    /// If the key is correct, `ACK(0x4B)` comes back within tens of ms (confirmed on
+    /// real hardware; no button press needed). When the key is unknown, this is sent
+    /// with `.zero`, and the device is said to respond with `0x4B` (key in data[3],
+    /// data[4]) after the power button is pressed (**unverified**).
     case readKey(DeviceKeys)
-    /// 現在選択中の弾を読む。
+    /// Reads the currently selected BB.
     case readCurrentAmmo
-    /// 本体内ログ件数を読む。
+    /// Reads the device log's record count.
     case readLogCount
-    /// 本体内ログを 1 件読む（`0x63`）。**実機確定**（`docs/PROTOCOL.md` §6.6）。
+    /// Reads one device log record (`0x63`). **Confirmed on real hardware**
+    /// (`docs/PROTOCOL.md` §6.6).
     ///
-    /// payload は 1 byte・**1 始まり**の index。index 0 には応答が来ない。
-    /// 件数を超える index には全ゼロのレコードが返る（エラーではない）。
+    /// The payload is a 1-byte, **1-based** index. Index 0 gets no response. An index
+    /// past the record count returns an all-zero record (not an error).
     case readLogRecord(index: UInt8)
-    /// アモプリセット（1..5）を読む。
+    /// Reads an ammo preset (1..5).
     case readAmmoPreset(slot: UInt8)
-    /// バッテリーを問い合わせる（**未検証**。応答が無くても致命的でない前提で送る）。
+    /// Queries the battery (**unverified**; sent on the assumption that no response
+    /// isn't fatal).
     case readBattery
 
     public var frame: ChronoFrame {
@@ -102,11 +115,12 @@ public enum ChronoRequest: Sendable, Hashable {
         }
     }
 
-    /// 送信バイト列。
+    /// The bytes to transmit.
     ///
-    /// **`READ_KEY` だけは鍵確立前のフレームなので、`keys` に関わらず 0/0 で署名する**
-    /// （`docs/PROTOCOL.md` §3.2 の worked example と一致）。この特例をここ 1 箇所に
-    /// 閉じ込めることで、呼び出し側が鍵の有無を気にしなくてよくなる。
+    /// **`READ_KEY` alone is signed with 0/0 regardless of `keys`**, since it's sent
+    /// before the key is established (matching the worked example in
+    /// `docs/PROTOCOL.md` §3.2). Keeping this special case in this one place means
+    /// callers don't have to worry about whether the key is known yet.
     public func encoded(keys: DeviceKeys) -> Data {
         switch self {
         case .readKey:
@@ -118,9 +132,9 @@ public enum ChronoRequest: Sendable, Hashable {
 }
 
 extension ChronoCommand {
-    // 仕様書の呼び名でそのまま呼べる薄いショートカット。
+    // Thin shortcuts callable by the names used in the spec.
 
-    /// `aa 06 4b <k1> <k2> <cks>`（鍵 0/0 で署名）。
+    /// `aa 06 4b <k1> <k2> <cks>` (signed with key 0/0).
     public static func readKey(keys: DeviceKeys) -> Data {
         ChronoRequest.readKey(keys).encoded(keys: keys)
     }
@@ -135,7 +149,8 @@ extension ChronoCommand {
         ChronoRequest.readLogCount.encoded(keys: keys)
     }
 
-    /// `aa 05 63 <index> <cks>`（1 byte・1 始まり index。**実機確定**。§6.6）
+    /// `aa 05 63 <index> <cks>` (1-byte, 1-based index. **Confirmed on real hardware.**
+    /// §6.6)
     public static func readLogRecord(_ index: UInt8, keys: DeviceKeys) -> Data {
         ChronoRequest.readLogRecord(index: index).encoded(keys: keys)
     }
@@ -145,7 +160,7 @@ extension ChronoCommand {
         ChronoRequest.readAmmoPreset(slot: slot).encoded(keys: keys)
     }
 
-    /// `aa 05 2c 00 <cks>`（**未検証**）
+    /// `aa 05 2c 00 <cks>` (**unverified**)
     public static func readBattery(keys: DeviceKeys) -> Data {
         ChronoRequest.readBattery.encoded(keys: keys)
     }

@@ -1,43 +1,46 @@
 import Foundation
 
-/// 規制上限に対する 1 発の立ち位置。
+/// Where a single shot stands relative to the regulation limit.
 ///
-/// エアソフトで一番怖いのは「気づかないうちに上限を越えていた」状態なので、
-/// **越えたかどうか**だけでなく「あと少しで越える」を独立した段階として持つ。
-/// 越えてからでは遅く、ホップやスプリングを調整する猶予が要るため。
+/// The scariest thing in airsoft is "the limit was exceeded without anyone noticing," so
+/// this holds not just **whether it was exceeded** but "about to be exceeded" as its own
+/// independent stage. Waiting until it's already exceeded is too late — there needs to be
+/// room to adjust the hop or spring beforehand.
 public enum EnergyMargin: String, Sendable, Hashable, Codable, CaseIterable {
-    /// 上限より十分下（既定では上限の 90 % 以下）。
+    /// Comfortably under the limit (by default, 90% of the limit or less).
     case safe
-    /// 上限に近い（上限の 90 % 超〜上限未満）。
+    /// Close to the limit (over 90% of the limit, but under it).
     case caution
-    /// 上限ちょうど、またはそれ以上。
+    /// Exactly at the limit, or over it.
     case over
 
     public var isOver: Bool { self == .over }
-    /// 注意喚起（色・音・ハプティクス）を出すべきか。
+    /// Whether an alert (color / sound / haptics) should be raised.
     public var needsAttention: Bool { self != .safe }
 }
 
-/// 規制上限（プロファイルごとの J）に対する判定。
+/// Judgment against the regulation limit (in J, per profile).
 ///
-/// アプリ側ではなくキットに置いてあるのは、**しきい値の決め方そのものが仕様**であり、
-/// UI に埋めるとテストできなくなるため。境界の扱い（上限ちょうどは「超過」）も
-/// ここ 1 箇所で決める。
+/// This lives in the kit rather than the app because **how the threshold is decided is
+/// itself part of the spec**, and burying it in the UI would make it untestable. How the
+/// boundary is handled (exactly at the limit counts as "exceeded") is also decided in
+/// this one place.
 public enum EnergyLimit {
-    /// 「注意」に入る幅。上限の 10 % 以内に入ったら注意。
+    /// The width of the "caution" band. Within 10% of the limit triggers caution.
     public static let defaultCautionFraction: Double = 0.10
 
-    /// 1 発のジュールを上限と比べて段階に落とす。
+    /// Reduces one shot's joules, compared against the limit, to a stage.
     ///
     /// - Parameters:
-    ///   - joules: 判定するエネルギー（J）
-    ///   - limitJoules: 規制上限（J）。0 以下なら上限なしとして常に `.safe`。
-    ///   - cautionFraction: 「注意」に入る幅（上限に対する比）。
-    /// - Returns: `joules >= limit` なら `.over`、`limit * (1 - fraction) < joules < limit` なら
-    ///   `.caution`、それ以外は `.safe`。
+    ///   - joules: the energy being judged (J)
+    ///   - limitJoules: the regulation limit (J). `<= 0` means no limit, always `.safe`.
+    ///   - cautionFraction: the width of the "caution" band, as a fraction of the limit.
+    /// - Returns: `.over` if `joules >= limit`, `.caution` if
+    ///   `limit * (1 - fraction) < joules < limit`, otherwise `.safe`.
     ///
-    /// **上限ちょうどは `.over`。** 法令上限 0.98 J は「0.98 J を超えてはならない」ではなく
-    /// 運用上「0.98 J 未満で収める」ものとして扱われるので、ちょうどを安全側に倒す。
+    /// **Exactly at the limit is `.over`.** A legal limit of 0.98 J is treated in practice
+    /// not as "must not exceed 0.98 J" but as "must stay under 0.98 J," so the exact
+    /// boundary is resolved on the safe side.
     public static func margin(
         joules: Double,
         limitJoules: Double,
@@ -49,7 +52,7 @@ public enum EnergyLimit {
         return joules > cautionThreshold ? .caution : .safe
     }
 
-    /// 速度（m/s）と BB 重量から直接判定する版。
+    /// A variant that judges directly from velocity (m/s) and BB weight.
     public static func margin(
         massGrams: Double,
         velocityMetersPerSecond: Double,
@@ -66,12 +69,12 @@ public enum EnergyLimit {
         )
     }
 
-    /// 上限までの余裕（J）。越えていれば負の値（＝超過分）になる。
+    /// Headroom under the limit (J). Negative (i.e. the overage) once exceeded.
     public static func headroomJoules(joules: Double, limitJoules: Double) -> Double {
         limitJoules - joules
     }
 
-    /// 上限を越えたショットの数。セッションのまとめに出す。
+    /// The number of shots that exceeded the limit. Shown in the session summary.
     public static func overLimitCount(
         shots: [Shot],
         massGrams: Double,
@@ -87,9 +90,10 @@ public enum EnergyLimit {
         }
     }
 
-    /// 上限を越えない最大初速（m/s）。BB 重量が 0 以下なら `nil`。
+    /// The maximum velocity (m/s) that stays under the limit. `nil` if the BB weight is
+    /// `<= 0`.
     ///
-    /// 「あと何 m/s 出せるか」を出すために使う。E = ½mv² を v について解いただけ。
+    /// Used to show "how much more speed is available." Just E = ½mv² solved for v.
     public static func maxVelocity(massGrams: Double, limitJoules: Double) -> Double? {
         guard massGrams > 0, limitJoules > 0 else { return nil }
         return (2.0 * limitJoules / (massGrams / 1000.0)).squareRoot()

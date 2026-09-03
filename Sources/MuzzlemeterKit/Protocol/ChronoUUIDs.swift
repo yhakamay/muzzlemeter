@@ -1,106 +1,114 @@
 import Foundation
 
-/// AC6000 MKIII BT の BLE サービス / キャラクタリスティック UUID。
+/// The AC6000 MKIII BT's BLE service / characteristic UUIDs.
 ///
-/// 値は `docs/PROTOCOL.md` §2（Apple PacketLogger の実測 GATT テーブル）に基づく **確定値**。
-/// **Notify と Write は別サービスにある**ので、1 サービスにまとめて探索してはいけない。
+/// These values are **confirmed** per `docs/PROTOCOL.md` §2 (a GATT table measured from
+/// an Apple PacketLogger capture). **Notify and Write live in separate services**, so
+/// don't discover them as if they were in one.
 public enum ChronoUUIDs {
-    // MARK: - Notify（本体 → アプリ）
+    // MARK: - Notify (device -> app)
 
-    /// Notify サービス（handles 0x000E–0x0011）。
+    /// The notify service (handles 0x000E-0x0011).
     public static let notifyService = uuid("5CDE0C3D-7B1D-4352-94BB-02269C9F42B5")
-    /// 通知用 characteristic（handle 0x0010、properties 0x10 = Notify のみ）。
+    /// The notification characteristic (handle 0x0010, properties 0x10 = Notify only).
     public static let notifyCharacteristic = uuid("3337E46E-F79E-4FF5-9A49-77C36D170C62")
 
-    // MARK: - Write（アプリ → 本体）
+    // MARK: - Write (app -> device)
 
-    /// Write サービス（handles 0x0012–0x0014）。
+    /// The write service (handles 0x0012-0x0014).
     public static let writeService = uuid("53C47FE1-6C22-4EA6-99C7-7B6325EC75B9")
-    /// 書き込み用 characteristic（handle 0x0014、properties 0x0C）。
+    /// The write characteristic (handle 0x0014, properties 0x0C).
     ///
-    /// Write Without Response も申告されているが、AceSoft は全フレームを
-    /// **ATT Write Request（応答あり）**で送っている（`docs/PROTOCOL.md` §3.4）。
-    /// 本キットも `withResponse` で送る。
+    /// Write Without Response is also declared, but AceSoft sends every frame as an
+    /// **ATT Write Request (with response)** (`docs/PROTOCOL.md` §3.4). This kit writes
+    /// `withResponse` too.
     public static let writeCharacteristic = uuid("9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C")
 
-    // MARK: - OTA（絶対に触らない）
+    // MARK: - OTA (never touch this)
 
-    /// Silicon Labs OTA（DFU）サービス。**列挙のみ。書き込み禁止。**
+    /// The Silicon Labs OTA (DFU) service. **Discovery only. Writing is forbidden.**
     public static let otaService = uuid("1D14D6EE-FD63-4FA1-BFA4-8F47B42119F0")
 
-    /// 🚫 **絶対に書き込まないこと。**
+    /// Do not write to this. Ever.
     ///
-    /// Silicon Labs OTA コントロール（handle 0x0017）。ここへ書き込むと MCU が
-    /// OTA ブートローダへ再起動し、復旧には正規のファームウェアイメージが要る
-    /// （＝**文鎮化のリスク**）。`docs/PROTOCOL.md` §11 を参照。
+    /// The Silicon Labs OTA control point (handle 0x0017). Writing here reboots the MCU
+    /// into the OTA bootloader, and recovery requires a genuine firmware image (i.e.
+    /// **bricking risk**). See `docs/PROTOCOL.md` §11.
     ///
-    /// `CoreBluetoothTransport` は書き込み先をホワイトリストで縛り、この UUID への
-    /// 書き込みを `ChronoTransportError.forbiddenCharacteristic` で拒否する。
+    /// `CoreBluetoothTransport` restricts write targets to an allowlist and rejects a
+    /// write to this UUID with `ChronoTransportError.forbiddenCharacteristic`.
     public static let otaControlCharacteristic = uuid("F7BF3564-FB6D-4E53-88A4-5E37E0326063")
 
-    /// 書き込みを禁じる characteristic。トランスポート実装はここを必ず参照する。
+    /// Characteristics that writes are forbidden to. Transport implementations must
+    /// always consult this.
     public static let forbiddenWriteCharacteristics: Set<UUID> = [otaControlCharacteristic]
 
-    /// この characteristic への書き込みが禁止されているか。
+    /// Whether writing to this characteristic is forbidden.
     public static func isForbiddenWriteTarget(_ characteristic: UUID) -> Bool {
         forbiddenWriteCharacteristics.contains(characteristic)
     }
 
-    // MARK: - スキャン
+    // MARK: - Scanning
 
-    /// アドバタイズされる Complete Local Name の前方一致候補。
+    /// Prefix-match candidates for the advertised Complete Local Name.
     ///
-    /// 実測は `AC6000BT-009809`。AC6000/AC7000 の別表記も資料に現れるため候補に含める。
-    /// GAP Device Name（0x2A00）は全個体で `ACETECH-12345678` の可能性があり識別に使えない。
+    /// Confirmed on real hardware: `AC6000BT-009809`. Other spellings for AC6000/AC7000
+    /// also show up in reference material, so they're included as candidates too. The GAP
+    /// Device Name (0x2A00) may be `ACETECH-12345678` on every unit and can't be used to
+    /// identify a specific device.
     public static let advertisedNamePrefixes = ["AC6000BT-", "AC6000-BT", "AC7000-BT"]
 
-    /// スキャン時の名前フィルタ（`ChronoDevice.Configuration.nameFilter` の既定値）。
+    /// The name filter used when scanning (the default for
+    /// `ChronoDevice.Configuration.nameFilter`).
     public static let primaryNamePrefix = "AC6000BT-"
 
-    /// Manufacturer Specific Data の先頭 3 バイト（company id `00 05` + 機種コード `08`）。
-    /// 名前が取れないアドバタイズを拾うための保険として使う。
+    /// The first 3 bytes of the Manufacturer Specific Data (company id `00 05` + model
+    /// code `08`). Used as a fallback to catch advertisements where the name can't be read.
     public static let manufacturerDataPrefix: [UInt8] = [0x00, 0x05, 0x08]
 
-    /// **サービス UUID はアドバタイズされない**（実測）。スキャンは `services: nil` で行い、
-    /// 名前 / manufacturer data で絞ること。
+    /// **No service UUID is advertised** (confirmed by measurement). Scan with
+    /// `services: nil` and filter by name / manufacturer data instead.
     public static let advertisesServiceUUIDs = false
 
-    /// 広告名が AC6000 系か。
+    /// Whether the advertised name belongs to the AC6000 family.
     public static func matchesAdvertisedName(_ name: String?) -> Bool {
         guard let name else { return false }
         let upper = name.uppercased()
         return advertisedNamePrefixes.contains { upper.hasPrefix($0.uppercased()) }
     }
 
-    /// Manufacturer data が AC6000 系か（`00 05 08 …`）。
+    /// Whether the manufacturer data belongs to the AC6000 family (`00 05 08 ...`).
     public static func matchesManufacturerData(_ data: Data?) -> Bool {
         guard let data, data.count >= manufacturerDataPrefix.count else { return false }
         return Array(data.prefix(manufacturerDataPrefix.count)) == manufacturerDataPrefix
     }
 
-    /// 広告が AC6000 系のものか（名前 **または** manufacturer data で判定）。
+    /// Whether the advertisement belongs to the AC6000 family (matched by name **or**
+    /// manufacturer data).
     public static func matches(name: String?, manufacturerData: Data?) -> Bool {
         matchesAdvertisedName(name) || matchesManufacturerData(manufacturerData)
     }
 
-    /// 文字列リテラルからの生成。定数はすべて有効な UUID なので失敗しない。
+    /// Builds a `UUID` from a string literal. Never fails since every constant here is a
+    /// valid UUID.
     private static func uuid(_ text: String) -> UUID {
         guard let value = UUID(uuidString: text) else {
-            preconditionFailure("ChronoUUIDs の UUID リテラルが不正です: \(text)")
+            preconditionFailure("Invalid UUID literal in ChronoUUIDs: \(text)")
         }
         return value
     }
 }
 
-/// フレームのチェックサムに加算される 2 バイトの鍵。
+/// The 2-byte key added into a frame's checksum.
 ///
 /// `docs/PROTOCOL.md` §3.1 / §4.3:
-/// * チェックサムは `(Σ frame[0..L-2] + key1 + key2) & 0xFF`。
-/// * 鍵はアドバタイズの Manufacturer Specific Data の offset 3/4 に載っている
-///   （`00 05 08 c4 94 52 04` → key1 = 0xC4, key2 = 0x94）。**実機で検証済み**:
-///   広告から取った鍵をそのまま `0x4B` に載せると 55 ms で ACK が返り、
-///   本体の電源ボタン押下は不要だった。
-/// * `0x4B`（READ_KEY）フレーム自身だけは鍵確立前なので `key1 = key2 = 0` で署名する。
+/// * The checksum is `(sum(frame[0..L-2]) + key1 + key2) & 0xFF`.
+/// * The key is carried at offset 3/4 of the advertisement's Manufacturer Specific Data
+///   (`00 05 08 c4 94 52 04` -> key1 = 0xC4, key2 = 0x94). **Verified on real hardware**:
+///   putting the key straight from the advertisement into `0x4B` gets an ACK back in
+///   55 ms, with no button press needed on the device.
+/// * The `0x4B` (READ_KEY) frame itself is signed with `key1 = key2 = 0`, since the key
+///   isn't established yet at that point.
 public struct DeviceKeys: Sendable, Hashable, Codable, CustomStringConvertible {
     public let key1: UInt8
     public let key2: UInt8
@@ -110,24 +118,24 @@ public struct DeviceKeys: Sendable, Hashable, Codable, CustomStringConvertible {
         self.key2 = key2
     }
 
-    /// 鍵未確立を表す 0/0。READ_KEY フレームの署名にも使う。
+    /// 0/0, representing "no key established yet." Also used to sign the READ_KEY frame.
     public static let zero = DeviceKeys(key1: 0, key2: 0)
 
     public var isZero: Bool { key1 == 0 && key2 == 0 }
 
-    /// チェックサムに加算する値。
+    /// The value added into the checksum.
     public var sum: Int { Int(key1) + Int(key2) }
 
-    /// アドバタイズの Manufacturer Specific Data から鍵を取り出す。
+    /// Extracts the key from the advertisement's Manufacturer Specific Data.
     ///
     /// `00 05 08 c4 94 52 04`
-    ///  └┬─┘ └┬┘ └┬┘ └┬┘
-    ///   │    │   │   └ key2 (offset 4)
-    ///   │    │   └──── key1 (offset 3)
-    ///   │    └──────── 機種コード（推定）
-    ///   └───────────── company id（LE 0x0500。SIG の正規割り当てではない）
+    ///  |--|  |-| |-| |-|
+    ///   |     |   |   `- key2 (offset 4)
+    ///   |     |   `----- key1 (offset 3)
+    ///   |     `--------- model code (inferred)
+    ///   `--------------- company id (LE 0x0500; not an official SIG assignment)
     ///
-    /// company id が `00 05` でない、または 5 バイト未満なら `nil`。
+    /// `nil` if the company id isn't `00 05`, or the data is under 5 bytes.
     public init?(manufacturerData: Data) {
         let bytes = [UInt8](manufacturerData)
         guard bytes.count >= 5 else { return nil }
@@ -135,7 +143,7 @@ public struct DeviceKeys: Sendable, Hashable, Codable, CustomStringConvertible {
         self.init(key1: bytes[3], key2: bytes[4])
     }
 
-    /// `"c494"` 形式。`KeyValueStore` への永続化に使う。
+    /// The `"c494"` form, used when persisting to `KeyValueStore`.
     public var hexString: String { String(format: "%02x%02x", key1, key2) }
 
     public init?(hexString: String) {
