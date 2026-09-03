@@ -28,6 +28,7 @@ struct LiveView: View {
                     VStack(spacing: 20) {
                         connectionPill
                         ammoMismatchBanner
+                        deviceLogBanner
                         Spacer()
                         idleState(selection: $service.selectedProfile)
                         Spacer()
@@ -39,6 +40,7 @@ struct LiveView: View {
                         VStack(spacing: 20) {
                             connectionPill
                             ammoMismatchBanner
+                            deviceLogBanner
 
                             lastVelocity(selection: $service.selectedProfile)
 
@@ -182,6 +184,23 @@ struct LiveView: View {
                 mismatch: mismatch,
                 onAdopt: { withAnimation(.snappy) { service.adoptDeviceAmmoWeight() } },
                 onDismiss: { withAnimation(.snappy) { service.dismissAmmoMismatch() } }
+            )
+        }
+    }
+
+    /// 本体内に未取込のログがあるとき、取り込みの進捗・結果を出す帯。
+    ///
+    /// **接続ピルのすぐ下**（弾設定の警告と同じ場所）に置く。本体まわりの知らせは
+    /// 1 か所に集めたほうが、どこを見れば本体の話が出るのかを覚えずに済む。
+    @ViewBuilder
+    private var deviceLogBanner: some View {
+        if service.pendingDeviceLogCount != nil || service.deviceLogImport != .idle {
+            DeviceLogBanner(
+                state: service.deviceLogImport,
+                pendingCount: service.pendingDeviceLogCount,
+                onImport: { withAnimation(.snappy) { service.importDeviceLog() } },
+                onDismissPending: { withAnimation(.snappy) { service.dismissDeviceLogBanner() } },
+                onDismissResult: { withAnimation(.snappy) { service.dismissDeviceLogResult() } }
             )
         }
     }

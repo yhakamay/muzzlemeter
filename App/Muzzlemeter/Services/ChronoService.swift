@@ -199,6 +199,139 @@ final class ChronoService {
         dismissedAmmoMismatch = ammoWeightMismatch
     }
 
+    // MARK: - 本体内ログの取り込み
+
+    /// 本体が報告したログ件数（`0x62`）。未取得なら nil。
+    private(set) var deviceLogCount: Int?
+    /// 取り込みの進行状態。帯の見た目はこれだけで決まる。
+    private(set) var deviceLogImport: DeviceLogImportState = .idle
+    /// 「あとで」を押された件数。**この起動の間だけ**黙る（次の起動ではまた促す）。
+    private var dismissedDeviceLogCount: Int?
+    /// いま繋がっている機器。取り込み済みの印を機器ごとに付けるために要る。
+    private var connectedPeripheralID: UUID?
+
+    /// 機器ごとの「どこまで取り込んだか」の印。
+    ///
+    /// 件数そのものを覚える。本体のログには ID も時刻も無いので、**同じ件数なら
+    /// 同じログとみなす**しかない。撃ち足されて件数が増えれば、また促される。
+    private static func lastImportedLogCountKey(for peripheral: UUID) -> String {
+        "muzzlemeter.lastImportedLogCount.\(peripheral.uuidString)"
+    }
+
+    private var lastImportedLogCountKey: String? {
+        connectedPeripheralID.map { Self.lastImportedLogCountKey(for: $0) }
+    }
+
+    private var lastImportedLogCount: Int? {
+        guard let key = lastImportedLogCountKey else { return nil }
+        return defaults.object(forKey: key) as? Int
+    }
+
+    /// 「本体に未取込のログが N 件あります」と出すべき件数。無ければ nil。
+    ///
+    /// **繋がっているときにしか出さない。** 押しても読み出しは始まらないのに
+    /// 「取り込む」を出すと、押した人には「試したのに失敗した」としか見えない。
+    var pendingDeviceLogCount: Int? {
+        guard connectionState.isReady else { return nil }
+        guard deviceLogImport == .idle else { return nil }
+        guard let count = deviceLogCount, count > 0 else { return nil }
+        guard count != dismissedDeviceLogCount else { return nil }
+        guard count != lastImportedLogCount else { return nil }
+        return count
+    }
+
+    /// 取り込みを始める。**計測は止めない**（撃てば普通にショットが入る）。
+    func importDeviceLog() {
+        guard let count = pendingDeviceLogCount else { return }
+        deviceLogImport = .importing(done: 0, total: count)
+        let device = self.device
+        // ここだけ self を強く掴む（読み出しが終わるまでの数秒）。弱参照にすると
+        // 入れ子のクロージャで「捕捉した var self」を再捕捉することになり、
+        // 進捗の受け渡しがかえって読みにくくなる。ChronoService はアプリと同じ寿命。
+        Task {
+            let result = await device.readDeviceLog { progress in
+                Task { @MainActor in self.updateDeviceLogProgress(progress) }
+            }
+            self.finishDeviceLogImport(result)
+        }
+    }
+
+    /// 進捗の反映。**取り込みを止めた後の遅れて来た進捗は捨てる。**
+    private func updateDeviceLogProgress(_ progress: DeviceLogProgress) {
+        guard case .importing = deviceLogImport else { return }
+        deviceLogImport = .importing(done: progress.done, total: progress.total)
+    }
+
+    /// 「あとで」。件数が変わるまで黙る。
+    func dismissDeviceLogBanner() {
+        dismissedDeviceLogCount = deviceLogCount
+    }
+
+    /// 結果の帯を閉じる。
+    func dismissDeviceLogResult() {
+        deviceLogImport = .idle
+    }
+
+    private func finishDeviceLogImport(_ result: DeviceLogReadResult) {
+        let requested = deviceLogCount ?? result.reportedCount
+        let outcome: DeviceLogImportSummary.Outcome
+        switch result.outcome {
+        case .completed: outcome = .completed
+        case .unsupportedFormat: outcome = .unsupportedFormat
+        case .timedOut, .unavailable: outcome = .noResponse
+        }
+
+        var savedShotCount = 0
+        if let modelContext,
+           let session = DeviceLogSessionBuilder.insertSession(
+               shots: result.shots,
+               variables: variables,
+               profile: selectedProfile,
+               gunName: gunName,
+               isPartial: outcome != .completed,
+               into: modelContext
+           ) {
+            savedShotCount = session.shots.count
+            try? modelContext.save()
+        }
+
+        // 読めなかったときだけ生データを残す。**これが実物の 0x63 を手に入れる唯一の経路。**
+        let fileName = result.isComplete ? nil : DeviceLogArchive.write(records: result.records)
+
+        // 印は「読めた」ときだけ付ける。応答が無かっただけで済ませてしまうと、
+        // 本当に溜まっているログを二度と促さなくなる。
+        if outcome != .noResponse, let key = lastImportedLogCountKey {
+            defaults.set(requested, forKey: key)
+        }
+        dismissedDeviceLogCount = requested
+        deviceLogImport = .finished(
+            DeviceLogImportSummary(
+                savedShotCount: savedShotCount,
+                outcome: outcome,
+                debugFileName: fileName
+            )
+        )
+    }
+
+    /// 接続できたら件数だけ訊く（best-effort）。
+    ///
+    /// 応答が無くても何も起きない。ログの読み出しは**おまけ**で、計測を妨げてはいけない。
+    private func refreshDeviceLog() {
+        let device = self.device
+        Task { [weak self] in
+            let peripheral = await device.connectedPeripheral
+            let count = await device.readLogCount()
+            self?.applyDeviceLogCount(count, peripheral: peripheral)
+        }
+    }
+
+    private func applyDeviceLogCount(_ count: Int?, peripheral: UUID?) {
+        connectedPeripheralID = peripheral
+        if let count { deviceLogCount = count }
+        // 目視確認用（`--demo-device-log-auto`）。製品では常に false。
+        if ScreenshotSupport.startsDeviceLogImport { importDeviceLog() }
+    }
+
     // MARK: - 規制上限
 
     /// 1 発を規制上限と比べた段階。色分け・音・振動はすべてこれで決まる。
@@ -374,7 +507,14 @@ final class ChronoService {
         case .shot(let shot):
             append(shot)
         case .connectionState(let state):
+            let wasReady = connectionState.isReady
             connectionState = state
+            // 繋がった直後に 1 回だけ訊く。切れたら件数は忘れる（別の機器かもしれない）。
+            if state.isReady, !wasReady {
+                refreshDeviceLog()
+            } else if !state.isReady {
+                deviceLogCount = nil
+            }
         case .battery(let percent):
             batteryPercent = percent
         case .ammo(let record):
@@ -397,7 +537,19 @@ final class ChronoService {
             // キット側に 1 つだけ置く）。変化したときだけ届くので、ここでは代入だけ。
             discovery = list
 
-        case .ack, .logCount, .deviceInfo, .raw:
+        case .logCount(let count):
+            // 要求していなくても届くことがある。届いた値をそのまま採る。
+            // ただし**切れた後に遅れて届いたものは採らない**。直前に nil へ戻した
+            // 件数がここで蘇ると、切断中なのに「取り込む」が出てしまう。
+            guard connectionState.isReady else { break }
+            deviceLogCount = count
+
+        case .logRecordRaw, .logRecord:
+            // 取り込みの本体は `ChronoDevice.readDeviceLog` が要求と対にして受け取る。
+            // ここで拾うと**進行中のセッションに過去のログが混ざる**ので、何もしない。
+            break
+
+        case .ack, .deviceInfo, .raw:
             break
         }
     }

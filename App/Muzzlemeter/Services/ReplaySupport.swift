@@ -38,10 +38,55 @@ enum ReplaySupport {
         switch source {
         case .capture:
             // 実キャプチャは 103 秒あり、最初の射撃が +50 秒。等倍だと待たされるので早送りする。
-            ReplayTransport(script: captureScript(), speed: 6.0, repeats: true, loopGap: 3.0)
+            ReplayTransport(
+                script: withoutRecordedLogCount(captureScript()),
+                speed: 6.0,
+                repeats: true,
+                loopGap: 3.0,
+                responder: deviceLogResponder
+            )
         case .synthetic:
-            ReplayTransport(script: syntheticScript, speed: 1.0, repeats: true, loopGap: 4.0)
+            ReplayTransport(
+                script: syntheticScript,
+                speed: 1.0,
+                repeats: true,
+                loopGap: 4.0,
+                responder: deviceLogResponder
+            )
         }
+    }
+
+    /// 擬似本体の「本体内ログ」。
+    ///
+    /// 記録済みパケットを流すだけでは、**要求と応答の往復**（`0x62` → `0x63`）が
+    /// 成り立たない。ログの取り込みはその往復そのものなので、再生でも答える
+    /// 擬似ファームウェアを差しておく。件数の既定は実キャプチャの `0x62` が
+    /// 答えていた 1 件で、`--demo-device-log N` で増やせる。
+    ///
+    /// **返すレコードの中身は推定**（`docs/PROTOCOL.md` §6.6）。実機の形式が
+    /// 判明したら `ReplayTransport.deviceLogResponder` ごと差し替える。
+    private static var deviceLogResponder: ReplayTransport.Responder {
+        ReplayTransport.deviceLogResponder(
+            count: ScreenshotSupport.deviceLogCountOverride ?? 1,
+            keys: keys,
+            brokenIndex: ScreenshotSupport.deviceLogBrokenIndex
+        )
+    }
+
+    /// 記録済みの `0x62`（件数）応答をスクリプトから抜く。
+    ///
+    /// 擬似本体（`deviceLogResponder`）が `0x62` に答えるようになったので、
+    /// **同じ擬似本体が 2 つの件数を言う**状態になっていた。キャプチャに写っている
+    /// 応答（1 件）が遅れて流れると、`--demo-device-log 12` で作った状態を
+    /// 上書きしてしまう。要求への応答は擬似ファームウェア側に一本化する。
+    private static func withoutRecordedLogCount(_ script: ReplayScript) -> ReplayScript {
+        ReplayScript(
+            entries: script.entries.filter { entry in
+                let bytes = [UInt8](entry.data)
+                guard bytes.count >= 3, bytes[0] == ChronoFrame.header else { return true }
+                return bytes[2] != ChronoCommand.logCount.rawValue
+            }
+        )
     }
 
     /// バンドルした実キャプチャ。読めなければ合成スクリプトにフォールバックする。

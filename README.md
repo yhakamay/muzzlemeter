@@ -429,11 +429,27 @@ xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
   --demo-compare \              # 履歴タブで直近 3 件の比較画面を開く
   --demo-tag-editor \           # 見本セッションの詳細とタグ編集シートを開く
   --demo-filter 屋内 \          # 履歴タブにタグの絞り込みを掛ける
-  --demo-profile-detail         # 設定タブで最初のプロファイルの詳細を開く
+  --demo-profile-detail \        # 設定タブで最初のプロファイルの詳細を開く
+  --demo-device-log 12 \         # 擬似本体が「本体内ログ 12 件」を持っている状態にする
+  --demo-device-log-broken 4 \   # そのうち 5 件目を未対応の形式で返す
+  --demo-device-log-auto         # 帯を押さずに取り込みを始める（進捗・結果の目視用）
 ```
 
 `--demo-seed-sessions` は比較・タグ・推移のように**複数のセッションが溜まっていないと
 出ない画面**のために入れてある。既にセッションがあるときは何もしない。
+
+`--demo-device-log` は本体内ログの取り込みのために入れてある。再生用の擬似本体
+（`ReplayTransport` の responder）が `0x62` / `0x63` に答えるので、**アプリ側は実機と
+同じ経路**（write → notify → デコード）を通る。既定でも 1 件持っている
+（実キャプチャの `0x62` が答えていた件数と揃えてある）。
+`--demo-device-log-broken <n>` を付けると n 番目のレコードだけ読めない形で返るので、
+「未対応の形式でした。ログを保存しました」と生データの書き出しを目視確認できる。
+`--demo-device-log-auto` は「取り込む」を押した後の画面（進捗・結果）を出すためのもの。
+実キャプチャの再生は**繋がっている時間が 10 秒足らず**なので、その間に手で押して
+進捗を捉えるのは運任せになる。付けると件数が分かった時点で取り込みが始まる。
+
+> ⚠️ 擬似本体が返す `0x63` の中身は**推定**（`docs/PROTOCOL.md` §6.6）。
+> 実機の形式が判明したら `ReplayTransport.deviceLogResponder` ごと差し替える。
 
 ### 環境（気温・湿度・気圧）
 

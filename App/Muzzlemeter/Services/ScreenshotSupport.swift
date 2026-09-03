@@ -55,6 +55,24 @@ enum ScreenshotSupport {
     /// 履歴タブで、このタグの絞り込みを掛けた状態にする。
     static var filterTag: String? { value(for: "--demo-filter") }
 
+    /// 再生用の擬似本体が「持っている」ログ件数（`0x62` の答え）。
+    ///
+    /// 本体内ログの取り込みは、**本体にログが溜まっていないと帯すら出ない**。
+    /// 実機を撃たずにその状態を作るための引数。擬似本体（`ReplayTransport` の
+    /// responder）が `0x62` / `0x63` に答えるので、アプリ側は実機と同じ経路を通る。
+    static var deviceLogCountOverride: Int? { int(for: "--demo-device-log") }
+
+    /// 擬似本体が返すレコードのうち 1 件を**読めない形**にする。
+    /// 「未対応の形式でした」の経路を目視確認するために要る。
+    static var deviceLogBrokenIndex: Int? { int(for: "--demo-device-log-broken") }
+
+    /// 件数が分かった時点で、帯を押さずに取り込みを始める。
+    ///
+    /// 再生は本物のキャプチャ（103 秒 / 6 倍速）なので、**繋がっている時間が
+    /// 10 秒足らず**しかない。その間に人の手で「取り込む」を押して進捗を捉えるのは
+    /// 運任せになる。押した後の画面（進捗・結果）を毎回同じ手順で出せるようにする。
+    static var startsDeviceLogImport: Bool { flag("--demo-device-log-auto") }
+
     // MARK: - 引数の読み取り
 
     private static var isEnabled: Bool {

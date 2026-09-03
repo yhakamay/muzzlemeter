@@ -664,6 +664,23 @@
         }
       }
     },
+    "あとで": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あとで"
+          }
+        }
+      }
+    },
     "このセッションで撃った弾の初速の平均です。": {
       "extractionState": "manual",
       "localizations": {
@@ -2364,6 +2381,23 @@
         }
       }
     },
+    "取り込む": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り込む"
+          }
+        }
+      }
+    },
     "合計発数": {
       "extractionState": "manual",
       "localizations": {
@@ -2581,6 +2615,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "履歴"
+          }
+        }
+      }
+    },
+    "履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved to history with the “Device log” tag. Timestamps are the import time."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。"
           }
         }
       }
@@ -3163,6 +3214,40 @@
         }
       }
     },
+    "未対応の形式が出たところで読み出しを止めました。ここまでが読めたぶんです。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading stopped at an unsupported record. These are the entries that could be read."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未対応の形式が出たところで読み出しを止めました。ここまでが読めたぶんです。"
+          }
+        }
+      }
+    },
+    "未対応の形式でした。ログを保存しました": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsupported format. The log has been saved."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未対応の形式でした。ログを保存しました"
+          }
+        }
+      }
+    },
     "未設定": {
       "extractionState": "manual",
       "localizations": {
@@ -3176,6 +3261,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "未設定"
+          }
+        }
+      }
+    },
+    "本体から応答がありませんでした": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The chronograph did not respond"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体から応答がありませんでした"
+          }
+        }
+      }
+    },
+    "本体に未取込のログが %lld 件あります": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The chronograph has %lld log entries not yet imported"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体に未取込のログが %lld 件あります"
+          }
+        }
+      }
+    },
+    "本体のログには計測時刻が入っていないため、取り込んだ時刻で記録しています。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The device log has no measurement times, so the import time is recorded instead."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体のログには計測時刻が入っていないため、取り込んだ時刻で記録しています。"
+          }
+        }
+      }
+    },
+    "本体のログ形式に対応できていない可能性があります。あとでもう一度試せます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The device’s log format may not be supported yet. You can try again later."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体のログ形式に対応できていない可能性があります。あとでもう一度試せます。"
           }
         }
       }
@@ -3210,6 +3363,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "本体の電源が切れました"
+          }
+        }
+      }
+    },
+    "本体ログ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device log"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体ログ"
+          }
+        }
+      }
+    },
+    "本体ログ %lld 件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device log (%lld)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体ログ %lld 件"
+          }
+        }
+      }
+    },
+    "本体ログ %lld 件を取り込みました": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported %lld entries from the device log"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体ログ %lld 件を取り込みました"
+          }
+        }
+      }
+    },
+    "本体ログを取り込み中 %lld / %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing device log %lld / %lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体ログを取り込み中 %lld / %lld"
           }
         }
       }
@@ -4298,6 +4519,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "読み上げの速さ"
+          }
+        }
+      }
+    },
+    "読めたぶんだけ履歴に保存しました。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the records that could be read were saved to history."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読めたぶんだけ履歴に保存しました。"
+          }
+        }
+      }
+    },
+    "読めたぶんは履歴に、生データは %@ に保存しました。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Readable records went to history; the raw data was saved to %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読めたぶんは履歴に、生データは %@ に保存しました。"
           }
         }
       }
