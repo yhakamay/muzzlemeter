@@ -179,6 +179,7 @@ final class ChronoService {
             limitJoules: energyLimitJoules
         )
     }
+
     var gunName: String { selectedProfile?.name ?? String(localized: "未設定") }
 
     /// いまの条件をプロファイルの既定値として書き戻す。
@@ -328,7 +329,7 @@ final class ChronoService {
         guard let modelContext else {
             recomputeStats()
             // 保存先が無くても（Preview など）表示と通知は同じように動かす。
-            feedback.report(margin: margin(forSpeed: shot.velocityMetersPerSecond))
+            report(shot)
             return
         }
         let isNewSession = activeSession == nil
@@ -342,7 +343,19 @@ final class ChronoService {
         if isNewSession { captureEnvironment(for: session) }
         recomputeStats()
         // 上限の判定はセッションが決まってから（セッションが持つ上限を使う）。
-        feedback.report(margin: margin(forSpeed: shot.velocityMetersPerSecond))
+        report(shot)
+    }
+
+    /// 1 発ぶんの音・振動・読み上げを `FeedbackService` へ渡す。
+    ///
+    /// 読み上げの文言は**表示と同じ整形**を通す。画面に 92.5 と出ているのに
+    /// 「92.53」と読まれると、どちらが本当なのか分からなくなる。
+    private func report(_ shot: Shot) {
+        feedback.report(
+            margin: margin(forSpeed: shot.velocityMetersPerSecond),
+            speedText: formattedSpeed(shot.velocityMetersPerSecond),
+            joulesText: JouleFormat.value(joules(shot.velocityMetersPerSecond))
+        )
     }
 
     /// 前回の起動で「終了して保存」を押さずに終わったセッションを閉じる。

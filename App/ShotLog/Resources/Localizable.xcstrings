@@ -1,6 +1,23 @@
 {
   "sourceLanguage": "ja",
   "strings": {
+    "%@、%@ ジュール": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, %@ joules"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、%@ ジュール"
+          }
+        }
+      }
+    },
     "%@（デモ再生）": {
       "extractionState": "manual",
       "localizations": {
@@ -82,6 +99,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "0.25"
+          }
+        }
+      }
+    },
+    "1 発ごとに、表示している単位のまま弾速を読み上げます。上限を越えた発では「超過」も読み上げます。読み上げは音楽と同じ経路で再生するため、**本体のサイレントスイッチでは消えません**（音楽は少し音量が下がるだけで止まりません）。手も目も離せないときに耳で確認するための機能なので、意図的にこうしてあります。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaks the velocity of every shot in the unit shown on screen, and says “over the limit” for shots above the limit. Speech plays on the same route as music, so **the silent switch does not mute it** (music is ducked, not stopped). That is deliberate: this is for when your hands and eyes are busy."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 発ごとに、表示している単位のまま弾速を読み上げます。上限を越えた発では「超過」も読み上げます。読み上げは音楽と同じ経路で再生するため、**本体のサイレントスイッチでは消えません**（音楽は少し音量が下がるだけで止まりません）。手も目も離せないときに耳で確認するための機能なので、意図的にこうしてあります。"
           }
         }
       }
@@ -426,6 +460,23 @@
         }
       }
     },
+    "、超過": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", over the limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "、超過"
+          }
+        }
+      }
+    },
     "このセッションで撃った弾の初速の平均です。": {
       "extractionState": "manual",
       "localizations": {
@@ -762,6 +813,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "ショットがありません"
+          }
+        }
+      }
+    },
+    "ジュールも読み上げる": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also speak the joules"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ジュールも読み上げる"
           }
         }
       }
@@ -1769,6 +1837,23 @@
         }
       }
     },
+    "弾速を読み上げる": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speak the velocity"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "弾速を読み上げる"
+          }
+        }
+      }
+    },
     "待機中": {
       "extractionState": "manual",
       "localizations": {
@@ -2649,6 +2734,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定"
+          }
+        }
+      }
+    },
+    "読み上げ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speech"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み上げ"
+          }
+        }
+      }
+    },
+    "読み上げの速さ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaking rate"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み上げの速さ"
           }
         }
       }

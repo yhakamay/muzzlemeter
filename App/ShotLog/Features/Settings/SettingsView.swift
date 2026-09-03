@@ -47,6 +47,34 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Toggle("弾速を読み上げる", isOn: $feedback.isSpeechEnabled)
+                    Toggle("ジュールも読み上げる", isOn: $feedback.speaksJoules)
+                        .disabled(!feedback.isSpeechEnabled)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("読み上げの速さ")
+                            .font(.subheadline)
+                        HStack(spacing: 8) {
+                            Image(systemName: "tortoise")
+                                .foregroundStyle(.secondary)
+                            Slider(
+                                value: $feedback.speechRate,
+                                in: FeedbackService.minimumSpeechRate...FeedbackService.maximumSpeechRate
+                            )
+                            .disabled(!feedback.isSpeechEnabled)
+                            Image(systemName: "hare")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                } header: {
+                    Text("読み上げ")
+                } footer: {
+                    // 通知音（サイレントスイッチに従う）と扱いが違うことを明記する。
+                    // 「なぜ音は消えるのに読み上げは喋るのか」を後から悩ませない。
+                    Text("1 発ごとに、表示している単位のまま弾速を読み上げます。上限を越えた発では「超過」も読み上げます。読み上げは音楽と同じ経路で再生するため、**本体のサイレントスイッチでは消えません**（音楽は少し音量が下がるだけで止まりません）。手も目も離せないときに耳で確認するための機能なので、意図的にこうしてあります。")
+                }
+
+                Section {
                     ForEach(profiles) { profile in
                         Button {
                             editingProfile = profile

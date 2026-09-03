@@ -26,19 +26,32 @@ struct ShotLogApp: App {
     }
 }
 
-/// 4 画面の TabView。起動時は Live。
+/// タブの識別子。`--demo-tab` で起動時のタブを選べるようにするために名前を付けてある。
+enum RootTab: String, Hashable {
+    case live
+    case sessions
+    case settings
+}
+
+/// 3 画面の TabView。起動時は Live。
 struct RootView: View {
     @Environment(ChronoService.self) private var service
     @Environment(\.modelContext) private var modelContext
 
+    @State private var selectedTab: RootTab =
+        ScreenshotSupport.initialTab.flatMap(RootTab.init(rawValue:)) ?? .live
+
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             LiveView()
                 .tabItem { Label("Live", systemImage: "scope") }
+                .tag(RootTab.live)
             SessionsView()
                 .tabItem { Label("履歴", systemImage: "list.bullet.rectangle") }
+                .tag(RootTab.sessions)
             SettingsView()
                 .tabItem { Label("設定", systemImage: "gearshape") }
+                .tag(RootTab.settings)
         }
         .task {
             service.start(modelContext: modelContext)
