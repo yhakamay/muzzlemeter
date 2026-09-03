@@ -1,0 +1,3 @@
+/* 位置情報の使用目的。気象データ（気温・湿度・気圧）を取るためだけに使う。 */
+"NSLocationWhenInUseUsageDescription" = "計測した場所の気温・湿度・気圧を記録するために、セッションの開始時に一度だけ現在地を使用します。";
+"NSBluetoothAlwaysUsageDescription" = "弾速計 AC6000 と接続して計測値を受け取るために Bluetooth を使用します。";

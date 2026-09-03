@@ -511,6 +511,40 @@
         }
       }
     },
+    "すべて自動値に戻す": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset all to automatic"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて自動値に戻す"
+          }
+        }
+      }
+    },
+    "その他": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
+          }
+        }
+      }
+    },
     "まだセッションがありません": {
       "extractionState": "manual",
       "localizations": {
@@ -1106,6 +1140,23 @@
         }
       }
     },
+    "例: 屋内レンジ、風なし": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. indoor range, no wind"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例: 屋内レンジ、風なし"
+          }
+        }
+      }
+    },
     "例: 押しゴム交換、1/4 戻し": {
       "extractionState": "manual",
       "localizations": {
@@ -1327,6 +1378,57 @@
         }
       }
     },
+    "場所": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "場所"
+          }
+        }
+      }
+    },
+    "天気": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weather"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天気"
+          }
+        }
+      }
+    },
+    "屋内 / 屋外、風、日射など、数値にならない条件を残せます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anything that is not a number: indoors or outdoors, wind, sun."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "屋内 / 屋外、風、日射など、数値にならない条件を残せます。"
+          }
+        }
+      }
+    },
     "履歴": {
       "extractionState": "manual",
       "localizations": {
@@ -1446,6 +1548,40 @@
         }
       }
     },
+    "手動": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手動"
+          }
+        }
+      }
+    },
+    "手動で上書き": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual override"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手動で上書き"
+          }
+        }
+      }
+    },
     "接続": {
       "extractionState": "manual",
       "localizations": {
@@ -1527,6 +1663,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "新規プロファイル"
+          }
+        }
+      }
+    },
+    "晴れ時々くもり": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partly Cloudy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "晴れ時々くもり"
           }
         }
       }
@@ -1667,6 +1820,57 @@
         }
       }
     },
+    "気圧": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressure"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "気圧"
+          }
+        }
+      }
+    },
+    "気温": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temperature"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "気温"
+          }
+        }
+      }
+    },
+    "湿度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Humidity"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "湿度"
+          }
+        }
+      }
+    },
     "準備中": {
       "extractionState": "manual",
       "localizations": {
@@ -1680,6 +1884,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "準備中"
+          }
+        }
+      }
+    },
+    "環境": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conditions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "環境"
+          }
+        }
+      }
+    },
+    "環境の記録がありません。「編集」から手で入力できます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No conditions were recorded. Tap Edit to enter them by hand."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "環境の記録がありません。「編集」から手で入力できます。"
+          }
+        }
+      }
+    },
+    "環境を編集": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit conditions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "環境を編集"
           }
         }
       }
@@ -1752,6 +2007,23 @@
         }
       }
     },
+    "種類": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "種類"
+          }
+        }
+      }
+    },
     "空にすると、日時と銃名の自動タイトルに戻ります。": {
       "extractionState": "manual",
       "localizations": {
@@ -1765,6 +2037,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "空にすると、日時と銃名の自動タイトルに戻ります。"
+          }
+        }
+      }
+    },
+    "空欄にすると、その項目は自動取得した値に戻ります。薄い文字は自動値です。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave a field empty to fall back to the automatically fetched value. The grey text is that value."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空欄にすると、その項目は自動取得した値に戻ります。薄い文字は自動値です。"
           }
         }
       }
@@ -1799,6 +2088,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "統計の見かた"
+          }
+        }
+      }
+    },
+    "編集": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集"
+          }
+        }
+      }
+    },
+    "自動": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
           }
         }
       }
@@ -1850,6 +2173,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "表示単位"
+          }
+        }
+      }
+    },
+    "見本の場所": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sample location"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見本の場所"
           }
         }
       }

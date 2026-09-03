@@ -9,6 +9,7 @@ struct SessionDetailView: View {
     @Environment(ChronoService.self) private var service
 
     @State private var renamingSession: Session?
+    @State private var isEditingEnvironment = false
 
     var body: some View {
         let shots = session.orderedShots
@@ -30,6 +31,8 @@ struct SessionDetailView: View {
                     LabeledContent("インナーバレル長", value: "\(barrel) mm")
                 }
             }
+
+            SessionEnvironmentSection(session: session, isEditing: $isEditingEnvironment)
 
             Section {
                 chart(shots: shots, stats: stats)
@@ -74,6 +77,9 @@ struct SessionDetailView: View {
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .sessionRenameAlert(target: $renamingSession)
+        .sheet(isPresented: $isEditingEnvironment) {
+            SessionEnvironmentEditor(session: session)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("名前を変更", systemImage: "pencil") {

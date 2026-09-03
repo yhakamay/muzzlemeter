@@ -29,6 +29,37 @@ final class Session {
     var gunModel: String = ""
     var gunInnerBarrelLengthMm: Int?
 
+    // MARK: - 環境（自動取得）
+    //
+    // WeatherKit と CoreLocation から**セッション開始時に一度だけ**取る。
+    // 取れなかった場合（未許可・オフライン・エンタイトルメント未反映）は
+    // すべて nil のままにする。「取れなかった」と「0 だった」を区別するため。
+
+    var autoTemperatureC: Double?
+    /// 相対湿度。WeatherKit と同じ 0–1 で持つ（表示のときだけ % にする）。
+    var autoHumidity: Double?
+    var autoPressureHPa: Double?
+    /// 天気の SF Symbol 名（WeatherKit の `symbolName`）。
+    var autoConditionSymbol: String?
+    /// 天気の説明文（WeatherKit が返すローカライズ済みの文字列）。
+    var autoConditionText: String?
+    /// 逆ジオコーディングした地名。取れなくても計測には影響しないので best effort。
+    var placeName: String?
+    var latitude: Double?
+    var longitude: Double?
+    var weatherFetchedAt: Date?
+
+    // MARK: - 環境（手動の上書き）
+    //
+    // 自動値を**書き換えず別の列に持つ**。上書きしてしまうと「元の観測値は何だったか」
+    // が失われ、手動値を消しても自動値に戻せない。実効値は manual ?? auto。
+
+    var manualTemperatureC: Double?
+    var manualHumidity: Double?
+    var manualPressureHPa: Double?
+    /// 屋内 / 屋外、風の有無など、数値にならない条件。
+    var manualNotes: String?
+
     @Relationship(deleteRule: .cascade, inverse: \ShotRecord.session)
     var shots: [ShotRecord] = []
 
@@ -65,6 +96,40 @@ final class Session {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
+    // MARK: - 環境の実効値
+
+    /// 実効気温（℃）。手動で入れた値があればそちら。
+    var temperatureC: Double? { manualTemperatureC ?? autoTemperatureC }
+    /// 実効湿度（0–1）。
+    var humidity: Double? { manualHumidity ?? autoHumidity }
+    /// 実効気圧（hPa）。
+    var pressureHPa: Double? { manualPressureHPa ?? autoPressureHPa }
+
+    var isTemperatureManual: Bool { manualTemperatureC != nil }
+    var isHumidityManual: Bool { manualHumidity != nil }
+    var isPressureManual: Bool { manualPressureHPa != nil }
+
+    /// WeatherKit から何か取れているか（Apple Weather の表記を出す条件）。
+    var hasAutoWeather: Bool {
+        autoTemperatureC != nil || autoHumidity != nil || autoPressureHPa != nil
+            || autoConditionText != nil
+    }
+
+    /// 環境セクションに出すものが 1 つでもあるか。
+    var hasEnvironmentData: Bool {
+        temperatureC != nil || humidity != nil || pressureHPa != nil
+            || autoConditionText != nil || placeName != nil
+            || !(manualNotes?.isEmpty ?? true)
+    }
+
+    /// 手動の上書きをすべて消して自動値に戻す。
+    func resetManualEnvironment() {
+        manualTemperatureC = nil
+        manualHumidity = nil
+        manualPressureHPa = nil
+        manualNotes = nil
     }
 
     // MARK: - 名前

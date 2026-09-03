@@ -216,7 +216,9 @@ struct GunProfileEditor: View {
                 }
 
                 Section {
-                    Picker("パワーソース", selection: $draft.powerSource) {
+                    // セクション見出しが「パワーソース」なので、行の見出しは「種類」にする
+                    // （同じ語が 2 段続くと、どちらが何なのか読み取れない）。
+                    Picker("種類", selection: $draft.powerSource) {
                         ForEach(PowerSource.allCases) { source in
                             Text(source.label).tag(source)
                         }
@@ -228,13 +230,20 @@ struct GunProfileEditor: View {
                 }
 
                 Section("仕様") {
-                    Picker("BB 重量", selection: $draft.bbWeightGrams) {
-                        ForEach(GunProfile.weightPresets, id: \.self) { preset in
-                            Text(verbatim: GunProfile.weightLabel(preset)).tag(preset)
+                    // `.wheel` はピッカーのラベルを描かないので、何を選んでいるのか
+                    // 分かるように見出しを自前で出す（表示単位の設定と同じ扱い）。
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("BB 重量")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Picker("BB 重量", selection: $draft.bbWeightGrams) {
+                            ForEach(GunProfile.weightPresets, id: \.self) { preset in
+                                Text(verbatim: GunProfile.weightLabel(preset)).tag(preset)
+                            }
                         }
+                        .pickerStyle(.wheel)
+                        .disabled(isCustomWeight)
                     }
-                    .pickerStyle(.wheel)
-                    .disabled(isCustomWeight)
 
                     Toggle("自由入力", isOn: $isCustomWeight)
                     if isCustomWeight {
@@ -263,7 +272,7 @@ struct GunProfileEditor: View {
                             .lineLimit(2...4)
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("メモ")
+                        Text("その他")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         TextField("スプリング、内部カスタム、注意点など", text: $draft.notes, axis: .vertical)

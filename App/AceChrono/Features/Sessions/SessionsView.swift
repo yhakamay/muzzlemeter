@@ -110,6 +110,9 @@ struct SessionRow: View {
                 if let joules = stats.meanJoules {
                     Text(JouleFormat.labeled(joules))
                 }
+                if let temperature = session.temperatureC {
+                    Text(verbatim: EnvironmentFormat.compactTemperature(temperature))
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)

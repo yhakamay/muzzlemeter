@@ -22,6 +22,12 @@ enum CSVExporter {
         "velocity_fps",
         "joules",
         "interval_ms",
+        "temperature_c",
+        "humidity_pct",
+        "pressure_hpa",
+        "weather",
+        "place",
+        "env_notes",
     ]
     .joined(separator: ",")
 
@@ -47,6 +53,14 @@ enum CSVExporter {
         let manufacturer = escape(session.gunManufacturer)
         let model = escape(session.gunModel)
         let barrel = session.gunInnerBarrelLengthMm.map(String.init) ?? ""
+        // 環境は**実効値**（手動 ?? 自動）を出す。CSV を読む側は「どちらが入っているか」
+        // ではなく「そのとき何度だったか」を知りたい。湿度だけは 0–1 ではなく % にする。
+        let temperature = session.temperatureC.map { String(format: "%.1f", $0) } ?? ""
+        let humidity = session.humidity.map { String(format: "%.0f", $0 * 100) } ?? ""
+        let pressure = session.pressureHPa.map { String(format: "%.0f", $0) } ?? ""
+        let weather = escape(session.autoConditionText ?? "")
+        let place = escape(session.placeName ?? "")
+        let envNotes = escape(session.manualNotes ?? "")
         var previous: Date?
         return session.orderedShots.map { shot in
             let interval = previous.map { (shot.timestamp.timeIntervalSince($0) * 1000).rounded() }
@@ -66,6 +80,12 @@ enum CSVExporter {
                 String(format: "%.1f", SpeedUnit.feetPerSecond.value(fromMetersPerSecond: mps)),
                 String(format: "%.3f", shot.joules(massGrams: session.bbWeightGrams)),
                 interval.map { String(format: "%.0f", $0) } ?? "",
+                temperature,
+                humidity,
+                pressure,
+                weather,
+                place,
+                envNotes,
             ]
             .joined(separator: ",")
         }

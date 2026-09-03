@@ -46,6 +46,8 @@ BLE プロトコルが非公開のため**プロトコル解析から始めた**
 | `App/AceChrono/` | iOS アプリ（SwiftUI + SwiftData） |
 | `App/AceChrono/Resources/Localizable.xcstrings` | UI 文言の String Catalog。**ベース言語は ja**、en は完全な翻訳 |
 | `App/Info.plist` | `CFBundleLocalizations` だけを持つ土台。他のキーはビルド設定から合成される |
+| `App/AceChrono/Resources/<lang>.lproj/InfoPlist.strings` | 権限の用途説明の ja / en。ビルド設定の値を実行時に差し替える |
+| `App/AceChrono.entitlements` | WeatherKit のエンタイトルメント（`CODE_SIGN_ENTITLEMENTS`） |
 | `project.yml` | XcodeGen 定義。`.xcodeproj` はここから生成する |
 
 ## acechrono-sniff の使い方
@@ -311,6 +313,18 @@ CLI の `swift build` / `swift test` にはこれは**不要**。
 
 `ReplayScript` は **`acechrono-sniff dump` のログ形式もそのまま読める**ので、
 新しくキャプチャを取ったらそのファイルを置くだけで再生できる。
+
+### 環境（気温・湿度・気圧）
+
+セッションの 1 発目で、WeatherKit と CoreLocation から現況を 1 回だけ取って
+`Session` に記録する（`SessionEnvironmentService`）。取得は切り離したタスクで
+行うので**計測は一切待たされず**、失敗しても自動値が空のままになるだけ。
+値は詳細画面の「環境」から手で上書きでき、実効値は `manual ?? auto`。
+
+**シミュレータでは WeatherKit のエンタイトルメントが効かないので値が取れない。**
+UI を目視確認できるように、`--replay-capture` かつシミュレータのときだけ
+見本の値を返す経路が `SessionEnvironmentService` にある（`#if targetEnvironment(simulator)`）。
+実機のコードパスには入らない。
 
 ## 実機での検証手順
 

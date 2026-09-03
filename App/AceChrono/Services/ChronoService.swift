@@ -174,11 +174,15 @@ final class ChronoService {
             recomputeStats()
             return
         }
+        let isNewSession = activeSession == nil
         let session = activeSession ?? beginSession(in: modelContext)
         let record = ShotRecord(shot: shot, session: session)
         modelContext.insert(record)
         session.shots.append(record)
         try? modelContext.save()
+        // 気象の取得は**保存の後**に始める。保存前の `persistentModelID` は一時的な値で、
+        // 後から引き直しても実体に当たらない（SwiftData がアサートで落ちる）。
+        if isNewSession { captureEnvironment(for: session) }
         recomputeStats()
     }
 
@@ -214,6 +218,38 @@ final class ChronoService {
         modelContext.insert(session)
         activeSession = session
         return session
+    }
+
+    /// 計測場所の気象を記録する。
+    ///
+    /// **ショットの取り込みを絶対に待たせない。** 切り離したタスクで取りに行き、
+    /// 戻ってきたらメインアクタでセッションへ書き戻す。失敗しても何も起きない
+    /// （自動値が nil のままになるだけ）。
+    private func captureEnvironment(for session: Session) {
+        let id = session.persistentModelID
+        Task.detached(priority: .utility) { [weak self] in
+            guard let snapshot = await SessionEnvironmentService.currentConditions() else { return }
+            await self?.apply(snapshot, toSessionWith: id)
+        }
+    }
+
+    /// セッションは値として渡せない（`@Model` は Sendable ではない）ので、
+    /// 永続 ID で引き直してから書き込む。取得中に消されていれば何もしない。
+    private func apply(_ snapshot: EnvironmentSnapshot, toSessionWith id: PersistentIdentifier) {
+        guard let modelContext,
+              let session = modelContext.model(for: id) as? Session,
+              !session.isDeleted
+        else { return }
+        session.autoTemperatureC = snapshot.temperatureC
+        session.autoHumidity = snapshot.humidity
+        session.autoPressureHPa = snapshot.pressureHPa
+        session.autoConditionSymbol = snapshot.conditionSymbol
+        session.autoConditionText = snapshot.conditionText
+        session.placeName = snapshot.placeName
+        session.latitude = snapshot.latitude
+        session.longitude = snapshot.longitude
+        session.weatherFetchedAt = snapshot.fetchedAt
+        try? modelContext.save()
     }
 
     /// 進行中のセッションを確定して閉じる。

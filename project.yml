@@ -45,6 +45,8 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: AZHMSV7C5P
+        # WeatherKit を使うためのエンタイトルメント（App ID 側でも有効化済み）。
+        CODE_SIGN_ENTITLEMENTS: App/AceChrono.entitlements
         # Info.plist はビルド設定から合成する。`App/Info.plist` は「ビルド設定では
         # 配列を書けないキー」だけを持つ土台で、GENERATE_INFOPLIST_FILE と
         # INFOPLIST_KEY_* の内容がここへマージされる。
@@ -52,6 +54,9 @@ targets:
         INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: AceChrono
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "弾速計 AC6000 と接続して計測値を受け取るために Bluetooth を使用します。"
+        # 用途説明はビルド設定に日本語（開発言語）を置き、各言語の文言は
+        # Resources/<lang>.lproj/InfoPlist.strings が実行時に差し替える。
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "計測した場所の気温・湿度・気圧を記録するために、セッションの開始時に一度だけ現在地を使用します。"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
