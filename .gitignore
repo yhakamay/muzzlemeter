@@ -16,9 +16,9 @@ build/
 .swiftpm/
 Package.resolved
 
-# Reverse engineering artifacts
-# APK / デコンパイル結果 / 文字列ダンプ / キャプチャログは
-# 巨大かつ第三者の著作物なのでリポジトリには入れない。
+# プロトコル調査の作業用アーティファクト
+# キャプチャログや中間生成物は巨大で、第三者の著作物を含みうるので
+# リポジトリには入れない（tools/re/README.md 参照）。
 tools/re/*.apk
 tools/re/*.xapk
 tools/re/jadx/

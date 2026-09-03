@@ -2,8 +2,8 @@ import Foundation
 
 /// AC6000 MKIII BT の既知 opcode。
 ///
-/// 出典は `docs/PROTOCOL.md` §6（実測）と静的解析メモ。**実測で観測されたもの**と
-/// **静的解析由来で未検証のもの**をコメントで区別してある。
+/// 出典は `docs/PROTOCOL.md` §6。**実測で観測されたもの**と
+/// **まだ観測できていない（未検証の）もの**をコメントで区別してある。
 ///
 /// > ⚠️ 破壊的・危険な opcode はここに**意図的に含めない**（`docs/PROTOCOL.md` §11）:
 /// > `0x61` CLEAR_LOG（本体のログを消す）、`0x24` WRITE_DEVICE_SETTINGS などの

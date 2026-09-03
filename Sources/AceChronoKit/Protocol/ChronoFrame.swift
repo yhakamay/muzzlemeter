@@ -12,7 +12,7 @@ import Foundation
 /// ```
 /// したがって `L == payload.count + 4`（payload は cmd を含まない）。
 public struct ChronoFrame: Sendable, Hashable {
-    /// フレームヘッダ。実測値は 0xAA（静的解析メモの 0x85 は誤り）。
+    /// フレームヘッダ。実測値は 0xAA。
     public static let header: UInt8 = 0xAA
     /// payload 0 バイトのときのフレーム長。header + L + cmd + checksum。
     public static let minimumLength = 4

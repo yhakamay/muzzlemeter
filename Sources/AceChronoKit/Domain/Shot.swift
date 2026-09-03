@@ -3,7 +3,7 @@ import Foundation
 /// 1 発の計測結果。
 ///
 /// 速度は常に **m/s** で保持し、表示単位（m/s / fps）への換算は `SpeedUnit` が行う。
-/// 連射速度は **本体が送ってくる値**（`docs/PROTOCOL-apk-analysis.md` §8 の `rawRev`）を
+/// 連射速度は **本体が送ってくる値**（`docs/PROTOCOL.md` §7 の `rawRev`）を
 /// そのまま保持する。本体が値を送らない場合は `nil` で、その場合は `RateOfFire` が
 /// タイムスタンプ差からフォールバック推定する。
 public struct Shot: Sendable, Hashable, Codable, Identifiable {

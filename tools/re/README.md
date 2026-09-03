@@ -1,47 +1,32 @@
-# tools/re — リバースエンジニアリング作業ディレクトリ
+# tools/re — プロトコル調査の作業ディレクトリ
 
-`docs/PROTOCOL.md` を埋めるための材料置き場。中身（APK・デコンパイル結果・キャプチャログ）は
-`.gitignore` 済みで、リポジトリにはコミットされない。
+`docs/PROTOCOL.md` を埋めるための材料置き場。中身（キャプチャログ・作業メモ）は
+`.gitignore` 済みで、リポジトリにはコミットされない（`README.md` と
+`captures/.gitkeep` だけを追跡している）。
 
-## 1. AceSoft APK の配置（ユーザー作業）
+## 通信キャプチャ
 
-iOS 版 (.ipa) は暗号化されているため、Android 版の公式アプリを静的解析に使う。
+`docs/PROTOCOL.md` の内容は、次の 2 つの実測から得ている。
 
-- パッケージ名: `com.acetk.acesoft`
-- バージョン: v1.2.28
-- 入手先: apkcombo / uptodown などの APK ミラー
-- 配置先: **`tools/re/acesoft.apk`**
+1. **iPhone の HCI ログ**（Apple の PacketLogger で取得した `.pklg`）。
+   公式アプリと本体のあいだで実際に流れたフレームをそのまま観察する。
+2. **自作クライアントでの追試**。仮説を立てて本体に投げ、応答を確かめる。
 
-## 2. デコンパイル
-
-```sh
-jadx -d tools/re/jadx tools/re/acesoft.apk
-```
-
-`jadx` は `brew install jadx` 済み。出力は `tools/re/jadx/`（gitignore 済み）。
-
-### 見るべき箇所
+### 自作サニファでのキャプチャ
 
 ```sh
-# サービス / characteristic UUID
-grep -rn "0000....-0000-1000-8000-00805f9b34fb" tools/re/jadx/ | sort -u
-
-# GATT 操作
-grep -rn "setCharacteristicNotification\|writeCharacteristic\|BluetoothGattCharacteristic" tools/re/jadx/
-
-# パケットのパース処理（速度・単位・チェックサム）
-grep -rni "velocity\|joule\|fps\|checksum\|crc" tools/re/jadx/
-```
-
-Flutter / React Native 製だった場合は Java 側にロジックが無いので、
-`libapp.so` の文字列や `assets/index.android.bundle` を追う。
-
-## 3. 実機キャプチャ
-
-```sh
-swift run acechrono-sniff scan --seconds 10
-swift run acechrono-sniff dump --name AC6000
+swift run shotlog-sniff scan --seconds 10
+swift run shotlog-sniff dump --name AC6000BT- --handshake
 ```
 
 ログは `tools/re/captures/<yyyyMMdd-HHmmss>.log` に自動保存される（gitignore 済み）。
-解析が済んだ代表パケットは `Tests/AceChronoKitTests/Fixtures/` に手で書き出して回帰テストにする。
+`ReplayScript` がこの形式をそのまま読めるので、取ったログはアプリの再生にも使える。
+
+解析が済んだ代表パケットは `Tests/ShotLogKitTests/Fixtures/` に手で書き出して
+回帰テストにする。
+
+### 注意
+
+- `docs/PROTOCOL.md` に載せるのは**自分で観測した事実**だけにすること。
+- 危険な opcode（`0x61` CLEAR_LOG、OTA characteristic への書き込み）は
+  送らない。`docs/PROTOCOL.md` §11 を読むこと。

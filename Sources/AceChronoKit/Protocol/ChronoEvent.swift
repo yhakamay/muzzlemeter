@@ -2,8 +2,8 @@ import Foundation
 
 /// 弾速計との接続状態。
 ///
-/// `pairing` は AceSoft が接続直後に鍵ハンドシェイク（`docs/PROTOCOL-apk-analysis.md` §5）を
-/// 行うことが判明しているため、その段階を表現できるよう先に用意してある。
+/// 本体は接続直後に鍵ハンドシェイク（`docs/PROTOCOL.md` §4.3）を要求するため、
+/// `pairing` はその段階を表現するために用意してある。
 /// 実際の遷移はハンドシェイクを実装した時点で使い始める。
 public enum ConnectionState: Sendable, Equatable {
     case idle
