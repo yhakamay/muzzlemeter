@@ -25,6 +25,7 @@ struct LiveView: View {
                     // 待機中は項目が少ないので、スクロールさせずに画面の中央へ置く。
                     VStack(spacing: 20) {
                         ConnectionPill(state: service.connectionState, isReplaying: service.isReplaying)
+                        ammoMismatchBanner
                         Spacer()
                         idleState(selection: $service.selectedProfile)
                         Spacer()
@@ -35,6 +36,7 @@ struct LiveView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             ConnectionPill(state: service.connectionState, isReplaying: service.isReplaying)
+                            ammoMismatchBanner
 
                             lastVelocity(selection: $service.selectedProfile)
 
@@ -89,6 +91,18 @@ struct LiveView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
+        }
+    }
+
+    /// 本体の弾設定とセッションの BB 重量が食い違っているときだけ出る帯。
+    @ViewBuilder
+    private var ammoMismatchBanner: some View {
+        if let mismatch = service.ammoWeightMismatch {
+            AmmoMismatchBanner(
+                mismatch: mismatch,
+                onAdopt: { withAnimation(.snappy) { service.adoptDeviceAmmoWeight() } },
+                onDismiss: { withAnimation(.snappy) { service.dismissAmmoMismatch() } }
+            )
         }
     }
 

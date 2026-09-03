@@ -62,10 +62,37 @@ public struct AmmoRecord: Sendable, Hashable, Codable {
         self.marker = marker
     }
 
-    /// 直径（mm）。スケールは**推定**。
+    /// `0x47` の payload[1] が取る値のうち、**自発通知**と推定されるもの。
+    /// 実機追試（`docs/PROTOCOL.md` §6.3）で観測。読み出し応答は `0x41`。
+    public static let spontaneousMarker: UInt8 = 0x40
+
+    /// 直径（mm）。スケールは**推定**（実測は全スロット 600 = 6.00 mm）。
     public var diameterMm: Double { Double(rawDiameter) / 100.0 }
-    /// 重量（g）。スケールは**推定**。
-    public var weightGrams: Double { Double(rawWeight) / 100.0 }
+
+    /// 重量（g）。**スケールが 1 つに決まっていないので寛容に読む。**
+    ///
+    /// キャプチャのプリセットは `20 / 25 / 43 / 45 / 88`（×100 で 0.20〜0.88 g）だったが、
+    /// 実機の自発通知では同じスロット 1 に `200` が来た（×1000 で 0.20 g）。
+    /// 6 mm BB の実在重量は 0.12〜1.0 g 程度で、
+    ///
+    /// * ×100 で意味を成す値は 12〜100 の範囲
+    /// * ×1000 で意味を成す値は 120〜1000 の範囲
+    ///
+    /// と重ならない。そこで **100 以上なら ×1000、未満なら ×100** と読む。
+    /// この境目（100 = 1.00 g か 0.10 g か）はどちらも実在しない重量なので、
+    /// 誤読しても実害のある範囲に入らない。
+    ///
+    /// 0（未設定）と、読み替えても実在しない重量になる値は `nil` を返す。
+    /// **判断が付かないときに黙って数字を出さない**のが要点で、この値は
+    /// 「本体の設定と食い違っていませんか」という警告の根拠に使われる。
+    public var weightGrams: Double? {
+        guard rawWeight > 0 else { return nil }
+        let grams = rawWeight >= 100
+            ? Double(rawWeight) / 1000.0
+            : Double(rawWeight) / 100.0
+        guard grams >= 0.10, grams <= 2.0 else { return nil }
+        return grams
+    }
 }
 
 /// 弾速計から流れてくるアプリ向けのイベント。

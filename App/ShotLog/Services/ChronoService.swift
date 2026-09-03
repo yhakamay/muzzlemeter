@@ -99,6 +99,50 @@ final class ChronoService {
     /// 統計・ジュール計算に使う BB 重量。
     var massGrams: Double { variables.bbWeightGrams }
 
+    // MARK: - 本体の弾設定との不一致
+
+    /// 本体が報告した弾の重量と、いま効いている BB 重量の食い違い。
+    struct AmmoWeightMismatch: Equatable {
+        /// 本体が選んでいる弾の重量（g）。
+        let deviceGrams: Double
+        /// セッション（待機中なら次のセッション）の BB 重量（g）。
+        let sessionGrams: Double
+    }
+
+    /// 「同じ」と見なす差。表示は小数 2 桁なので、それより細かい差で警告しても意味が無い。
+    static let ammoWeightTolerance = 0.005
+
+    /// 「無視」された食い違い。**同じ組み合わせの間だけ**黙る。
+    private var dismissedAmmoMismatch: AmmoWeightMismatch?
+
+    /// 出すべき警告。無ければ `nil`。
+    ///
+    /// **本体には何も書き込まない。** 本体の設定を勝手に変えると、アプリを閉じた後の
+    /// 本体単体の表示まで変わってしまう。食い違いを知らせて、直すかどうかは人が決める。
+    var ammoWeightMismatch: AmmoWeightMismatch? {
+        guard let deviceGrams = deviceAmmo?.weightGrams else { return nil }
+        let mismatch = AmmoWeightMismatch(deviceGrams: deviceGrams, sessionGrams: massGrams)
+        guard abs(mismatch.deviceGrams - mismatch.sessionGrams) > Self.ammoWeightTolerance else {
+            return nil
+        }
+        // 無視した後で本体かセッションのどちらかが変われば、また出す。
+        return mismatch == dismissedAmmoMismatch ? nil : mismatch
+    }
+
+    /// セッションの BB 重量を本体に合わせる。
+    func adoptDeviceAmmoWeight() {
+        guard let mismatch = ammoWeightMismatch else { return }
+        var updated = variables
+        updated.bbWeightGrams = mismatch.deviceGrams
+        variables = updated
+        dismissedAmmoMismatch = nil
+    }
+
+    /// この食い違いについては黙る（次に値が変わるまで）。
+    func dismissAmmoMismatch() {
+        dismissedAmmoMismatch = ammoWeightMismatch
+    }
+
     // MARK: - 規制上限
 
     /// 1 発を規制上限と比べた段階。色分け・音・振動はすべてこれで決まる。
@@ -259,8 +303,16 @@ final class ChronoService {
             batteryPercent = percent
         case .ammo(let record):
             // 本体が選んでいる弾。要求していなくても飛んでくる（`docs/PROTOCOL.md` §6.2）。
-            // 重量のスケールが未確定なので、アプリの計算には使わず表示情報として持つだけ。
-            if record.isCurrent { deviceAmmo = record }
+            // 重量のスケールが未確定なので、アプリの計算には**使わない**。
+            // 使うのは「セッションの BB 重量と食い違っていないか」の確認だけ。
+            //
+            // `0x5A`（現在選択中）は常に採る。`0x47`（プリセット）は、本体からの
+            // 自発通知（marker 0x40）だけを「いま選ばれている弾が変わった」と読む。
+            // 読み出し応答（0x41）は 5 スロットぶん順に届くので、採ると最後の
+            // スロットが「現在の弾」に化ける。
+            if record.isCurrent || record.marker == AmmoRecord.spontaneousMarker {
+                deviceAmmo = record
+            }
         case .powerOff:
             // 本体の電源 OFF。接続状態は ChronoDevice 側が落としてくれる。
             break

@@ -79,7 +79,7 @@ struct ShotLogDecoderTests {
         #expect(preset1.rawDiameter == 600)
         #expect(preset1.rawWeight == 20)
         #expect(abs(preset1.diameterMm - 6.0) < 1e-9)
-        #expect(abs(preset1.weightGrams - 0.20) < 1e-9)
+        #expect(abs((preset1.weightGrams ?? 0) - 0.20) < 1e-9)
         #expect(preset1.marker == 0x41)
     }
 
@@ -103,6 +103,9 @@ struct ShotLogDecoderTests {
         #expect(record.rawWeight == 200)
         #expect(record.rawDiameter == 600)
         #expect(!record.isCurrent)
+        // 200 は ×1000 で 0.20 g と読む（×100 の 2.00 g は実在しない）。
+        #expect(abs((record.weightGrams ?? 0) - 0.20) < 1e-9)
+        #expect(record.marker == AmmoRecord.spontaneousMarker)
     }
 
     @Test("未知 cmd とチェックサム不一致は .raw として流し、例外にしない")

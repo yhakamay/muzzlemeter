@@ -817,6 +817,23 @@
         }
       }
     },
+    "セッションを %@ にする": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use %@ for this session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを %@ にする"
+          }
+        }
+      }
+    },
     "セッション名": {
       "extractionState": "manual",
       "localizations": {
@@ -2058,6 +2075,23 @@
         }
       }
     },
+    "本体の弾設定 %@ がセッションの %@ と違います": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The chrono is set to %@, but this session uses %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体の弾設定 %@ がセッションの %@ と違います"
+          }
+        }
+      }
+    },
     "本体の電源が切れました": {
       "extractionState": "manual",
       "localizations": {
@@ -2190,6 +2224,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "準備中"
+          }
+        }
+      }
+    },
+    "無視": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無視"
           }
         }
       }
