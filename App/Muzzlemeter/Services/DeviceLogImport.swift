@@ -37,10 +37,9 @@ struct DeviceLogImportSummary: Equatable {
 
 /// 読めなかった `0x63` の生 payload をファイルに残す。
 ///
-/// **これが唯一「実物の応答」を手に入れる経路**（`docs/PROTOCOL.md` §6.6）。
-/// 形式が違ったときにその場で捨ててしまうと、ユーザーの手元にある実機の
-/// 応答が永久に分からない。ファイル App から共有できる Documents 直下に置き、
-/// 送り返してもらう。
+/// 実機確定の形式（`docs/PROTOCOL.md` §6.6）だが、未知のファームウェア差異への保険として
+/// 残してある。形式が違ったときにその場で捨ててしまうと、ユーザーの手元にある実機の
+/// 応答が永久に分からない。ファイル App から共有できる Documents 直下に置き、送り返してもらう。
 enum DeviceLogArchive {
     /// `device-log-<yyyyMMdd-HHmmss>.txt` を書き出してファイル名を返す。失敗したら nil。
     static func write(records: [DeviceLogRecord], now: Date = Date()) -> String? {
@@ -57,7 +56,7 @@ enum DeviceLogArchive {
         // 文言は**翻訳しない**。読むのは開発者で、そのまま貼って共有されるファイル。
         var lines = [
             "# Muzzlemeter device log dump",
-            "# AC6000 MKIII BT / 0x63 response payload (format UNVERIFIED, docs/PROTOCOL.md 6.6)",
+            "# AC6000 MKIII BT / 0x63 response payload (format confirmed, docs/PROTOCOL.md 6.6)",
             "# one record per line: <index> <payload hex>",
         ]
         lines.append(contentsOf: records.map(\.hexLine))
@@ -103,10 +102,13 @@ enum DeviceLogSessionBuilder {
             gunInnerBarrelLengthMm: profile?.innerBarrelLengthMm
         )
         session.tags = [tag]
-        // **時刻が無いことを記録に残す。** 本体のログには計測時刻が入っていないので、
-        // 並んでいる時刻は「取り込んだ時刻」でしかない。書いておかないと、後から
-        // 見た人が「この日のこの時間に撃った」と誤読する。
-        var notes = [String(localized: "本体のログには計測時刻が入っていないため、取り込んだ時刻で記録しています。")]
+        // **出どころと、時刻が無いことを記録に残す。** 本体（クロノグラフ）内蔵のログから
+        // 取り込んでおり、そのログには計測時刻が入っていないので、並んでいる時刻は
+        // 「取り込んだ時刻」でしかない。書いておかないと、後から見た人が
+        // 「この日のこの時間に撃った」と誤読する。
+        var notes = [
+            String(localized: "本体（クロノグラフ）内蔵のログから取り込みました。本体はログに計測時刻を記録しないため、取り込んだ時刻を表示しています。")
+        ]
         if isPartial {
             notes.append(String(localized: "未対応の形式が出たところで読み出しを止めました。ここまでが読めたぶんです。"))
         }

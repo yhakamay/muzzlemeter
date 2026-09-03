@@ -2619,23 +2619,6 @@
         }
       }
     },
-    "履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saved to history with the “Device log” tag. Timestamps are the import time."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。"
-          }
-        }
-      }
-    },
     "平均": {
       "extractionState": "manual",
       "localizations": {
@@ -3299,23 +3282,6 @@
         }
       }
     },
-    "本体のログには計測時刻が入っていないため、取り込んだ時刻で記録しています。": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The device log has no measurement times, so the import time is recorded instead."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "本体のログには計測時刻が入っていないため、取り込んだ時刻で記録しています。"
-          }
-        }
-      }
-    },
     "本体のログ形式に対応できていない可能性があります。あとでもう一度試せます。": {
       "extractionState": "manual",
       "localizations": {
@@ -3431,6 +3397,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "本体ログを取り込み中 %lld / %lld"
+          }
+        }
+      }
+    },
+    "本体（クロノグラフ）内蔵のログから取り込みました。履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported from the chronograph's on-device log. Saved to history with the “Device log” tag. Timestamps are the import time."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体（クロノグラフ）内蔵のログから取り込みました。履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。"
+          }
+        }
+      }
+    },
+    "本体（クロノグラフ）内蔵のログから取り込みました。本体はログに計測時刻を記録しないため、取り込んだ時刻を表示しています。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported from the chronograph's on-device log. The device does not record timestamps, so the import time is shown instead."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本体（クロノグラフ）内蔵のログから取り込みました。本体はログに計測時刻を記録しないため、取り込んだ時刻を表示しています。"
           }
         }
       }

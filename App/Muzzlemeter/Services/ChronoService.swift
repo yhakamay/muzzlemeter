@@ -206,6 +206,16 @@ final class ChronoService {
     }
 
     // MARK: - 本体内ログの取り込み
+    //
+    // 本体内ログは **volatile**（`docs/PROTOCOL.md` §6.5 / §6.6。電源を切ると 0 件に戻る）。
+    // そのため「件数が変わったら促す」だけでは足りない: 6 件取り込んだ後に本体の電源が
+    // 入り直り、新たに 3 発撃たれると件数はまた「3」になる。件数の比較だけで済ませると、
+    // 「6 と 3 は違う」→促す、まではよいが、**取り込みは常に index 1 から** なので
+    // 前回取り込んだ 6 件のうち被る分は無い（volatile なので index 1..3 は新しい記録）。
+    // 一方、電源が入ったままさらに 3 発撃ち足された場合（件数が 6→9）は、index 1..6 を
+    // 二重に読んでしまう。これを避けるため、**件数**ではなく**どこまで読んだ index か**
+    // （`importedThroughIndex`）を機器ごとに覚え、差分（`importedThroughIndex+1...count`）
+    // だけを読む。件数が前回より**減っていたら**電源サイクルとみなして 0 に戻す。
 
     /// 本体が報告したログ件数（`0x62`）。未取得なら nil。
     private(set) var deviceLogCount: Int?
@@ -216,49 +226,68 @@ final class ChronoService {
     /// いま繋がっている機器。取り込み済みの印を機器ごとに付けるために要る。
     private var connectedPeripheralID: UUID?
 
-    /// 機器ごとの「どこまで取り込んだか」の印。
-    ///
-    /// 件数そのものを覚える。本体のログには ID も時刻も無いので、**同じ件数なら
-    /// 同じログとみなす**しかない。撃ち足されて件数が増えれば、また促される。
-    private static func lastImportedLogCountKey(for peripheral: UUID) -> String {
-        "muzzlemeter.lastImportedLogCount.\(peripheral.uuidString)"
+    /// 機器ごとの「どこまで（何番目の index まで）取り込んだか」の印。
+    private struct DeviceLogProgressRecord: Codable {
+        var importedThroughIndex: Int
+        var updatedAt: Date
     }
 
-    private var lastImportedLogCountKey: String? {
-        connectedPeripheralID.map { Self.lastImportedLogCountKey(for: $0) }
+    private static func deviceLogProgressKey(for peripheral: UUID) -> String {
+        "muzzlemeter.deviceLogProgress.\(peripheral.uuidString)"
     }
 
-    private var lastImportedLogCount: Int? {
-        guard let key = lastImportedLogCountKey else { return nil }
-        return defaults.object(forKey: key) as? Int
+    private func loadDeviceLogProgress(for peripheral: UUID) -> DeviceLogProgressRecord? {
+        guard let data = defaults.data(forKey: Self.deviceLogProgressKey(for: peripheral)) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(DeviceLogProgressRecord.self, from: data)
     }
 
-    /// 「本体に未取込のログが N 件あります」と出すべき件数。無ければ nil。
+    private func saveDeviceLogProgress(importedThroughIndex: Int, for peripheral: UUID) {
+        let record = DeviceLogProgressRecord(importedThroughIndex: importedThroughIndex, updatedAt: Date())
+        guard let data = try? JSONEncoder().encode(record) else { return }
+        defaults.set(data, forKey: Self.deviceLogProgressKey(for: peripheral))
+    }
+
+    /// いま繋がっている機器で、どこまで取り込み済みか（0 = まだ何も取り込んでいない）。
+    private var importedThroughIndex: Int {
+        guard let id = connectedPeripheralID else { return 0 }
+        return loadDeviceLogProgress(for: id)?.importedThroughIndex ?? 0
+    }
+
+    /// 「本体に未取込のログが N 件あります」と出すべき件数（＝差分の件数）。無ければ nil。
     ///
     /// **繋がっているときにしか出さない。** 押しても読み出しは始まらないのに
     /// 「取り込む」を出すと、押した人には「試したのに失敗した」としか見えない。
     var pendingDeviceLogCount: Int? {
         guard connectionState.isReady else { return nil }
         guard deviceLogImport == .idle else { return nil }
-        guard let count = deviceLogCount, count > 0 else { return nil }
+        guard let count = deviceLogCount, count > importedThroughIndex else { return nil }
         guard count != dismissedDeviceLogCount else { return nil }
-        guard count != lastImportedLogCount else { return nil }
-        return count
+        return count - importedThroughIndex
     }
 
     /// 取り込みを始める。**計測は止めない**（撃てば普通にショットが入る）。
+    ///
+    /// 読むのは `importedThroughIndex+1...count` だけ（差分）。ログは volatile なので、
+    /// 同じ電源サイクルの間に既に読んだところを読み直す必要が無い。
     func importDeviceLog() {
-        guard let count = pendingDeviceLogCount else { return }
-        deviceLogImport = .importing(done: 0, total: count)
+        guard let pending = pendingDeviceLogCount,
+              let count = deviceLogCount,
+              let peripheral = connectedPeripheralID
+        else { return }
+        let startIndex = importedThroughIndex + 1
+        deviceLogImport = .importing(done: 0, total: pending)
         let device = self.device
-        // ここだけ self を強く掴む（読み出しが終わるまでの数秒）。弱参照にすると
+        let options = DeviceLogReadOptions(startIndex: startIndex)
+        // ここだけ self を強く掴む(読み出しが終わるまでの数秒)。弱参照にすると
         // 入れ子のクロージャで「捕捉した var self」を再捕捉することになり、
         // 進捗の受け渡しがかえって読みにくくなる。ChronoService はアプリと同じ寿命。
         Task {
-            let result = await device.readDeviceLog { progress in
+            let result = await device.readDeviceLog(options: options) { progress in
                 Task { @MainActor in self.updateDeviceLogProgress(progress) }
             }
-            self.finishDeviceLogImport(result)
+            self.finishDeviceLogImport(result, peripheral: peripheral, previousCount: count)
         }
     }
 
@@ -278,8 +307,11 @@ final class ChronoService {
         deviceLogImport = .idle
     }
 
-    private func finishDeviceLogImport(_ result: DeviceLogReadResult) {
-        let requested = deviceLogCount ?? result.reportedCount
+    private func finishDeviceLogImport(
+        _ result: DeviceLogReadResult,
+        peripheral: UUID,
+        previousCount: Int
+    ) {
         let outcome: DeviceLogImportSummary.Outcome
         switch result.outcome {
         case .completed: outcome = .completed
@@ -304,12 +336,12 @@ final class ChronoService {
         // 読めなかったときだけ生データを残す。**これが実物の 0x63 を手に入れる唯一の経路。**
         let fileName = result.isComplete ? nil : DeviceLogArchive.write(records: result.records)
 
-        // 印は「読めた」ときだけ付ける。応答が無かっただけで済ませてしまうと、
-        // 本当に溜まっているログを二度と促さなくなる。
-        if outcome != .noResponse, let key = lastImportedLogCountKey {
-            defaults.set(requested, forKey: key)
+        // 印は「実際に読めた末尾の index」まで進める。部分的にしか読めなくても、
+        // そこまでは確実に取り込めているので次回はその続きから読む。
+        if let lastIndex = result.lastReadIndex {
+            saveDeviceLogProgress(importedThroughIndex: lastIndex, for: peripheral)
         }
-        dismissedDeviceLogCount = requested
+        dismissedDeviceLogCount = previousCount
         deviceLogImport = .finished(
             DeviceLogImportSummary(
                 savedShotCount: savedShotCount,
@@ -333,9 +365,21 @@ final class ChronoService {
 
     private func applyDeviceLogCount(_ count: Int?, peripheral: UUID?) {
         connectedPeripheralID = peripheral
-        if let count { deviceLogCount = count }
+        if let count {
+            deviceLogCount = count
+            detectPowerCycleIfNeeded(newCount: count, peripheral: peripheral)
+        }
         // 目視確認用（`--demo-device-log-auto`）。製品では常に false。
         if ScreenshotSupport.startsDeviceLogImport { importDeviceLog() }
+    }
+
+    /// 件数が前回の取り込み済み index より**減っていたら**、本体の電源が入り直った
+    /// （volatile なログが 0 件に戻った）とみなして印を 0 に戻す。
+    private func detectPowerCycleIfNeeded(newCount: Int, peripheral: UUID?) {
+        guard let peripheral else { return }
+        guard let record = loadDeviceLogProgress(for: peripheral), newCount < record.importedThroughIndex
+        else { return }
+        saveDeviceLogProgress(importedThroughIndex: 0, for: peripheral)
     }
 
     // MARK: - 規制上限
@@ -555,13 +599,14 @@ final class ChronoService {
             // 件数がここで蘇ると、切断中なのに「取り込む」が出てしまう。
             guard connectionState.isReady else { break }
             deviceLogCount = count
+            detectPowerCycleIfNeeded(newCount: count, peripheral: connectedPeripheralID)
 
-        case .logRecordRaw, .logRecord:
+        case .logRecordRaw, .logRecord, .logRecordEmpty:
             // 取り込みの本体は `ChronoDevice.readDeviceLog` が要求と対にして受け取る。
             // ここで拾うと**進行中のセッションに過去のログが混ざる**ので、何もしない。
             break
 
-        case .ack, .deviceInfo, .raw:
+        case .ack, .nak, .deviceInfo, .raw:
             break
         }
     }

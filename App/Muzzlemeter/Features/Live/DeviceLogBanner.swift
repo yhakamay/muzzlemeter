@@ -123,7 +123,7 @@ struct DeviceLogBanner: View {
     private func detail(_ summary: DeviceLogImportSummary) -> LocalizedStringKey? {
         switch summary.outcome {
         case .completed:
-            return "履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。"
+            return "本体（クロノグラフ）内蔵のログから取り込みました。履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。"
         case .unsupportedFormat:
             guard let name = summary.debugFileName else {
                 return "読めたぶんだけ履歴に保存しました。"
