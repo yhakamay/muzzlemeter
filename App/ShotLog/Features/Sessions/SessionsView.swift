@@ -9,9 +9,12 @@ struct SessionsView: View {
     @Query(sort: \Session.startedAt, order: .reverse) private var sessions: [Session]
 
     @State private var renamingSession: Session?
+    /// 詳細への遷移を値で表す。目視確認の起動引数から最新セッションを開くために、
+    /// `NavigationLink` の見た目だけの遷移ではなく**プログラムから積める形**にしてある。
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if sessions.isEmpty {
                     ContentUnavailableView(
@@ -22,9 +25,7 @@ struct SessionsView: View {
                 } else {
                     List {
                         ForEach(sessions) { session in
-                            NavigationLink {
-                                SessionDetailView(session: session)
-                            } label: {
+                            NavigationLink(value: session) {
                                 SessionRow(session: session, speedUnit: service.speedUnit)
                             }
                             // 名前の変更は破壊的ではないので leading（右スワイプ）に置く。
@@ -43,6 +44,15 @@ struct SessionsView: View {
                         }
                         .onDelete(perform: delete)
                     }
+                }
+            }
+            .navigationDestination(for: Session.self) { session in
+                SessionDetailView(session: session)
+            }
+            .task {
+                // 目視確認用（Debug のシミュレータのみ）。いちばん新しいセッションを開く。
+                if ScreenshotSupport.opensLatestSession, let latest = sessions.first {
+                    path.append(latest)
                 }
             }
             .sessionRenameAlert(target: $renamingSession)

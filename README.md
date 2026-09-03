@@ -377,7 +377,8 @@ xcrun simctl launch <udid> com.yhakamay.shotlog --replay-capture \
   --demo-energy-limit 0.001 \   # 選択中プロファイルの規制上限を上書き（J）
   --demo-target-shots 5 \       # 目標発数を上書き（0 で手動に戻す）
   --demo-tab settings \         # 起動時のタブ（live / sessions / settings）
-  --demo-scan-sheet             # 起動直後に機器選択シートを開く
+  --demo-scan-sheet \           # 起動直後に機器選択シートを開く
+  --demo-latest-session         # 履歴タブで最新セッションの詳細を開く
 ```
 
 ### 環境（気温・湿度・気圧）

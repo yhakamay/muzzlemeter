@@ -11,7 +11,8 @@ import Foundation
 ///
 /// ```sh
 /// xcrun simctl launch <udid> com.yhakamay.shotlog \
-///   --replay-capture --demo-energy-limit 0.001 --demo-target-shots 10 --demo-tab settings
+///   --replay-capture --demo-energy-limit 0.001 --demo-target-shots 10 \
+///   --demo-tab sessions --demo-latest-session
 /// ```
 enum ScreenshotSupport {
     /// 選択中プロファイルの規制上限を上書きする（J）。
@@ -25,6 +26,9 @@ enum ScreenshotSupport {
 
     /// 起動直後に機器選択シートを開く。
     static var opensScanSheet: Bool { flag("--demo-scan-sheet") }
+
+    /// 履歴タブで、いちばん新しいセッションの詳細を開く。
+    static var opensLatestSession: Bool { flag("--demo-latest-session") }
 
     // MARK: - 引数の読み取り
 
