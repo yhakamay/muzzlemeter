@@ -222,6 +222,23 @@
         }
       }
     },
+    "BB 重量の既定値": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default BB weight"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BB 重量の既定値"
+          }
+        }
+      }
+    },
     "Bluetooth がオフです": {
       "extractionState": "manual",
       "localizations": {
@@ -494,6 +511,23 @@
         }
       }
     },
+    "SD": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SD"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SD"
+          }
+        }
+      }
+    },
     "SD（標準偏差）": {
       "extractionState": "manual",
       "localizations": {
@@ -541,6 +575,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "· 最大 %@"
+          }
+        }
+      }
+    },
+    "℃": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "°C"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "℃"
           }
         }
       }
@@ -698,6 +749,23 @@
         }
       }
     },
+    "このプロファイルで 1 発でも撃つと、ここに推移が出ます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fire a single shot with this profile and the trend appears here."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプロファイルで 1 発でも撃つと、ここに推移が出ます。"
+          }
+        }
+      }
+    },
     "この機器を忘れる": {
       "extractionState": "manual",
       "localizations": {
@@ -728,6 +796,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "この端末では Bluetooth Low Energy が使えません"
+          }
+        }
+      }
+    },
+    "この銃の設定": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This gun's settings"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この銃の設定"
+          }
+        }
+      }
+    },
+    "これまで": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So far"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これまで"
           }
         }
       }
@@ -830,6 +932,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "まだタグがありません。"
+          }
+        }
+      }
+    },
+    "まだ記録がありません": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No records yet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだ記録がありません"
           }
         }
       }
@@ -1208,6 +1327,23 @@
         }
       }
     },
+    "セッション数": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション数"
+          }
+        }
+      }
+    },
     "セッション条件": {
       "extractionState": "manual",
       "localizations": {
@@ -1480,6 +1616,23 @@
         }
       }
     },
+    "プロファイルの詳細": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile details"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイルの詳細"
+          }
+        }
+      }
+    },
     "プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで編集、右スワイプで選択、左スワイプで削除。": {
       "extractionState": "manual",
       "localizations": {
@@ -1493,6 +1646,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで編集、右スワイプで選択、左スワイプで削除。"
+          }
+        }
+      }
+    },
+    "プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで詳細（推移と編集）、右スワイプで選択、左スワイプで削除。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A profile holds the gun itself plus the defaults for a session. Tap for details (trend and editing), swipe right to select, swipe left to delete."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで詳細（推移と編集）、右スワイプで選択、左スワイプで削除。"
           }
         }
       }
@@ -1578,6 +1748,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "ホップ %@"
+          }
+        }
+      }
+    },
+    "ホップの既定値": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default hop setting"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホップの既定値"
           }
         }
       }
@@ -2177,6 +2364,23 @@
         }
       }
     },
+    "合計発数": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total shots"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合計発数"
+          }
+        }
+      }
+    },
     "同じタグは 2 つ付きません。大文字小文字と全角半角の違いは同じタグとして扱います。": {
       "extractionState": "manual",
       "localizations": {
@@ -2445,6 +2649,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均 J"
+          }
+        }
+      }
+    },
+    "平均と SD は、このプロファイルで撃った全ショットをまとめて 1 つの標本として計算しています。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mean and SD treat every shot fired with this profile as one single sample."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均と SD は、このプロファイルで撃った全ショットをまとめて 1 つの標本として計算しています。"
+          }
+        }
+      }
+    },
+    "平均弾速の推移": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mean velocity over time"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均弾速の推移"
           }
         }
       }
@@ -2772,6 +3010,23 @@
         }
       }
     },
+    "日付": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日付"
+          }
+        }
+      }
+    },
     "晴れ時々くもり": {
       "extractionState": "manual",
       "localizations": {
@@ -2887,6 +3142,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "最後に接続した機器を覚えて、アプリを開いたら自動で繋ぎ直します。"
+          }
+        }
+      }
+    },
+    "最後のセッション": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最後のセッション"
           }
         }
       }
@@ -3231,6 +3503,74 @@
         }
       }
     },
+    "気温が記録されているセッションが %lld 件しかありません。傾きを読み取るには %lld 件以上ほしいところです。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only %lld session(s) have a temperature recorded. You want at least %lld before reading a trend into it."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "気温が記録されているセッションが %lld 件しかありません。傾きを読み取るには %lld 件以上ほしいところです。"
+          }
+        }
+      }
+    },
+    "気温が記録されているセッションだけを出しています。ガス銃は気温で初速が大きく動きます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only sessions with a recorded temperature are plotted. Gas guns change velocity a lot with temperature."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "気温が記録されているセッションだけを出しています。ガス銃は気温で初速が大きく動きます。"
+          }
+        }
+      }
+    },
+    "気温との関係": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Against temperature"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "気温との関係"
+          }
+        }
+      }
+    },
+    "気温と平均弾速の散布図": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temperature vs mean velocity"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "気温と平均弾速の散布図"
+          }
+        }
+      }
+    },
     "注意": {
       "extractionState": "manual",
       "localizations": {
@@ -3278,6 +3618,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "準備中"
+          }
+        }
+      }
+    },
+    "点が 1 セッションの平均、縦の線が ±SD（そのセッションのばらつき）です。点をタップするとそのセッションを開きます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each dot is one session's mean and the vertical line is ±SD (that session's spread). Tap a dot to open the session."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点が 1 セッションの平均、縦の線が ±SD（そのセッションのばらつき）です。点をタップするとそのセッションを開きます。"
           }
         }
       }

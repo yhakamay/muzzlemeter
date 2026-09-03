@@ -32,6 +32,7 @@
 - 履歴の閲覧・リネーム・CSV 書き出し
 - セッション比較（2〜3 件の統計並置・弾速の重ね合わせ・ばらつきの要約）
 - タグ付けと、タグ・銃・文字列による履歴の絞り込み
+- プロファイルごとの推移（平均弾速の時系列 ±SD、気温との散布図）
 - 日本語 / 英語（ベース言語は日本語）
 - 本体が無くても UI を確認できるリプレイモード（実キャプチャの再生）
 - 解析用の macOS CLI `muzzlemeter-sniff`（BLE スキャン / GATT 列挙 / パケットダンプ）
@@ -384,7 +385,8 @@ xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
   --demo-seed-sessions \        # 見本セッションを 5 件流し込む（ストアが空のときだけ）
   --demo-compare \              # 履歴タブで直近 3 件の比較画面を開く
   --demo-tag-editor \           # 見本セッションの詳細とタグ編集シートを開く
-  --demo-filter 屋内            # 履歴タブにタグの絞り込みを掛ける
+  --demo-filter 屋内 \          # 履歴タブにタグの絞り込みを掛ける
+  --demo-profile-detail         # 設定タブで最初のプロファイルの詳細を開く
 ```
 
 `--demo-seed-sessions` は比較・タグ・推移のように**複数のセッションが溜まっていないと

@@ -15,6 +15,7 @@ struct LiveView: View {
 
     @State private var isAddingProfile = false
     @State private var isEditingVariables = false
+    @State private var isShowingProfileDetail = false
     @State private var isChoosingDevice = ScreenshotSupport.opensScanSheet
 
     var body: some View {
@@ -101,6 +102,16 @@ struct LiveView: View {
                     try? modelContext.save()
                     // 作った直後は「それを使いたい」はずなので、そのまま選択状態にする。
                     service.selectedProfile = profile
+                }
+            }
+            // 詳細は Live のスタックに積まず**シート**で出す。計測中に画面を
+            // 押しのけると、弾速の巨大数字が見えなくなる時間ができてしまう。
+            .sheet(isPresented: $isShowingProfileDetail) {
+                if let profile = service.selectedProfile {
+                    NavigationStack {
+                        GunProfileDetailView(profile: profile)
+                    }
+                    .environment(service)
                 }
             }
             .sheet(isPresented: $isChoosingDevice) {
@@ -221,7 +232,8 @@ struct LiveView: View {
                     profiles: profiles,
                     selection: selection,
                     style: .large,
-                    onCreate: { isAddingProfile = true }
+                    onCreate: { isAddingProfile = true },
+                    onShowDetail: { isShowingProfileDetail = true }
                 )
                 variablesLine(isCompact: false)
                 Text("最初の 1 発でセッションが始まります")
@@ -275,7 +287,8 @@ struct LiveView: View {
                 profiles: profiles,
                 selection: selection,
                 style: .compact,
-                onCreate: { isAddingProfile = true }
+                onCreate: { isAddingProfile = true },
+                onShowDetail: { isShowingProfileDetail = true }
             )
             variablesLine(isCompact: true)
             targetProgress
@@ -348,6 +361,8 @@ struct ProfileMenu: View {
     @Binding var selection: GunProfile?
     var style: Style = .compact
     var onCreate: () -> Void
+    /// 選択中プロファイルの詳細を開く。`nil` なら項目を出さない。
+    var onShowDetail: (() -> Void)?
 
     var body: some View {
         Menu {
@@ -358,6 +373,11 @@ struct ProfileMenu: View {
                 }
             }
             Divider()
+            // 「いまこの銃はどうなっているか」（推移・仕様）は、計測中でも
+            // ここから 1 手で見られるべき。設定タブまで戻らせない。
+            if let onShowDetail, selection != nil {
+                Button("プロファイルの詳細", systemImage: "info.circle", action: onShowDetail)
+            }
             Button("新規プロファイル", systemImage: "plus", action: onCreate)
         } label: {
             // 重量はピルではなく**直下のセッション条件の行**に出す。ピルにプロファイルの

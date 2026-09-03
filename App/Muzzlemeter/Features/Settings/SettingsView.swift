@@ -10,12 +10,14 @@ struct SettingsView: View {
 
     @State private var editingProfile: GunProfile?
     @State private var isAddingProfile = false
+    /// 目視確認の起動引数からプロファイル詳細を開けるように、遷移を値で持つ。
+    @State private var path = NavigationPath()
 
     var body: some View {
         @Bindable var service = service
         @Bindable var feedback = service.feedback
 
-        NavigationStack {
+        NavigationStack(path: $path) {
             Form {
                 Section("表示単位") {
                     // `.segmented` は Picker のラベルを描かないので、何を切り替えているのか
@@ -76,9 +78,10 @@ struct SettingsView: View {
 
                 Section {
                     ForEach(profiles) { profile in
-                        Button {
-                            editingProfile = profile
-                        } label: {
+                        // タップは編集ではなく**詳細**へ。編集は詳細の「編集」から。
+                        // 一覧から直に編集シートを出していた頃は、「この銃はいまどうなって
+                        // いるか」を見る場所がどこにも無かった。
+                        NavigationLink(value: profile) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(profile.name)
@@ -96,10 +99,12 @@ struct SettingsView: View {
                                 }
                             }
                         }
-                        .foregroundStyle(.primary)
                         .swipeActions(edge: .leading) {
                             Button("使用") { service.selectedProfile = profile }
                                 .tint(.blue)
+                        }
+                        .contextMenu {
+                            Button("編集", systemImage: "pencil") { editingProfile = profile }
                         }
                     }
                     .onDelete(perform: deleteProfiles)
@@ -112,7 +117,7 @@ struct SettingsView: View {
                 } footer: {
                     // スワイプの向きは実装と一致させる: 選択は leading（右スワイプ）、
                     // 削除は onDelete（左スワイプ）。逆に書くと破壊的操作に誘導してしまう。
-                    Text("プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで編集、右スワイプで選択、左スワイプで削除。")
+                    Text("プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで詳細（推移と編集）、右スワイプで選択、左スワイプで削除。")
                 }
 
                 Section {
@@ -136,6 +141,15 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("設定")
+            .navigationDestination(for: GunProfile.self) { profile in
+                GunProfileDetailView(profile: profile)
+            }
+            .task {
+                // 目視確認用（Debug のシミュレータのみ）。最初のプロファイルの詳細を開く。
+                if ScreenshotSupport.opensProfileDetail, let first = profiles.first {
+                    path.append(first)
+                }
+            }
             .sheet(isPresented: $isAddingProfile) {
                 GunProfileEditor(profile: nil) { draft in
                     let profile = draft.makeProfile()

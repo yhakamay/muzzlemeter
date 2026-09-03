@@ -49,6 +49,9 @@ enum ScreenshotSupport {
     /// 履歴タブで、見本のセッションの詳細を開いてタグ編集シートまで出す。
     static var opensTagEditor: Bool { flag("--demo-tag-editor") }
 
+    /// 設定タブで、最初のプロファイルの詳細を開く。
+    static var opensProfileDetail: Bool { flag("--demo-profile-detail") }
+
     /// 履歴タブで、このタグの絞り込みを掛けた状態にする。
     static var filterTag: String? { value(for: "--demo-filter") }
 
