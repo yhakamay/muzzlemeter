@@ -14,6 +14,7 @@ struct LiveView: View {
     @Query(sort: \GunProfile.createdAt) private var profiles: [GunProfile]
 
     @State private var isAddingProfile = false
+    @State private var isEditingVariables = false
 
     var body: some View {
         @Bindable var service = service
@@ -78,6 +79,29 @@ struct LiveView: View {
                     service.selectedProfile = profile
                 }
             }
+            .sheet(isPresented: $isEditingVariables) {
+                // 中くらいの高さ。後ろの Live 画面（弾速）が見えたままになるので、
+                // 「作業を止めるモーダル」に見えない。
+                SessionVariablesSheet(service: service)
+                    .environment(service)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+
+    /// プロファイルピルの直下に添える条件の 1 行。プロファイルが 1 つも無いときは出さない
+    /// （条件の置き場所（プロファイル）がまだ無いので、押しても意味が無い）。
+    @ViewBuilder
+    private func variablesLine(isCompact: Bool) -> some View {
+        if !profiles.isEmpty {
+            SessionVariablesLine(
+                variables: service.variables,
+                category: service.powerCategory,
+                isCompact: isCompact
+            ) {
+                isEditingVariables = true
+            }
         }
     }
 
@@ -114,6 +138,7 @@ struct LiveView: View {
                     style: .large,
                     onCreate: { isAddingProfile = true }
                 )
+                variablesLine(isCompact: false)
                 Text("最初の 1 発でセッションが始まります")
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -152,6 +177,7 @@ struct LiveView: View {
                 style: .compact,
                 onCreate: { isAddingProfile = true }
             )
+            variablesLine(isCompact: true)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
@@ -216,23 +242,20 @@ struct ProfileMenu: View {
         Menu {
             Picker("銃プロファイル", selection: $selection) {
                 ForEach(profiles) { profile in
-                    Text(verbatim: "\(profile.name)  \(GunProfile.weightLabel(profile.bbWeightGrams))")
+                    Text(verbatim: "\(profile.name)  \(GunProfile.weightLabel(profile.defaultBBWeightGrams))")
                         .tag(Optional(profile))
                 }
             }
             Divider()
             Button("新規プロファイル", systemImage: "plus", action: onCreate)
         } label: {
+            // 重量はピルではなく**直下のセッション条件の行**に出す。ピルにプロファイルの
+            // 既定値を出すと、その回だけ 0.30 g にしたときに 2 つの重量が食い違って見える。
             HStack(spacing: 6) {
                 Text(name)
                     .font(nameFont)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Text(verbatim: "·")
-                    .foregroundStyle(.secondary)
-                Text(GunProfile.weightLabel(weightGrams))
-                    .font(detailFont)
-                    .foregroundStyle(.secondary)
                 Image(systemName: "chevron.down")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -251,16 +274,8 @@ struct ProfileMenu: View {
         selection?.name ?? String(localized: "未設定")
     }
 
-    private var weightGrams: Double {
-        selection?.bbWeightGrams ?? 0.25
-    }
-
     private var nameFont: Font {
         style == .large ? .title2.weight(.semibold) : .callout.weight(.medium)
-    }
-
-    private var detailFont: Font {
-        style == .large ? .title3 : .callout
     }
 }
 

@@ -919,6 +919,23 @@
         }
       }
     },
+    "プロファイル「%@」の既定値も、この条件で上書きします。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These conditions also overwrite the defaults of the “%@” profile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイル「%@」の既定値も、この条件で上書きします。"
+          }
+        }
+      }
+    },
     "プロファイルがありません": {
       "extractionState": "manual",
       "localizations": {
@@ -932,6 +949,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロファイルがありません"
+          }
+        }
+      }
+    },
+    "プロファイルの既定値に戻す": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset to profile defaults"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイルの既定値に戻す"
           }
         }
       }
@@ -1463,6 +1497,23 @@
         }
       }
     },
+    "変更はこのセッション全体に適用され、ジュールが計算し直されます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes apply to the whole session, and the joules are recalculated."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更はこのセッション全体に適用され、ジュールが計算し直されます。"
+          }
+        }
+      }
+    },
     "天気": {
       "extractionState": "manual",
       "localizations": {
@@ -1476,6 +1527,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "天気"
+          }
+        }
+      }
+    },
+    "完了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
           }
         }
       }
@@ -1752,6 +1820,23 @@
         }
       }
     },
+    "既定値として保存": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save as the default"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既定値として保存"
+          }
+        }
+      }
+    },
     "晴れ時々くもり": {
       "extractionState": "manual",
       "localizations": {
@@ -1901,6 +1986,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "機器を探しています"
+          }
+        }
+      }
+    },
+    "次のセッション（最初の 1 発）はこの条件で始まります。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The next session — starting with its first shot — will use these conditions."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のセッション（最初の 1 発）はこの条件で始まります。"
           }
         }
       }
