@@ -1,6 +1,6 @@
 # UX ロードマップ（2026-09-03 ユーザー合意）
 
-## データモデルの棲み分け（Round A）
+## データモデルの棲み分け（Round A・実装済み）
 
 | 置き場所 | 項目 |
 |---|---|
@@ -10,6 +10,16 @@
 - セッションは最初の 1 発でプロファイル既定値により自動開始（ブロッキング UI なし）。
 - Live のプロファイルピル直下に「0.25 g · HFC134a · ホップ 3」を表示し、タップでセッション変数を変更。変更はセッション全体に適用（ジュール再計算）。
 - 既存の GunProfile.powerSource（ガス種別込み）は「区分」と「ガス種別」に分割し、既存データを移行する。
+
+実装メモ（該当コミットの ADR に詳細）:
+
+- セッション変数は値型 `SessionVariables`（BB 重量・ガス種別・ホップ）。プロファイルは
+  その**既定値**だけを持ち、セッションが開始時にスナップショットする。
+- 待機中の「次に始まる条件」は `ChronoService.pendingVariables`（永続化しない）。
+- 移行は列の追加＋起動時の値の派生（`StoreMigration`）。`VersionedSchema` は使っていない。
+- `bbWeightGrams` / `hopNotes` は列名を据え置き、`defaultBBWeightGrams` /
+  `defaultHopSetting` という別名で呼ぶ。
+- CSV: `power_source` → `power_category`、`gas_type` / `hop_setting` / `energy_limit_j` を追加。
 
 ## Round B: Live 周り
 1. 規制値ライン（プロファイル上限に対し 余裕/注意/超過 の色分け、超過時ハプティクス＋音）
