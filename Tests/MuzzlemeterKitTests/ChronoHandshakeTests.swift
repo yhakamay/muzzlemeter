@@ -57,7 +57,12 @@ struct ChronoHandshakeTests {
             default:
                 break
             }
-            if shots.count == 5, states.contains(.ready) {
+            // **電源 OFF まで受け切ってから終える。** 5 発目で `shutdown()` すると、
+            // 再生（`speed == 0` でも `Task.yield()` を挟む）がキャプチャ末尾の
+            // 電源 OFF 通知に到達する前にストリームが閉じることがあり、
+            // `sawPowerOff` が実行ごとに変わる。キャプチャには必ず入っているので、
+            // 3 つ揃うのを待てば決定的になる。
+            if shots.count == 5, states.contains(.ready), sawPowerOff {
                 await device.shutdown()
             }
         }
