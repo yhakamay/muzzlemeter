@@ -61,7 +61,11 @@ final class ChronoService {
     /// 選択中の銃プロファイル。ジュール計算と新規セッションのスナップショットに使う。
     var selectedProfile: GunProfile? {
         didSet {
-            guard selectedProfile != oldValue else { return }
+            // Compare identities explicitly. `!=` on a SwiftData `@Model` reference
+            // relies on a synthesized Equatable conformance that some toolchains do
+            // not provide here, and the check we actually want is "a different
+            // profile object", not value equality of its fields.
+            guard selectedProfile !== oldValue else { return }
             defaults.set(selectedProfile?.name, forKey: Keys.selectedProfileName)
             // 銃を替えたら、次のセッションの条件はその銃の既定値から始める。
             // 前の銃の 0.20 g が黙って引き継がれると、ジュールが静かに間違う。

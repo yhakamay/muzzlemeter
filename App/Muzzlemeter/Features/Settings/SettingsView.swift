@@ -93,7 +93,7 @@ struct SettingsView: View {
                                     }
                                 }
                                 Spacer()
-                                if profile == service.selectedProfile {
+                                if profile === service.selectedProfile {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(.tint)
                                 }
@@ -185,7 +185,7 @@ struct SettingsView: View {
     private func deleteProfiles(at offsets: IndexSet) {
         for index in offsets {
             let profile = profiles[index]
-            if profile == service.selectedProfile { service.selectedProfile = nil }
+            if profile === service.selectedProfile { service.selectedProfile = nil }
             modelContext.delete(profile)
         }
         try? modelContext.save()
