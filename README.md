@@ -35,29 +35,31 @@
 - プロファイルごとの推移（平均弾速の時系列 ±SD、気温との散布図）
 - 日本語 / 英語（ベース言語は日本語）
 - 本体が無くても UI を確認できるリプレイモード（実キャプチャの再生）
-- 本体内に溜まったログの取り込み（`0x62` / `0x63`。**`0x63` の形式は未検証**）
+- 本体内に溜まったログの取り込み（`0x62` / `0x63`。**実機で確認済み**の形式。ログは
+  volatile なので、機器ごとに前回どこまで取り込んだかを覚えて差分だけ読む）
 - 解析用の macOS CLI `muzzlemeter-sniff`（BLE スキャン / GATT 列挙 / パケットダンプ）
 
-## AC6000 と話すのに必要なこと（要点）
+## What it takes to talk to the AC6000 (essentials)
 
-詳細は `docs/PROTOCOL.md`。実装する側が最低限知っておくべき事実だけ:
+See `docs/PROTOCOL.md` for the full detail. Here's the minimum an implementer needs:
 
 | | |
 |---|---|
-| スキャン | 広告名 `AC6000BT-` の前方一致。**サービスは広告されない**ので `services: nil` で拾う |
-| notify | `3337E46E-F79E-4FF5-9A49-77C36D170C62`（service `5CDE0C3D-…`） |
-| write | `9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C`（service `53C47FE1-…`）**Write With Response** |
-| フレーム | `AA <L> <cmd> <payload…> <cks>`。`L` はフレーム全長 |
-| チェックサム | `(Σ frame[0..L-2] + key1 + key2) & 0xFF`。**鍵を知らないと組めないし検証もできない** |
-| **鍵** | **広告の manufacturer data の 4・5 バイト目**（`00 05 08 c4 94 52 04` → `key1=0xC4 key2=0x94`） |
-| ハンドシェイク | TX `aa 06 4b <k1> <k2> <cks>`（この 1 本だけ鍵 0/0 で署名）→ RX `aa 05 41 4b <cks>`（ACK）。**55 ms で返る。本体の電源ボタン押下は不要** |
-| keep-alive | **不要**（送らない） |
-| 弾速 | `FIRE_REPORT (0x52)` の `rawSpeed / 100` = m/s（実機 LCD と突き合わせて確定）。**LCD は切り捨て表示**なのでアプリの m/s 表示も切り捨てに揃えてある |
-| 電源 OFF | 1 バイトの `00` 通知。エラーではない。約 0.76 秒後にリンクが落ちる |
-| 🚫 禁止 | OTA characteristic `F7BF3564-…` への書き込み（文鎮化）。`0x61` CLEAR_LOG の送信 |
+| Scan | prefix match on the advertised name `AC6000BT-`. **No service is advertised**, so scan with `services: nil` |
+| notify | `3337E46E-F79E-4FF5-9A49-77C36D170C62` (service `5CDE0C3D-…`) |
+| write | `9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C` (service `53C47FE1-…`) **Write With Response** |
+| Frame | `AA <L> <cmd> <payload…> <cks>`. `L` is the total frame length |
+| Checksum | `(Σ frame[0..L-2] + key1 + key2) & 0xFF`. **You can neither build nor verify a frame without the key** |
+| **Key** | **bytes 4 and 5 of the advertisement's manufacturer data** (`00 05 08 c4 94 52 04` → `key1=0xC4 key2=0x94`) |
+| Handshake | TX `aa 06 4b <k1> <k2> <cks>` (signed with key 0/0, this one frame only) → RX `aa 05 41 4b <cks>` (ACK). **Returns in 55 ms. No button press needed on the device** |
+| Keep-alive | **not needed** (don't send one) |
+| Speed | `FIRE_REPORT (0x52)`'s `rawSpeed / 100` = m/s (confirmed against the device's own LCD). **The LCD truncates**, so the app's m/s display truncates the same way |
+| Power off | a 1-byte `00` notification. Not an error. The link drops ~0.76 s later |
+| Device log | `0x62` (count) / `0x63` (one record, 1-byte 1-based index). **Confirmed against real hardware.** The log is **volatile** — it resets to 0 records on power-cycle |
+| 🚫 Forbidden | writing to the OTA characteristic `F7BF3564-…` (bricking risk). Sending `0x61` CLEAR_LOG |
 
-本体は**要求していないフレーム**（`0x47` / `0x5A`）も自発的に送ってくる。
-「予期しない = エラー」にしないこと。
+The device also sends frames **you never asked for** (`0x47` / `0x5A` periodically,
+roughly every 10 s after connecting). Don't treat "unexpected" as an error.
 
 ## 構成
 

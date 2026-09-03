@@ -1,38 +1,46 @@
-# AC6000 MKIII BT BLE プロトコル
+# AC6000 MKIII BT BLE protocol
 
-Acetech AC6000 MKIII BT の BLE 通信仕様。
+BLE communication spec for the Acetech AC6000 MKIII BT.
 
-> **本書は実測（PacketLogger キャプチャと実機追試）に基づく仕様であり、本リポジトリにおける正典（authoritative）。**
-> 記載しているのは自分で取得した通信キャプチャと、自作クライアントによる実機での追試から
-> 得られた観測事実だけで、他者のアプリのバイナリを解析した内容は含まない。
+> **This document is a measured spec (based on PacketLogger captures and real-hardware
+> follow-up tests) and is authoritative in this repository.**
+> It contains only observations from communication captures we recorded ourselves and
+> follow-up tests against the real device made with our own client. It does not include
+> anything derived from reverse-engineering another app's binary.
 
-ステータス: **実機グラウンドトゥルースで確定**（Phase 1b 完了）
+Status: **confirmed against real-hardware ground truth** (Phase 1b complete; device log
+confirmed 2026-09-03/04)
 
-## 0. 出典と確度の凡例
+## 0. Sources and confidence legend
 
 | | |
 |---|---|
-| キャプチャ | `tools/re/captures/acesoft-iphone.pklg`（Apple PacketLogger, iPhone の HCI ログ） |
-| 抽出物 | `tools/re/notes/pklg-att.tsv`（生）/ `tools/re/notes/pklg-timeline.txt`（可読タイムライン） |
-| フィクスチャ | `Tests/MuzzlemeterKitTests/Fixtures/acesoft-iphone-{rx,tx}.txt` |
-| 相手 | AceSoft (iOS) ⇄ `AC6000BT-009809`（`54:dc:e9:db:f6:0c`, public address） |
-| 収録内容 | 接続 → GATT 探索 → 鍵ハンドシェイク → 初期化 → 手投げ BB 5 発 → 単位切替 → 電源 OFF |
-| 全長 | 約 104 秒 / ATT フレーム 66 本（うちアプリ層フレーム TX 8 / RX 16） |
+| Capture | `tools/re/captures/acesoft-iphone.pklg` (Apple PacketLogger, iPhone HCI log) |
+| Extracted | `tools/re/notes/pklg-att.tsv` (raw) / `tools/re/notes/pklg-timeline.txt` (readable timeline) |
+| Fixtures | `Tests/MuzzlemeterKitTests/Fixtures/acesoft-iphone-{rx,tx}.txt` |
+| Peer | AceSoft (iOS) ⇄ `AC6000BT-009809` (`54:dc:e9:db:f6:0c`, public address) |
+| Contents | connect → GATT discovery → key handshake → init → 5 hand-thrown BBs → unit switch → power off |
+| Duration | ~104 s / 66 ATT frames (8 app-layer TX / 16 app-layer RX) |
+| Additional captures | `tools/re/captures/20260903-222919.log`, `20260904-000619.log`, `20260904-000817.log` — our own sniffer (`muzzlemeter-sniff dump --read-log`), used to confirm the device log (`0x62`/`0x63`) format |
 
-確度: **確定** = 本キャプチャに直接の証拠あり / **推定** = 整合するが単独では決め手に欠ける /
-**未検証** = 実装上そう扱っているが、今回のキャプチャ・追試には現れなかった。
+Confidence: **confirmed** = directly evidenced in a capture / **inferred** = consistent but
+not conclusive on its own / **unverified** = implemented this way but never observed in a
+capture or follow-up test.
 
-> ✅ 速度スケール（§7.3）は **実機の LCD と突き合わせて確定した**（÷100 → m/s）。
-> ⚠️ アモプリセットの重量スケール（§6.4）は依然「**推定**」で、実機では
-> 同じスロットに ×100 では説明できない値（`0x00c8` = 200）が現れた。§10 参照。
+> ✅ The speed scale (§7.3) is **confirmed against the device's own LCD** (÷100 → m/s).
+> ✅ The device log (§6.5 / §6.6) is **confirmed against real hardware** (2026-09-03/04):
+> `0x62` reports the record count, `0x63` reads one record with a 1-based index, and the
+> speed matched the device's own LCD history for three hand-thrown BBs.
+> ⚠️ The ammo preset weight scale (§6.4) is still **inferred**: the real device showed a
+> value in the same slot that ×100 cannot explain (`0x00c8` = 200). See §10.
 
 ---
 
 ## 1. Device identification
 
-### 1.1 アドバタイズ
+### 1.1 Advertisement
 
-29 本のアドバタイズを収録。ペイロードは全て同一。
+29 advertisements recorded. All payloads identical.
 
 ```
 02 01 06                                    Flags: LE General Discoverable | BR/EDR Not Supported
@@ -42,128 +50,131 @@ Acetech AC6000 MKIII BT の BLE 通信仕様。
 08 ff 00 05 08 c4 94 52 04                  Manufacturer Specific Data (0xFF), 7 bytes
 ```
 
-Manufacturer Specific Data の内訳（**推定**）:
+Manufacturer Specific Data breakdown (**inferred**):
 
-| offset | bytes | 内容 |
+| offset | bytes | meaning |
 |---|---|---|
-| 0..1 | `00 05` | company id（LE = `0x0500`。Bluetooth SIG の正規割り当てではない） |
-| 2 | `08` | 機種コード? （AC6000 = 8 と推定） |
+| 0..1 | `00 05` | company id (LE = `0x0500`. Not a real Bluetooth SIG assignment) |
+| 2 | `08` | model code? (inferred: AC6000 = 8) |
 | **3** | **`c4`** | **key1** |
 | **4** | **`94`** | **key2** |
-| 5..6 | `52 04` | 不明（シリアル `009809` = `0x2651` とは一致しない） |
+| 5..6 | `52 04` | unknown (does not match serial `009809` = `0x2651`) |
 
-> **重要**: offset 3/4 の `c4 94` は、この直後にアプリが `0x4B` フレームで送り返した
-> `key1`/`key2` と**完全に一致する**。本体はペアリング鍵をアドバタイズに載せている可能性が高い
-> （**推定** / §4.3 参照）。
+> **Important**: offset 3/4 `c4 94` **exactly matches** the `key1`/`key2` the app sent
+> back in the `0x4B` frame right after this. The device very likely carries its pairing
+> key in the advertisement itself (**inferred** / see §4.3).
 
-### 1.2 接続後の識別
+### 1.2 Post-connection identification
 
-| 項目 | 値 |
+| Item | Value |
 |---|---|
 | GAP Device Name (`0x2A00`, handle `0x000B`) | `ACETECH-12345678` |
-| BD_ADDR | `54:dc:e9:db:f6:0c`（public。OUI = Silicon Laboratories） |
+| BD_ADDR | `54:dc:e9:db:f6:0c` (public. OUI = Silicon Laboratories) |
 
-**スキャン時のマッチは広告名 `AC6000BT-` の前方一致で行うこと。**
-`0x2A00` は全個体で `ACETECH-12345678` の可能性があり、識別に使えない。
+**Match on scan using a prefix match on the advertised name `AC6000BT-`.**
+`0x2A00` is likely `ACETECH-12345678` on every unit and cannot be used for identification.
 
 ---
 
 ## 2. GATT layout
 
-キャプチャで観測されたアトリビュートテーブル（**確定**）。
+Attribute table observed in the capture (**confirmed**).
 
-| handles | UUID | 役割 |
+| handles | UUID | role |
 |---|---|---|
-| `0x0001`–`0x0008` | `0x1801` | GATT（Service Changed / Database Hash / Client Supported Features） |
-| `0x0009`–`0x000D` | `0x1800` | GAP（`0x000B` = Device Name） |
-| `0x000E`–`0x0011` | `5CDE0C3D-7B1D-4352-94BB-02269C9F42B5` | **Notify サービス** |
-| &nbsp;&nbsp;`0x0010` | `3337E46E-F79E-4FF5-9A49-77C36D170C62` | properties `0x10` = **Notify のみ** |
-| &nbsp;&nbsp;`0x0011` | `0x2902` | 上記の CCCD |
-| `0x0012`–`0x0014` | `53C47FE1-6C22-4EA6-99C7-7B6325EC75B9` | **Write サービス** |
+| `0x0001`–`0x0008` | `0x1801` | GATT (Service Changed / Database Hash / Client Supported Features) |
+| `0x0009`–`0x000D` | `0x1800` | GAP (`0x000B` = Device Name) |
+| `0x000E`–`0x0011` | `5CDE0C3D-7B1D-4352-94BB-02269C9F42B5` | **Notify service** |
+| &nbsp;&nbsp;`0x0010` | `3337E46E-F79E-4FF5-9A49-77C36D170C62` | properties `0x10` = **notify only** |
+| &nbsp;&nbsp;`0x0011` | `0x2902` | CCCD for the above |
+| `0x0012`–`0x0014` | `53C47FE1-6C22-4EA6-99C7-7B6325EC75B9` | **Write service** |
 | &nbsp;&nbsp;`0x0014` | `9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C` | properties `0x0C` = **Write + Write Without Response** |
-| `0x0015`–`0xFFFF` | `1D14D6EE-FD63-4FA1-BFA4-8F47B42119F0` | Silicon Labs **OTA** サービス |
-| &nbsp;&nbsp;`0x0017` | `F7BF3564-FB6D-4E53-88A4-5E37E0326063` | properties `0x08` = Write。**絶対に書かない**（§11） |
+| `0x0015`–`0xFFFF` | `1D14D6EE-FD63-4FA1-BFA4-8F47B42119F0` | Silicon Labs **OTA** service |
+| &nbsp;&nbsp;`0x0017` | `F7BF3564-FB6D-4E53-88A4-5E37E0326063` | properties `0x08` = Write. **Never write to this** (§11) |
 
-**Notify と Write は別サービスにある。** 1 サービスにまとめて探索しないこと。
+**Notify and Write live in different services.** Do not assume they share one service.
 
-Included service (`0x2802`) の探索は 3 回とも Error Response（Attribute Not Found）。
-Include は存在しない。
+The Included Service (`0x2802`) lookup returned an Error Response (Attribute Not Found)
+all three times. There is no include.
 
-### 2.1 リンク層パラメータ（確定）
+### 2.1 Link-layer parameters (confirmed)
 
-| 項目 | 値 |
+| Item | Value |
 |---|---|
 | Connection Interval | 30 ms |
 | Connection Latency | 0 |
-| Supervision Timeout | 720 ms（短い。電源 OFF から 0.72 秒で切断される） |
-| PHY | TX/RX とも LE 2M |
-| Data Length Extension | TX/RX 251 octets / 2120 µs |
-| **ATT MTU** | **247**（**ペリフェラル側が Exchange MTU Request を投げ**、iPhone が 247 で応答） |
-| **SMP / ボンディング** | **一切無し。** リンクは暗号化されない。ペアリングは完全にアプリ層（`0x4B`） |
+| Supervision Timeout | 720 ms (short — the link drops 0.72 s after power-off) |
+| PHY | LE 2M on both TX/RX |
+| Data Length Extension | 251 octets / 2120 µs on both TX/RX |
+| **ATT MTU** | **247** (**the peripheral sends the Exchange MTU Request**; the iPhone responds with 247) |
+| **SMP / bonding** | **None at all.** The link is not encrypted. Pairing happens entirely at the app layer (`0x4B`) |
 
-MTU 247 だが、実際のフレームは最大 11 バイト。**MTU に依存する実装にしないこと。**
+MTU is 247, but frames top out at 11 bytes in practice. **Do not build anything that
+depends on the MTU.**
 
 ---
 
 ## 3. Frame format
 
-TX / RX で完全に同一（**確定**。全 23 フレームで検証済み・違反ゼロ）。
+Identical for TX and TB (**confirmed**. Verified across all 23 frames, zero violations).
 
 ```
-offset 0      : header  = 0xAA                    ← AC6000BT の実測値
-offset 1      : L       = フレーム全長（header/len/payload/checksum を含む）
+offset 0      : header  = 0xAA                    ← measured value for the AC6000BT
+offset 1      : L       = total frame length (header/len/payload/checksum inclusive)
 offset 2      : cmd
 offset 3..L-2 : payload
 offset L-1    : checksum
 ```
 
-* **`L == 実際のバイト数`**。全 23 フレームで一致。違反フレームは 1 件も無い。
-  cmd を payload に含めない数え方では **`L = payload.count + 4`**
-  （header + L + cmd + payload + checksum）。§3.3 の参照実装と同じ数え方。
-  cmd を payload の先頭に含める数え方なら `L = payload.length + 3` で、どちらも同義。
-* payload の多バイト整数は **リトルエンディアン**（**確定**。§7 / §6.4）。
+* **`L == the actual byte count`.** Matches in all 23 frames. Zero violating frames.
+  Counted without `cmd` in the payload, **`L = payload.count + 4`**
+  (header + L + cmd + payload + checksum). Same counting as the reference
+  implementation in §3.3. Counted with `cmd` at the head of the payload, `L =
+  payload.length + 3` — both mean the same thing.
+* Multi-byte integers in the payload are **little-endian** (**confirmed**. §7 / §6.4).
 
-### 3.1 チェックサム — 鍵が加算される
+### 3.1 Checksum — the keys are added in
 
 ```
 checksum = ( Σ frame[0 .. L-2]  +  key1  +  key2 ) & 0xFF
 ```
 
-**これが本キャプチャ最大の発見。** 単純な総和ではどのフレームも一致しないが、
-広告に載っている 2 バイト（§1.1 の key1 / key2）を足すと全フレームが一致する。
+**This is the single biggest finding in this capture.** A plain sum never matches for
+any frame, but adding the two bytes carried in the advertisement (key1 / key2, §1.1)
+makes every frame match.
 
-* 鍵確立**前**（= `0x4B` フレーム自身）は `key1 = key2 = 0`。
-* 鍵確立**後**は TX / RX の**両方向**が `key1 + key2` を加算する。
-* 検証結果: 鍵を加算する式では **23/23 フレームが一致**。
-  鍵を加算しない単純総和では **22/22 フレームが不一致**。偶然ではない。
+* **Before** the key is established (i.e. the `0x4B` frame itself), `key1 = key2 = 0`.
+* **After** the key is established, **both** TX and RX add `key1 + key2`.
+* Verification: with the keyed formula, **23/23 frames match**.
+  With a plain unkeyed sum, **22/22 frames mismatch**. Not a coincidence.
 
-**帰結: 鍵を知らないクライアントは、フレームを組めないし検証もできない。**
-これが以前の実機テストで `85 06 4b 00 00 d6` が無反応だった理由の一部でもある
-（ヘッダも違っていた）。
+**Consequence: a client that doesn't know the key can neither build nor verify frames.**
+This is also part of why `85 06 4b 00 00 d6` got no response in earlier hardware
+tests (the header was also wrong).
 
-### 3.2 計算例（worked example）
+### 3.2 Worked example
 
-TX `READ_KEY` — 鍵確立前なので `key1 = key2 = 0`:
+TX `READ_KEY` — before the key is established, so `key1 = key2 = 0`:
 
 ```
 frame  : aa 06 4b c4 94 ??
 sum    : 0xAA + 0x06 + 0x4B + 0xC4 + 0x94 = 0x253
 +k1+k2 : 0x253 + 0x00 + 0x00              = 0x253
 & 0xFF :                                    0x53
-frame  : aa 06 4b c4 94 53          ✓ キャプチャと一致
+frame  : aa 06 4b c4 94 53          ✓ matches the capture
 ```
 
-TX `READ_CURRENT_AMMO` — 鍵確立後（`key1 = 0xC4`, `key2 = 0x94`）:
+TX `READ_CURRENT_AMMO` — after the key is established (`key1 = 0xC4`, `key2 = 0x94`):
 
 ```
 frame  : aa 05 5a 00 ??
 sum    : 0xAA + 0x05 + 0x5A + 0x00 = 0x109
 +k1+k2 : 0x109 + 0xC4 + 0x94       = 0x261
 & 0xFF :                             0x61
-frame  : aa 05 5a 00 61             ✓ キャプチャと一致
+frame  : aa 05 5a 00 61             ✓ matches the capture
 ```
 
-RX `FIRE_REPORT` — 受信側も同じ式で検証できる:
+RX `FIRE_REPORT` — the receiving side can be verified with the same formula:
 
 ```
 frame  : aa 0a 52 00 00 1a 01 00 00 79
@@ -172,10 +183,10 @@ sum    : 0xAA+0x0A+0x52+0x00+0x00+0x1A+0x01+0x00+0x00 = 0x121
 & 0xFF :                                                0x79   ✓
 ```
 
-### 3.3 参照実装（Swift）
+### 3.3 Reference implementation (Swift)
 
 ```swift
-/// key1/key2 は 0x4B ハンドシェイク前は 0、確立後は本体の鍵。
+/// key1/key2 are 0 before the 0x4B handshake, and the device's own keys after.
 func aceChecksum(_ bytes: ArraySlice<UInt8>, key1: UInt8, key2: UInt8) -> UInt8 {
     var sum = Int(key1) + Int(key2)
     for b in bytes { sum &+= Int(b) }
@@ -186,45 +197,47 @@ func aceFrame(cmd: UInt8, payload: [UInt8], key1: UInt8, key2: UInt8) -> [UInt8]
     let body: [UInt8] = [0xAA, UInt8(payload.count + 4), cmd] + payload
     return body + [aceChecksum(body[...], key1: key1, key2: key2)]
 }
-// 注: cmd は payload の先頭バイトなので L = (cmd 込み payload).count + 3。
-//     上式では payload に cmd を含めていないため +4 になる。
+// Note: cmd is the first byte of the payload in this counting, so
+// L = (payload including cmd).count + 3. The formula above doesn't include cmd
+// in `payload`, hence the +4.
 ```
 
-### 3.4 ATT write の種類
+### 3.4 ATT write type
 
-アプリは write characteristic の properties に **Write Without Response が有るにもかかわらず、
-全 8 フレームを ATT Write Request（応答あり）で送っている**（**確定**）。
-自作クライアントも `.withResponse` を使うこと。
+Even though the write characteristic's properties include Write Without Response, the
+app sends **all 8 frames as an ATT Write Request (with response)** (**confirmed**).
+Our own client should also use `.withResponse`.
 
 ---
 
-## 4. Init sequence（実バイト列）
+## 4. Init sequence (raw bytes)
 
-`t` は LE Connection Complete からの経過秒。全て `tools/re/notes/pklg-timeline.txt` から。
+`t` is elapsed seconds since LE Connection Complete. All from
+`tools/re/notes/pklg-timeline.txt`.
 
-### 4.1 GATT フェーズ
+### 4.1 GATT phase
 
-| t | 向き | 内容 |
+| t | direction | contents |
 |---|---|---|
-| +0.030 | RX | Exchange MTU Request（Client Rx MTU 247）← **本体から** |
-| +0.391 | TX | Exchange MTU Response（Server Rx MTU 247） |
-| +0.421…+1.260 | — | サービス / キャラクタリスティック / ディスクリプタ探索 |
-| +0.661 | TX | Write `0x0004` ← `02 00`（`0x1801` Service Changed の indication。iOS が自動で行う） |
-| **+1.263** | **TX** | **Write `0x0011` ← `01 00`（notify char の CCCD を有効化）** |
+| +0.030 | RX | Exchange MTU Request (Client Rx MTU 247) ← **from the device** |
+| +0.391 | TX | Exchange MTU Response (Server Rx MTU 247) |
+| +0.421…+1.260 | — | service / characteristic / descriptor discovery |
+| +0.661 | TX | Write `0x0004` ← `02 00` (indication for `0x1801` Service Changed. iOS does this automatically) |
+| **+1.263** | **TX** | **Write `0x0011` ← `01 00` (enables the CCCD on the notify characteristic)** |
 | +1.320 | RX | Write Response |
 
-### 4.2 アプリケーションフェーズ
+### 4.2 Application phase
 
-CCCD 応答の **564 ms 後**に最初のフレーム。以降はコマンドキューが
-**1 フレームあたり約 300–360 ms 間隔**で流れる（応答受信 → 次を送信）。
+The first frame arrives **564 ms after** the CCCD response. After that, the command
+queue flows at roughly **300–360 ms per frame** (wait for response → send next).
 
 ```
 t=+1.827  TX  aa 06 4b c4 94 53              READ_KEY / VERIFY_KEY  (key1=0xC4, key2=0x94)
-t=+1.890  RX  aa 05 41 4b 93                 ACK(0x41) for cmd 0x4B     ← 63 ms 後
+t=+1.890  RX  aa 05 41 4b 93                 ACK(0x41) for cmd 0x4B     ← 63 ms later
 t=+2.205  TX  aa 05 5a 00 61                 READ_CURRENT_AMMO
-t=+2.250  RX  aa 0a 5a 01 01 58 02 14 00 d6  現在の弾 = プリセット #1, 6.00 mm / 0.20 g
+t=+2.250  RX  aa 0a 5a 01 01 58 02 14 00 d6  current ammo = preset #1, 6.00 mm / 0.20 g
 t=+2.554  TX  aa 05 62 00 69                 READ_LOG_COUNT
-t=+2.610  RX  aa 06 62 00 01 6b              log count = 1
+t=+2.610  RX  aa 06 62 00 01 6b              log count = 0 (see §6.5 — this is the confirmed reading)
 t=+2.915  TX  aa 06 47 01 01 51              READ_AMMO_PRESET #1
 t=+2.970  RX  aa 0b 47 00 41 01 58 02 14 00 04
 t=+3.276  TX  aa 06 47 01 02 52              READ_AMMO_PRESET #2
@@ -238,88 +251,93 @@ t=+4.410  RX  aa 0b 47 00 41 05 58 02 58 00 4c
 t=+5.627  TX  (ATT Read By Type 0x2A00) → "ACETECH-12345678"
 ```
 
-**アプリが送ったフレームはこの 8 本で全て。** 以降 99 秒間、TX は 1 本も無い。
+**These 8 frames are everything the app sent.** No TX for the following 99 seconds.
 
-### 4.3 鍵ハンドシェイク（`0x4B`）— 確定した挙動
+### 4.3 Key handshake (`0x4B`) — confirmed behavior
 
-本キャプチャでは **アプリは最初から `key1=0xC4, key2=0x94` を知っていた**。
-つまり観測されたのは **VerifyKey**（既知鍵の照合）であって初回ペアリングではない。
+In this capture, **the app already knew `key1=0xC4, key2=0x94`**. What was observed is
+therefore a **VerifyKey** (checking a known key), not first-time pairing.
 
-| ケース | TX | RX |
+| Case | TX | RX |
 |---|---|---|
-| 初回（鍵未知） | `aa 06 4b 00 00 fb` | **未検証**（応答を観測できていない。本体の電源ボタン押下が必要とされる） |
-| **2 回目以降（鍵既知）** | **`aa 06 4b <k1> <k2> <cks>`** | **`aa 05 41 4b <cks>`**（cmd `0x41` = ACK、payload = 照合した cmd `0x4B`） |
+| First time (key unknown) | `aa 06 4b 00 00 fb` | **unverified** (no response ever observed; reportedly needs the device's power button pressed) |
+| **Subsequent (key known)** | **`aa 06 4b <k1> <k2> <cks>`** | **`aa 05 41 4b <cks>`** (cmd `0x41` = ACK, payload = the acknowledged cmd `0x4B`) |
 
-**確定した事実:**
+**Confirmed facts:**
 
-* 応答は **63 ms 後**に到着。**電源ボタン押下は不要だった**
-  （鍵が一致していれば即座に ACK が返る）。
-* 応答の cmd は **`0x4B` ではなく `0x41`（ACK）**。
-  `0x4B` がそのまま返り payload に鍵が載るのは **鍵未知のとき**の経路とみられ、
-  鍵既知のときはこの `0x41` ACK 経路を通る。
-* この ACK フレーム自身のチェックサムが**既に `key1+key2` を含んでいる**。
-  つまり本体は「鍵が合っていること」をチェックサムで即座に示している。
+* The response arrives **63 ms later**. **No button press was needed**
+  (an ACK comes back immediately once the key matches).
+* The response cmd is **`0x41` (ACK), not `0x4B`**. Getting `0x4B` back with the key in
+  the payload appears to be the **unknown-key** path; when the key is already known, the
+  device takes this `0x41` ACK path instead.
+* This ACK frame's own checksum **already includes `key1+key2`**. In other words, the
+  device signals "the key matches" through the checksum itself, immediately.
 
-**鍵の入手方法: 広告の manufacturer data offset 3/4（§1.1）で確定（2026-09-03）。**
+**How to obtain the key: confirmed via advertisement manufacturer data offset 3/4
+(§1.1) (2026-09-03).**
 
-自作クライアント（`muzzlemeter-sniff dump --handshake`）で実機に対して検証した:
+Verified against real hardware with our own client (`muzzlemeter-sniff dump --handshake`):
 
 ```
-TX  aa 06 4b c4 94 53      ← 広告 00 05 08 c4 94 52 04 から取った鍵をそのまま載せる
-RX  aa 05 41 4b 93         ← 55 ms 後に ACK。電源ボタンの押下は不要
+TX  aa 06 4b c4 94 53      ← the key taken straight from the advertisement (c4/94) is sent as-is
+RX  aa 05 41 4b 93         ← ACK 55 ms later. No button press needed
 ```
 
-**帰結: 広告さえ受け取れれば、初回でもボタン操作なしで繋がる。**
-広告を取り逃した経路（`retrievePeripherals` での直接再接続）に備えて、
-成立した鍵は機器ごとに永続化しておくこと（実装は `ChronoDevice.keysKey(for:)`）。
+**Consequence: as long as you can receive the advertisement, you can connect on the
+first try with no button press.** As a fallback for the path where the advertisement is
+missed (direct reconnection via `retrievePeripherals`), persist the established key per
+device (implemented in `ChronoDevice.keysKey(for:)`).
 
 ---
 
 ## 5. Keep-alive / ping
 
-**観測されなかった（確定）。**
+**None observed (confirmed).**
 
-* アプリの最後の TX は `t=+4.355`。以降 **99 秒間、書き込みゼロ**。
-* その間も本体は通知を送り続けた（`t=+11.878` / `+49.948`…`+75.179`）。
-* → **AC6000 MKIII BT に定期 ping は不要。**
+* The app's last TX is at `t=+4.355`. **Zero writes** for the following 99 seconds.
+* The device kept sending notifications during that time regardless
+  (`t=+11.878` / `+49.948`…`+75.179`).
+* → **The AC6000 MKIII BT needs no periodic ping.**
 
-## 5.1 切断シーケンス
+## 5.1 Disconnect sequence
 
-**アプリからの切断は行われていない（確定）。**
+**The app never initiates the disconnect (confirmed).**
 
 ```
-t=+103.202  RX  00                      ← 1 バイトだけの通知（ATT: 0x1b, handle 0x0010, value 長 1）
+t=+103.202  RX  00                      ← a 1-byte notification (ATT: 0x1b, handle 0x0010, value length 1)
 t=+103.966      HCI Disconnection Complete, reason 0x08 = Connection Timeout
 ```
 
-`00` の 0.764 秒後に supervision timeout（720 ms）でリンクが落ちている。
+The link drops via supervision timeout (720 ms) 0.764 s after the `00`.
 
-> **以前の解釈の訂正**: 以前のサニファ実験で観測された
-> 「1 バイト `00` → 0.77 秒後に切断」を**「不正フレームに対する NAK」**と解釈していた。本キャプチャでは**正規のハンドシェイクが成立し 5 発の計測まで
-> 成功した後**に、まったく同じ `00` + 0.76 秒 → timeout が起きている。
-> したがってこれは **NAK ではなく「本体の電源 OFF シグネチャ」**である。
-> 自作クライアントは `00` を受けたら「本体が落ちる」と解釈してよい。
+> **Correction to an earlier interpretation**: an earlier sniffer experiment observed the
+> same "1 byte `00` → disconnect 0.77 s later" and interpreted it as a **NAK for a bad
+> frame**. In this capture, the exact same `00` + 0.76 s → timeout happened **after a
+> legitimate handshake succeeded and 5 shots were measured**. So this is **not a NAK — it
+> is the device's power-off signature**. Our own client can treat a `00` as "the device
+> just powered off."
 
 ---
 
 ## 6. Packet formats
 
-### 6.1 RX パケット一覧（本キャプチャで観測された全種）
+### 6.1 RX packet inventory (every kind observed in this capture)
 
-| cmd | 名前 | L | 件数 | 例 | 意味 |
+| cmd | name | L | count | example | meaning |
 |---|---|---|---|---|---|
-| `0x41` | ACK | 5 | 1 | `aa 05 41 4b 93` | payload = 応答対象の cmd。ここでは `0x4B` |
-| `0x47` | AMMO_PRESET | 11 | 6 | `aa 0b 47 00 41 01 58 02 14 00 04` | プリセットスロットの内容（§6.3） |
-| `0x52` | **FIRE_REPORT** | 10 | 5 | `aa 0a 52 00 00 1a 01 00 00 79` | 1 発の計測結果（§7） |
-| `0x5A` | CURRENT_AMMO | 10 | 2 | `aa 0a 5a 01 01 58 02 14 00 d6` | 現在選択中の弾（§6.2） |
-| `0x62` | LOG_COUNT | 6 | 1 | `aa 06 62 00 01 6b` | 本体内ログ件数 = 1 |
-| —  | （切断直前の 1 バイト） | — | 1 | `00` | 本体電源 OFF（§5.1） |
+| `0x41` | ACK | 5 | 1 | `aa 05 41 4b 93` | payload = the acknowledged cmd. Here, `0x4B` |
+| `0x47` | AMMO_PRESET | 11 | 6 | `aa 0b 47 00 41 01 58 02 14 00 04` | contents of an ammo preset slot (§6.3) |
+| `0x52` | **FIRE_REPORT** | 10 | 5 | `aa 0a 52 00 00 1a 01 00 00 79` | one shot's measurement (§7) |
+| `0x5A` | CURRENT_AMMO | 10 | 2 | `aa 0a 5a 01 01 58 02 14 00 d6` | currently selected ammo (§6.2) |
+| `0x62` | LOG_COUNT | 6 | 1 | `aa 06 62 00 01 6b` | on-device log record count (§6.5) |
+| `0x63` | LOG_RECORD | 9 | — | `aa 09 63 01 00 00 81 01 f1` | one log record (§6.6, confirmed 2026-09-03/04) |
+| `0x4E` | NAK | 5 | — | `aa 05 4e ff 54` | rejection of an unknown command (§6.7, confirmed) |
+| —  | (1 byte right before disconnect) | — | 1 | `00` | device power-off (§5.1) |
 
-**観測されなかった**（＝ **未検証**）:
-`0x24` / `0x27`（device settings）、`0x2C` / `0x64`（バッテリー）、
-`0x63`（ログレコード）、`0x50` / `0x51`、`0x53`、`0x61`、`0x81`、`0xD4`。
-とくに **バッテリー通知は 104 秒間 1 度も来なかった**。
-AceSoft はバッテリーを別経路で取っているか、AC6000 では使っていない。
+**Not observed in the original pklg capture** (still **unverified**):
+`0x24` / `0x27` (device settings), `0x2C` / `0x64` (battery), `0x53`, `0x61`, `0x81`,
+`0xD4`. In particular **no battery notification arrived in 104 seconds**. AceSoft either
+gets battery through another path or doesn't use it on the AC6000.
 
 ### 6.2 `0x5A` READ_CURRENT_AMMO
 
@@ -328,13 +346,13 @@ TX : aa 05 5a 00 <cks>              payload = [0x5A, 0x00]     ; 0x00 = read
 RX : aa 0a 5a 01 <slot> <ammo:4> <cks>
      aa 0a 5a 01 01  58 02 14 00  d6
               ^^ ^^  ^^^^^^^^^^^
-              |  |   ammo record（§6.4）
-              |  slot = 現在選択中のプリセット番号（1 始まり）
-              payload[1] = 0x01（意味不明。read 応答の識別子と推定）
+              |  |   ammo record (§6.4)
+              |  slot = currently selected preset number (1-based)
+              payload[1] = 0x01 (meaning unclear; inferred to identify a read response)
 ```
 
-`t=+75.179` に**同一フレームが自発的に再送**されている（TX なし）。
-本体側の状態変化通知と推定（トリガは不明）。
+The **same frame was resent unsolicited** at `t=+75.179` (no TX preceded it). Inferred
+to be a device-side state-change notification (trigger unknown).
 
 ### 6.3 `0x47` READ_AMMO_PRESET
 
@@ -343,37 +361,41 @@ TX : aa 06 47 01 <idx> <cks>        payload = [0x47, 0x01, idx]   ; 0x01 = read 
 RX : aa 0b 47 00 41 <idx> <ammo:4> <cks>
      aa 0b 47 00 41 01  58 02 14 00  04
               ^^ ^^ ^^  ^^^^^^^^^^^
-              |  |  |   ammo record（§6.4）
-              |  |  echo された idx
-              |  0x41 = ACK マーカ
-              payload[1] = 0x00（status = OK と推定）
+              |  |  |   ammo record (§6.4)
+              |  |  echoed idx
+              |  0x41 = ACK marker
+              payload[1] = 0x00 (inferred: status = OK)
 ```
 
-観測された `idx` は **1..5**。アプリは 5 スロットを順に読んでいる。
+Observed `idx` values are **1..5**. The app reads all 5 slots in order.
 
-`t=+11.878` に **idx=1 のフレームが自発的に再送**されている（TX なし）。
+The **idx=1 frame was resent unsolicited** at `t=+11.878` (no TX preceded it).
 
-> **実機追試（2026-09-03）**: ハンドシェイク成立の約 10 秒後、こちらから何も送っていないのに
-> `aa 0b 47 00 40 01 58 02 c8 00 b7` が届いた（チェックサムは鍵 c4/94 で正しい）。
-> * payload[1] が **`0x40`**（キャプチャは `0x41`）。**読み出し応答 = 0x41 / 自発通知 = 0x40**
->   と推定（**未検証**）。
-> * 重量フィールドが **`0x00c8` = 200**。×100 なら 2.00 g で実在しない重量になる
->   （×1000 なら 0.20 g）。§6.4 のスケールは**まだ確定していない**。
+> **Real-hardware follow-up (2026-09-03)**: about 10 seconds after the handshake
+> completed, `aa 0b 47 00 40 01 58 02 c8 00 b7` arrived even though we had sent nothing
+> (the checksum is correct for keys c4/94).
+> * payload[1] is **`0x40`** here (the capture had `0x41`). Inferred: **read response =
+>   0x41 / unsolicited notification = 0x40** (**unverified**).
+> * The weight field is **`0x00c8` = 200**. At ×100 that's 2.00 g, which doesn't
+>   correspond to a real weight (at ×1000 it's 0.20 g). §6.4's scale is **still not
+>   confirmed**.
 >
-> **帰結: `0x47` は要求していなくても飛んでくる。marker の値で弾かず、raw を保ったまま
-> 受け取ること。** 実装では `AmmoRecord` が `rawDiameter` / `rawWeight` / `marker` を公開する。
+> **Consequence: `0x47` arrives even when you didn't ask for it, roughly every 10
+> seconds after connecting — treat it as a periodic/unsolicited status update, not an
+> error.** Don't filter on the marker value — keep the raw bytes. The implementation
+> exposes `AmmoRecord.rawDiameter` / `rawWeight` / `marker` for this reason.
 
-サブコマンド付きの `[0x47, 0x00]` は本キャプチャには現れず、
-サブコマンド `0x00` の意味は **未検証**。
+The subcommand form `[0x47, 0x00]` never appeared in this capture; the meaning of
+subcommand `0x00` is **unverified**.
 
-### 6.4 ammo record（4 バイト・LE16 ×2）— **推定**
+### 6.4 Ammo record (4 bytes, two u16 LE) — **inferred**
 
 ```
-offset 0..1 : u16 LE  直径  = mm × 100
-offset 2..3 : u16 LE  重量  = g  × 100
+offset 0..1 : u16 LE  diameter = mm × 100
+offset 2..3 : u16 LE  weight   = g  × 100
 ```
 
-| slot | bytes | u16[0] | u16[1] | 解釈 |
+| slot | bytes | u16[0] | u16[1] | interpretation |
 |---|---|---|---|---|
 | 1 | `58 02 14 00` | 600 | 20 | 6.00 mm / 0.20 g |
 | 2 | `58 02 19 00` | 600 | 25 | 6.00 mm / 0.25 g |
@@ -381,82 +403,132 @@ offset 2..3 : u16 LE  重量  = g  × 100
 | 4 | `58 02 2d 00` | 600 | 45 | 6.00 mm / 0.45 g |
 | 5 | `58 02 58 00` | 600 | 88 | 6.00 mm / 0.88 g |
 
-根拠:
+Rationale:
 
-* `20 / 25 / 43 / 45 / 88` は **実在する 6 mm BB 重量（0.20/0.25/0.43/0.45/0.88 g）と完全一致**。
-  ×10 だと 2.0 g / 8.8 g となり実在しない。→ **×100 固定小数点で確定に近い**。
-* 第 1 フィールドが全スロットで `600` = 6.00 mm。同じ ×100 スケール。
-* grain 表記に切り替えたときワイヤ値が変わるかは **未検証**。
+* `20 / 25 / 43 / 45 / 88` **exactly match real 6 mm BB weights (0.20/0.25/0.43/0.45/0.88
+  g)**. At ×10 they'd be 2.0 g / 8.8 g, which don't exist. → **near-confirmed fixed-point
+  at ×100**.
+* The first field is `600` = 6.00 mm across every slot — the same ×100 scale.
+* Whether the wire value changes when switching to a grain display is **unverified**.
 
-### 6.5 `0x62` READ_LOG_COUNT
+### 6.5 `0x62` READ_LOG_COUNT — **confirmed against real hardware** (2026-09-03/04)
 
 ```
 TX : aa 05 62 00 <cks>              payload = [0x62, 0x00]
-RX : aa 06 62 00 01 <cks>           payload = [0x62, 0x00, 0x01]
-                ^^ ^^
-                |  count = 1 と推定
-                status = OK と推定
+RX : aa 06 62 <count> <0x01> <cks>  payload = [count, 0x01]
+                ^^^^^  ^^^^
+                |      constant 0x01. Meaning unknown — kept raw, never interpreted.
+                count = number of records currently held. 0 when the log is empty.
 ```
 
-`00 01` を BE16 の件数（= 1）と読むこともできる。**この 1 サンプルでは区別できない。**
-本プロトコルの他の多バイト値は全て LE なので `payload[1]=status, payload[2]=count` を推す。
-本体に 2 件以上ログを溜めてから再取得すれば確定する。
+Previously this section described the count/status byte order as undecided (LE16 vs.
+`[status, count]`). It is now settled: **`payload[0]` is the record count**;
+`payload[1]` is a fixed `0x01` whose meaning we don't know and don't try to interpret.
 
----
+**The earlier decoder read the wrong byte** — it treated `payload[1]` as the count, so
+an *empty* log (`aa 06 62 00 01 6b`) was misreported as `count = 1`. Two follow-up
+sessions nail this down:
 
-### 6.6 `0x63` READ_LOG_RECORD — **未検証（要求も応答も推定）**
+| capture | request → response | `payload[0]` (count) | context |
+|---|---|---|---|
+| `20260904-000817.log` | `aa 05 62 00 69` → `aa 06 62 00 01 6b` | **0** | right after a power cycle; log is empty |
+| `20260904-000619.log` | `aa 05 62 00 69` → `aa 06 62 03 01 6e` | **3** | after firing 3 hand-thrown BBs; matches the 3 non-zero records read back via `0x63` |
 
-`0x62` で件数が分かった後、1 件ずつ取り出すための opcode**と推定している**。
-**本キャプチャにも実機追試にも 1 度も現れていない。** 以下は実装上そう扱っているだけで、
-証拠は無い。
+**The on-device log is volatile**: power-cycling the device resets the count to 0 and
+every record to all-zero. It only holds shots fired since the device was last powered
+on. Records are stored in firing order (index 1 = oldest).
+
+### 6.6 `0x63` READ_LOG_RECORD — **confirmed against real hardware** (2026-09-03/04)
+
+Reads one log record after `0x62` reported the count. The request is a **single byte,
+1-based index**; the response echoes that index and carries rev/speed:
 
 ```
-TX : aa 06 63 <index lo> <index hi> <cks>     payload = [index LE16]  ★推定
-RX : ???                                                              ★未観測
+TX : aa 05 63 <index> <cks>                         payload = [index]              (1 byte, 1-based)
+RX : aa 09 63 <index> <rev0> <rev1> <speed0> <speed1> <cks>
+              ^^^^^^^ ^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^
+              echoed  rev  (u16 LE) speed (u16 LE)
+              index   raw. Meaning  velocity = raw ÷ 100 → m/s
+                      unconfirmed;
+                      kept raw
+                      (like FIRE_REPORT's
+                      rawRev)
 ```
 
-要求の形をこう置いた理由（いずれも状況証拠）:
+* **Index 0 gets no response at all.** The canonical request is exactly 1 byte; a
+  trailing extra byte is accepted and ignored by the device (observed in
+  `20260903-222919.log`: `aa 06 63 01 00 6c`, a 2-byte payload, got the same response as
+  the 1-byte form).
+* **An index beyond the reported count returns an all-zero record** (`rev = 0, speed =
+  0`) — this is **not an error**, it simply means "nothing here." Because the log is
+  volatile, records that were never written after the last power-on read back the same
+  way.
+* `rev` was `0x0000` in every observation so far (single, non-full-auto shots). It is
+  presumed to be a rate-of-fire value in the same spirit as `FIRE_REPORT`'s `rawRev`, but
+  its scale/unit is **unverified** — kept as a raw value, not converted.
+* `speed ÷ 100` is the velocity in m/s, using the same fixed-point convention confirmed
+  for `FIRE_REPORT` (§7.3).
 
-* 本プロトコルの多バイト値は全て LE（§3）。
-* `0x62` の payload が `[0x00]` だけなので、`0x63` にサブコマンドが要る理由が見当たらない
-  （`0x47` の `[0x01, idx]` 形も候補ではある）。
-* index は 1 バイトに収まらない可能性があるので 16 bit。
+**Real-hardware verification (2026-09-04, `20260904-000619.log`)**: three hand-thrown BBs
+were fired, then read back via `0x62` → `0x63`:
 
-応答の読み方は、**同じファームウェアが `0x52` で使っている並びの使い回し**を第一候補に
-置いている（`00 00 <speed LE16> <rev LE16>`）。実装（`FireReport.logRecord(payload:)`）は
-これを**厳しめ**に判定する（6 バイト以上・flags = 0・rawSpeed > 0）。少しでも外れたら
-数字にせず**生 payload のまま**上へ流す。似ているだけの別形式を「速度」として保存すると、
-記録に嘘の数字が混ざって後から見分けられなくなるため。
+| index | raw payload (after cmd) | rev | speed (raw) | speed ÷ 100 | device LCD history |
+|---|---|---|---|---|---|
+| 1 | `01 00 00 81 01` | 0 | 385 | **3.85 m/s** | 3.8 |
+| 2 | `02 00 00 67 01` | 0 | 359 | **3.59 m/s** | 3.5 |
+| 3 | `03 00 00 97 01` | 0 | 407 | **4.07 m/s** | 4.0 |
+| 4 | `04 00 00 00 00` | 0 | 0 | — (all-zero: end of log, count was 3) | — |
 
-**実物の採取方法**（これが唯一の経路）:
+The device's own LCD history (rounded to one decimal, truncated like §7.3) matches ÷100
+in all three cases, confirming both the byte layout and the shared ×100 speed scale.
+
+**How to capture more of these yourself**:
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000BT- --read-log
 ```
 
-`read-log:` で始まる行に生 payload が出る。**`0x61`（CLEAR_LOG）は絶対に送らないこと**
-（§11）。ビルダ自体を用意していないので、意図的に手で組まない限り送りようがない。
+Lines starting with `read-log:` print the decoded record (or the raw payload, if it
+doesn't parse). **Never send `0x61` (CLEAR_LOG)** (§11). No builder for it exists in this
+codebase, so it cannot be sent by accident.
+
+### 6.7 `0x4E` NAK — **confirmed against real hardware** (2026-09-03)
+
+```
+RX : aa 05 4e ff <cks>              payload = [0xFF]
+```
+
+Sending an unknown command (`0x50`, `0x51` were tried) gets back cmd `0x4E` ('N') with a
+fixed payload `0xFF` — the rejection counterpart to ACK (`0x41`, 'A'). Unlike ACK, the
+NAK payload does **not** echo which command was rejected.
+
+```
+TX  aa 04 50 56              (unknown cmd 0x50, no payload)
+RX  aa 05 4e ff 54            NAK
+TX  aa 05 50 00 57           (unknown cmd 0x50, payload [0x00])
+RX  aa 05 4e ff 54            NAK
+```
 
 ---
 
-## 7. FIRE_REPORT（`0x52`）
+## 7. FIRE_REPORT (`0x52`)
 
-### 7.1 レイアウト（**確定**）
+### 7.1 Layout (**confirmed**)
 
-L = 10 固定、payload 7 バイト。
+L = 10 fixed, 7-byte payload.
 
 ```
-offset  size  内容
+offset  size  contents
   0      1    0xAA        header
   1      1    0x0A        L
   2      1    0x52        cmd = FIRE_REPORT
-  3..4   2    u16 LE      常に 0x0000（意味不明。ショット index / flags と推定）
+  3..4   2    u16 LE      always 0x0000 (meaning unclear; inferred: shot index / flags)
   5..6   2    u16 LE      rawSpeed          ★
-  7..8   2    u16 LE      rawRev  (ROF)     ★  単発では常に 0
+  7..8   2    u16 LE      rawRev  (ROF)     ★  always 0 for single shots
   9      1    checksum
 ```
 
-観測された全 5 発:
+All 5 observed shots:
 
 | t | hex | b[3..4] | **rawSpeed** | **rawRev** |
 |---|---|---|---|---|
@@ -466,38 +538,41 @@ offset  size  内容
 | +60.448 | `aa 0a 52 00 00 0a 01 00 00 69` | 0 | **266** | 0 |
 | +63.509 | `aa 0a 52 00 00 31 01 00 00 90` | 0 | **305** | 0 |
 
-* **フルオートは未収録**のため `rawRev` は 5 発とも 0。
-  スケール（RPS / RPM / ×10）は **未検証**。
+* **No full-auto was recorded**, so `rawRev` is 0 for all 5 shots. Its scale
+  (RPS / RPM / ×10) is **unverified**.
 
-### 7.2 rawSpeed は「速度」であって「通過時間カウント」ではない（**確定**）
+### 7.2 rawSpeed is "speed," not "transit-time count" (**confirmed**)
 
-手投げ（＝**低速**）の BB で raw = 250..305 だった。
-もし raw が光ゲート間の通過時間カウントなら、低速ほど**大きな**値になるはずで、
-250 前後という小さな値は取り得ない。仮に「250 = 低速の通過時間」だとすると、
-実弾（100 m/s 級、約 30 倍速い）では raw ≈ 8 となり分解能が破綻する。
-→ **rawSpeed は速度に比例した値。単純なスケーリングで換算できる。**
+Hand-thrown (i.e. **slow**) BBs gave raw = 250..305. If raw were a light-gate transit-time
+count, slower shots would give **larger** values, and a small value like ~250 wouldn't be
+possible. If 250 were "transit time at low speed," a real airsoft/live shot (~100 m/s,
+roughly 30× faster) would give raw ≈ 8, which breaks down as a resolution. →
+**rawSpeed is proportional to speed and converts with simple scaling.**
 
-### 7.3 スケール（**確定** — 実機 LCD と突き合わせ済み）
+### 7.3 Scale (**confirmed** — cross-checked against the device's own LCD)
 
 ```
 speed_mps = rawSpeed / 100.0
 ```
 
-> **実機追試（2026-09-03）で確定。** 3 発を撃ち、本体 LCD の表示と raw を突き合わせた:
+> **Confirmed via a real-hardware follow-up (2026-09-03).** Three shots were fired and
+> raw was cross-checked against the device's own LCD:
 >
-> | フレーム | rawSpeed | ÷100 | **本体 LCD** |
+> | frame | rawSpeed | ÷100 | **device LCD** |
 > |---|---|---|---|
 > | `aa 0a 52 00 00 45 01 00 00 a4` | 325 | 3.25 | **3.2 m/s** |
 > | `aa 0a 52 00 00 16 01 00 00 75` | 278 | 2.78 | **2.7 m/s** |
 > | `aa 0a 52 00 00 77 01 00 00 d6` | 375 | 3.75 | **3.7 m/s** |
 >
-> * ÷100 が正しい（対抗仮説の ÷10 は 3 発とも 10 倍ずれるので**否定された**）。
-> * **本体 LCD は四捨五入ではなく切り捨てで小数 1 桁**にしている
->   （3.25 → 3.2、3.75 → 3.7）。アプリの m/s 表示も切り捨てに合わせること。
->   本体と表示がずれると「どちらが壊れているのか」で悩ませてしまうため。
->   内部値と CSV はフル精度のまま保持する（`SpeedUnit.truncatesDisplay`）。
+> * ÷100 is correct (the competing ÷10 hypothesis is **rejected** — it would be off by
+>   10× on all three shots).
+> * **The device's own LCD truncates to one decimal place rather than rounding**
+>   (3.25 → 3.2, 3.75 → 3.7). The app's m/s display should match this truncation — a
+>   mismatch between the device and the display would leave the user wondering which one
+>   is "wrong." Internal values and the CSV export keep full precision
+>   (`SpeedUnit.truncatesDisplay`).
 
-| 発 | raw | ÷100 → m/s | ÷10 → m/s | ÷10 → fps（= m/s） |
+| shot | raw | ÷100 → m/s | ÷10 → m/s | ÷10 → fps (= m/s) |
 |---|---|---|---|---|
 | 1 | 282 | **2.82** | 28.2 | 28.2 (8.60) |
 | 2 | 250 | **2.50** | 25.0 | 25.0 (7.62) |
@@ -505,27 +580,29 @@ speed_mps = rawSpeed / 100.0
 | 4 | 266 | **2.66** | 26.6 | 26.6 (8.11) |
 | 5 | 305 | **3.05** | 30.5 | 30.5 (9.30) |
 
-`÷100 → m/s` を採る根拠:
+Why `÷100 → m/s`:
 
-1. **同一ファーム内の固定小数点規約が ×100。** ammo record（§6.4）は直径 mm・重量 g とも
-   ×100 で、うち重量は実在 BB 重量と完全一致するため ×100 は**独立に確定している**。
-2. **単位は m/s（メートル法）** と考えられる。アプリで m/s ⇄ ft/s を切り替えても
-   **BLE トラフィックは一切発生しなかった**（§8）ため、ワイヤは単位非依存の生値。
-   ammo record が UI 単位に関わらずメートル法だったことから、速度もメートル法と推定。
-3. u16 × ÷100 の上限は 655.35 m/s（≈ 2150 fps）で、エアソフト／実射の全域をカバーする。
-   妥当な設計。
-4. ユーザ申告（手で BB を投げ入れた／「数 m/s」）と 2.50–3.05 m/s が整合する。
+1. **The same fixed-point-×100 convention is used elsewhere in this firmware.** The
+   ammo record (§6.4) uses ×100 for both diameter (mm) and weight (g), and the weight
+   values match real BB weights exactly — so ×100 is **independently confirmed** there.
+2. **The unit is m/s (metric)**. Switching m/s ⇄ ft/s in the app produced **zero BLE
+   traffic** (§8), so the wire value is unit-independent. Since the ammo record is
+   metric regardless of the UI unit, speed is inferred to be metric too.
+3. u16 × ÷100 tops out at 655.35 m/s (≈ 2150 fps), which covers the full airsoft/live-fire
+   range — a sensible design.
+4. User-reported context (hand-thrown BBs, "a few m/s") is consistent with 2.50–3.05 m/s.
 
-**対抗仮説 `÷10 → m/s` は上記の実機追試で否定された。**（3 発とも LCD が ÷100 と一致した）
+**The competing `÷10 → m/s` hypothesis was rejected by the real-hardware follow-up
+above** (all 3 shots matched the LCD under ÷100).
 
-### 7.4 参照実装
+### 7.4 Reference implementation
 
 ```swift
 struct FireReport {
     let rawSpeed: UInt16      // frame[5] | frame[6] << 8
     let rawRev: UInt16        // frame[7] | frame[8] << 8
 
-    /// スケールは実機 LCD で確定（§7.3）。定数は 1 箇所だけに置く。
+    /// Scale confirmed against the device's own LCD (§7.3). The constant lives in one place only.
     static let speedScale: Double = 100.0
     var metersPerSecond: Double { Double(rawSpeed) / Self.speedScale }
 }
@@ -533,94 +610,100 @@ struct FireReport {
 
 ---
 
-## 8. 単位切替（m/s ⇄ ft/s）
+## 8. Unit switching (m/s ⇄ ft/s)
 
-**アプリ内の表示切替のみ。BLE トラフィックは発生しない（確定）。**
+**Display-only, inside the app. No BLE traffic (confirmed).**
 
-ユーザはキャプチャ中に 1 度単位を切り替えているが、
-`t=+4.355`（最後の TX）以降 `t=+103.966`（切断）まで **TX は 1 本も無い**。
-本体への設定書き込みも、本体からの再送も無い。
+The user switched units once during the capture, but from `t=+4.355` (the last TX) to
+`t=+103.966` (disconnect), **there is not a single TX**. No settings write to the device,
+and no resend from the device either.
 
-→ `0x24` WRITE_DEVICE_SETTINGS の書き込みレイアウトは
-**このキャプチャからは得られなかった**（**未検証**）。
+→ The write layout for `0x24` WRITE_DEVICE_SETTINGS **could not be obtained from this
+capture** (**unverified**).
 
-→ 実装方針: **速度・エネルギーの単位換算は全てクライアント側で行う。**
+→ Implementation approach: **do all speed/energy unit conversion client-side.**
 
 ---
 
-## 9. RX チェックサム
+## 9. RX checksum
 
-**RX も TX と完全に同じ式（確定）。** §3.1。
-「RX にチェックサムが付くのか」は解決済み。
+**RX uses exactly the same formula as TX (confirmed).** §3.1.
+Whether RX carries a checksum at all is settled.
 
-受信側は次を全て検証すべき:
+A receiver should verify all of the following:
 
 1. `frame[0] == 0xAA`
 2. `frame[1] == frame.count`
 3. `(Σ frame[0..count-2] + key1 + key2) & 0xFF == frame[count-1]`
 
-長さ 1 の `00` は 1〜3 に全て掛からない。**エラーではなく電源 OFF として扱う**（§5.1）。
+A length-1 `00` fails all of 1–3. **Treat it as power-off, not an error** (§5.1).
 
 ---
 
-## 10. Known unknowns / 次に確かめること
+## 10. Known unknowns / next things to confirm
 
-| # | 項目 | 決着のさせ方 |
+| # | item | how to resolve |
 |---|---|---|
-| ~~1~~ | ~~rawSpeed のスケール~~ | ✅ **解決**（2026-09-03）。÷100 → m/s。LCD は切り捨て表示。§7.3 |
-| 2 | `rawRev` のスケール / 単位（RPS・RPM） | フルオートで 5 発ほど。連射間隔（実測 ms）と raw を比較。**未解決**（実装は生値のまま保持） |
-| 3 | 初回ペアリング（鍵未知）の実バイト列 | 別スマホ/アプリ再インストール後にキャプチャ。`aa 06 4b 00 00 fb` → ボタン押下 → 応答 |
-| ~~4~~ | ~~鍵は広告 manufacturer data から取れるか~~ | ✅ **解決**（2026-09-03）。広告の `c4 94` をそのまま `0x4B` に載せたら **55 ms で ACK**。**電源ボタン押下は不要**。§4.3 |
-| 4b | **アモ重量スケール（×100 か ×1000 か）** | 実機の自発 `0x47` に `0x00c8` = 200 が出た（×100 なら 2.00 g で実在しない）。本体で重量設定を変えながら raw を並べる。§6.3 / §6.4 |
-| 5 | `0x62` 応答の `00 01` が status+count か BE16 count か | 本体にログを 2 件以上溜めて再取得 |
-| 6 | `0x63` ログレコードの取得と形式 | `muzzlemeter-sniff dump --name AC6000BT- --read-log` で採取する（§6.6）。要求の形（`[index LE16]`）から推定。**`0x61` は絶対に送らない** |
-| 7 | バッテリー（`0x2C` / `0x64`）が AC6000 で使えるか | `aa 05 2c 00 <cks>` を送って応答を見る |
-| 8 | `0x24` / `0x27` device settings のレイアウト | `aa 05 27 00 <cks>` を送って応答を見る |
-| 9 | `t=+11.878` の `0x47` / `t=+75.179` の `0x5A` 自発再送のトリガ | 本体のボタン操作と対応付ける |
-| 10 | FIRE_REPORT の `b[3..4]`（常に 0）の意味 | 多数発射して変化するか見る |
-| 11 | 広告 manufacturer data の `08` / `52 04` | 別個体と比較 |
+| ~~1~~ | ~~rawSpeed scale~~ | ✅ **Resolved** (2026-09-03). ÷100 → m/s. LCD display truncates. §7.3 |
+| 2 | `rawRev` scale / unit (RPS vs RPM) | Fire ~5 rounds full-auto. Compare measured firing interval (ms) against raw. **Unresolved** (implementation keeps the raw value) |
+| 3 | Raw bytes for first-time pairing (unknown key) | Capture with a different phone/app reinstall. `aa 06 4b 00 00 fb` → button press → response |
+| ~~4~~ | ~~Can the key be read from advertisement manufacturer data?~~ | ✅ **Resolved** (2026-09-03). Sending the advertisement's `c4 94` straight into `0x4B` got an **ACK in 55 ms**. **No button press needed**. §4.3 |
+| 4b | **Ammo weight scale (×100 or ×1000)** | An unsolicited real-hardware `0x47` produced `0x00c8` = 200 (×100 would be 2.00 g, which doesn't exist). Vary the weight setting on the device and line up the raw values. §6.3 / §6.4 |
+| ~~5~~ | ~~Is the `0x62` response's `00 01` a status+count pair or a BE16 count?~~ | ✅ **Resolved** (2026-09-03/04). `payload[0]` = count, `payload[1]` = constant `0x01` (meaning unknown). §6.5 |
+| ~~6~~ | ~~`0x63` log record retrieval and format~~ | ✅ **Resolved** (2026-09-03/04). 1-byte, 1-based index request; response = `[index, rev0, rev1, speed0, speed1]`; speed ÷100 → m/s; all-zero = end of (volatile) log. §6.6 |
+| 7 | Does battery (`0x2C` / `0x64`) work on the AC6000? | Send `aa 05 2c 00 <cks>` and see what comes back |
+| 8 | `0x24` / `0x27` device settings layout | Send `aa 05 27 00 <cks>` and see what comes back |
+| 9 | Trigger for the unsolicited `0x47` at `t=+11.878` / `0x5A` at `t=+75.179` | Correlate with button presses on the device |
+| 10 | Meaning of FIRE_REPORT's `b[3..4]` (always 0) | Fire many rounds and see if it ever changes |
+| 11 | Meaning of advertisement manufacturer data `08` / `52 04` | Compare against a different unit |
 
 ---
 
 ## 11. Safety
 
-> ### 🚫 `F7BF3564-FB6D-4E53-88A4-5E37E0326063` には絶対に書き込まないこと
+> ### 🚫 Never write to `F7BF3564-FB6D-4E53-88A4-5E37E0326063`
 >
-> handle `0x0017`、サービス `1D14D6EE-FD63-4FA1-BFA4-8F47B42119F0` は
-> **Silicon Labs OTA（DFU）コントロール**である。ここへの書き込みは MCU を
-> **OTA ブートローダへ再起動**させる。復旧には正規のファームウェアイメージが必要で、
-> **文鎮化のリスクがある。**
+> Handle `0x0017`, in service `1D14D6EE-FD63-4FA1-BFA4-8F47B42119F0`, is the **Silicon
+> Labs OTA (DFU) control**. Writing to it reboots the MCU **into the OTA bootloader**.
+> Recovery requires a legitimate firmware image — **this can brick the device.**
 >
-> **AceSoft は探索するだけで一切書き込んでいない**（本キャプチャで確定）。
-> 自作クライアント / サニファも **enumerate のみ・書き込み禁止**とすること。
-> 書き込み先は `9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C` のみを許可するホワイトリスト実装にする。
+> **AceSoft only enumerates it and never writes** (confirmed in this capture). Our own
+> client and sniffer must also be **enumerate-only, write-forbidden** here. Restrict
+> writes to a whitelist containing only `9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C`.
 
-> ### ⚠️ `0x61` CLEAR_LOG を安易に送らない
+> ### ⚠️ Don't send `0x61` CLEAR_LOG casually
 >
-> `0x61` は本体内の計測ログを消去するコマンドとみられる。
-> ログ吸い上げ（`0x62` / `0x63`）の実装と検証が終わるまで送信しないこと。
-> 探索的なコマンド掃引を行う場合は **`0x61` を明示的に除外**すること。
+> `0x61` appears to clear the device's measurement log. Now that log retrieval
+> (`0x62` / `0x63`) is implemented and confirmed, there is still no reason to send it —
+> this codebase has no builder for it at all, so it cannot be sent by accident. If you
+> ever do an exploratory command sweep, **explicitly exclude `0x61`**.
 
-> ### ⚠️ 未知コマンドの総当たりをしない
+> ### ⚠️ Don't brute-force unknown commands
 >
-> 本書に載っていない opcode が多数ある。この中には校正・大会用ロック・設定消去・
-> ファームウェアローダ起動に相当するものが含まれ得る。
-> **読み取り系と当たりの付いているものだけを、1 本ずつ意図的に送ること。**
+> There are many opcodes not documented here. Some of them may correspond to
+> calibration, competition locks, settings resets, or triggering the firmware loader.
+> **Only send opcodes you have a specific, deliberate reason to try, one at a time,
+> favoring reads.**
 
 ---
 
-## 12. 実装チェックリスト
+## 12. Implementation checklist
 
-* [ ] スキャンは広告名 `AC6000BT-` の前方一致（`0x2A00` は識別に使わない）
-* [ ] notify `3337E46E-…`（svc `5CDE0C3D-…`）の CCCD に `01 00`
-* [ ] write は `9C6AA1EE-…`（svc `53C47FE1-…`）に **Write With Response**
-* [ ] CCCD 有効化から最初の書き込みまで **500 ms 程度待つ**（アプリは 564 ms）
-* [ ] コマンドは **1 本ずつ、前の応答を待って ~300 ms 間隔**で送る
-* [ ] `key1`/`key2` を永続化し、以降の全フレームのチェックサムに加算する
-* [ ] 受信フレームは header / 長さ / チェックサムの 3 点を検証
-* [ ] 1 バイト `00` の通知は「本体電源 OFF」として扱う（エラーにしない）
-* [ ] keep-alive は**送らない**（不要であることを確認済み）
-* [x] 速度スケール定数は 1 箇所に定義（`FireReport.speedScale`。§7.3 で確定）
-* [ ] m/s の表示は**切り捨て**（本体 LCD に合わせる。内部値と CSV はフル精度）
-* [ ] `0x47` / `0x5A` は要求していなくても飛んでくる。marker の値で弾かない
-* [ ] OTA characteristic への書き込みをコードレベルで禁止
+* [x] Scan matches the advertised name `AC6000BT-` by prefix (`0x2A00` is not used for identification)
+* [x] Enable the CCCD (`01 00`) on notify `3337E46E-…` (service `5CDE0C3D-…`)
+* [x] Write to `9C6AA1EE-…` (service `53C47FE1-…`) using **Write With Response**
+* [x] Wait **~500 ms** between enabling the CCCD and the first write (the app waits 564 ms)
+* [x] Send commands **one at a time**, waiting for the previous response, at **~300 ms** intervals
+* [x] Persist `key1`/`key2` and add them into the checksum of every subsequent frame
+* [x] Verify received frames on all 3 points: header / length / checksum
+* [x] Treat a 1-byte `00` notification as "device powered off" (not an error)
+* [x] Send **no** keep-alive (confirmed unnecessary)
+* [x] Define the speed-scale constant in exactly one place (`FireReport.speedScale`. Confirmed in §7.3)
+* [x] Display m/s **truncated** (to match the device's LCD. Internal values and the CSV keep full precision)
+* [x] `0x47` / `0x5A` arrive unsolicited — don't filter on the marker value
+* [x] Code-level ban on writing to the OTA characteristic
+* [x] `0x62` reads `payload[0]` as the count (not `payload[1]`)
+* [x] `0x63` requests use a 1-byte, 1-based index; an all-zero response ends the read, not an error
+* [x] The on-device log is volatile — track "imported through index N" per device, and
+      reset it to 0 when the reported count drops (power cycle), instead of relying on
+      the raw count alone
