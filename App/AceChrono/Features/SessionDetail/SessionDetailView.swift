@@ -15,6 +15,22 @@ struct SessionDetailView: View {
         let stats = session.stats
 
         List {
+            Section("銃") {
+                LabeledContent("名前", value: session.gunName)
+                if let makeAndModel = session.gunMakeAndModel {
+                    LabeledContent("メーカー / モデル", value: makeAndModel)
+                }
+                if let powerSource = session.gunPowerSource {
+                    LabeledContent("パワーソース") {
+                        PowerSourceBadge(source: powerSource)
+                    }
+                }
+                LabeledContent("BB 重量", value: GunProfile.weightLabel(session.bbWeightGrams))
+                if let barrel = session.gunInnerBarrelLengthMm {
+                    LabeledContent("インナーバレル長", value: "\(barrel) mm")
+                }
+            }
+
             Section {
                 chart(shots: shots, stats: stats)
                     .frame(height: 220)

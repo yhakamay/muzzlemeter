@@ -120,6 +120,23 @@
         }
       }
     },
+    "CO2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CO2"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CO2"
+          }
+        }
+      }
+    },
     "CSV 書き出し": {
       "extractionState": "manual",
       "localizations": {
@@ -167,6 +184,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "Extreme Spread = 最大 − 最小。そのセッションで最も速かった弾と最も遅かった弾の差です。1 発の外れ値でも大きくなるので、SD と合わせて見ます。"
+          }
+        }
+      }
+    },
+    "HFC134a": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HFC134a"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HFC134a"
+          }
+        }
+      }
+    },
+    "HFC152a": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HFC152a"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HFC152a"
+          }
+        }
+      }
+    },
+    "HPA": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HPA"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HPA"
+          }
+        }
+      }
+    },
+    "HPA (エアタンク)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HPA (air tank)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HPA (エアタンク)"
           }
         }
       }
@@ -443,6 +528,108 @@
         }
       }
     },
+    "インナーバレル長": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inner barrel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インナーバレル長"
+          }
+        }
+      }
+    },
+    "エアコッキング": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spring (air cocking)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エアコッキング"
+          }
+        }
+      }
+    },
+    "ガス (CO2)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gas (CO2)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ガス (CO2)"
+          }
+        }
+      }
+    },
+    "ガス (HFC134a)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gas (HFC134a)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ガス (HFC134a)"
+          }
+        }
+      }
+    },
+    "ガス (HFC152a)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gas (HFC152a)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ガス (HFC152a)"
+          }
+        }
+      }
+    },
+    "ガス (グリーンガス)": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gas (green gas)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ガス (グリーンガス)"
+          }
+        }
+      }
+    },
     "キャンセル": {
       "extractionState": "manual",
       "localizations": {
@@ -456,6 +643,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "キャンセル"
+          }
+        }
+      }
+    },
+    "グリーンガス": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Green gas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "グリーンガス"
           }
         }
       }
@@ -545,6 +749,23 @@
         }
       }
     },
+    "スプリング、内部カスタム、注意点など": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spring, internal work, things to watch out for"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スプリング、内部カスタム、注意点など"
+          }
+        }
+      }
+    },
     "セッション": {
       "extractionState": "manual",
       "localizations": {
@@ -609,6 +830,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "ハンドシェイクを送信できません: %@"
+          }
+        }
+      }
+    },
+    "パワーソース": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Power source"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パワーソース"
           }
         }
       }
@@ -698,6 +936,23 @@
         }
       }
     },
+    "ホップ調整": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hop-up"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホップ調整"
+          }
+        }
+      }
+    },
     "マイガン": {
       "extractionState": "manual",
       "localizations": {
@@ -711,6 +966,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "マイガン"
+          }
+        }
+      }
+    },
+    "メモ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモ"
+          }
+        }
+      }
+    },
+    "メーカー": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manufacturer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メーカー"
+          }
+        }
+      }
+    },
+    "メーカー / モデル": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manufacturer / model"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メーカー / モデル"
+          }
+        }
+      }
+    },
+    "モデル": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデル"
+          }
+        }
+      }
+    },
+    "仕様": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Specs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仕様"
           }
         }
       }
@@ -745,6 +1085,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用"
+          }
+        }
+      }
+    },
+    "例: HK416D": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. HK416D"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例: HK416D"
+          }
+        }
+      }
+    },
+    "例: 押しゴム交換、1/4 戻し": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. new hop rubber, backed off 1/4 turn"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例: 押しゴム交換、1/4 戻し"
+          }
+        }
+      }
+    },
+    "例: 東京マルイ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. Tokyo Marui"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例: 東京マルイ"
           }
         }
       }
@@ -915,6 +1306,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "名前を変更"
+          }
+        }
+      }
+    },
+    "基本": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basics"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "基本"
           }
         }
       }
@@ -1599,6 +2007,23 @@
         }
       }
     },
+    "銃": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gun"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "銃"
+          }
+        }
+      }
+    },
     "銃プロファイル": {
       "extractionState": "manual",
       "localizations": {
@@ -1633,6 +2058,23 @@
         }
       }
     },
+    "電動": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Electric (AEG)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電動"
+          }
+        }
+      }
+    },
     "項目名をタップすると説明が出ます。": {
       "extractionState": "manual",
       "localizations": {
@@ -1646,6 +2088,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "項目名をタップすると説明が出ます。"
+          }
+        }
+      }
+    },
+    "駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Different power sources react differently to temperature, so this helps when you look back at a session."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。"
           }
         }
       }

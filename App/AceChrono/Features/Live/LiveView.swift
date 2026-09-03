@@ -70,8 +70,8 @@ struct LiveView: View {
                 }
             }
             .sheet(isPresented: $isAddingProfile) {
-                GunProfileEditor(profile: nil) { name, weight in
-                    let profile = GunProfile(name: name, bbWeightGrams: weight)
+                GunProfileEditor(profile: nil) { draft in
+                    let profile = draft.makeProfile()
                     modelContext.insert(profile)
                     try? modelContext.save()
                     // 作った直後は「それを使いたい」はずなので、そのまま選択状態にする。

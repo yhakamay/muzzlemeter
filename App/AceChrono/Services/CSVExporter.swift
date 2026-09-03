@@ -13,6 +13,10 @@ enum CSVExporter {
         "session_id",
         "session_title",
         "gun",
+        "power_source",
+        "manufacturer",
+        "model",
+        "inner_barrel_mm",
         "bb_weight_g",
         "velocity_mps",
         "velocity_fps",
@@ -37,6 +41,12 @@ enum CSVExporter {
         let sessionID = Self.identifier(for: session)
         let gun = escape(session.gunName)
         let title = escape(session.displayTitle)
+        // パワーソースは表示名ではなく raw 値を出す。表計算で集計するときに
+        // 言語設定で列の中身が変わってしまうと使い物にならない。
+        let powerSource = session.gunPowerSourceRaw
+        let manufacturer = escape(session.gunManufacturer)
+        let model = escape(session.gunModel)
+        let barrel = session.gunInnerBarrelLengthMm.map(String.init) ?? ""
         var previous: Date?
         return session.orderedShots.map { shot in
             let interval = previous.map { (shot.timestamp.timeIntervalSince($0) * 1000).rounded() }
@@ -47,6 +57,10 @@ enum CSVExporter {
                 sessionID,
                 title,
                 gun,
+                powerSource,
+                manufacturer,
+                model,
+                barrel,
                 String(format: "%.2f", session.bbWeightGrams),
                 String(format: "%.2f", mps),
                 String(format: "%.1f", SpeedUnit.feetPerSecond.value(fromMetersPerSecond: mps)),

@@ -40,11 +40,14 @@ struct SettingsView: View {
                             editingProfile = profile
                         } label: {
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
+                                VStack(alignment: .leading, spacing: 4) {
                                     Text(profile.name)
-                                    Text(GunProfile.weightLabel(profile.bbWeightGrams))
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    HStack(spacing: 6) {
+                                        PowerSourceBadge(source: profile.powerSource)
+                                        Text(GunProfile.weightLabel(profile.bbWeightGrams))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                                 Spacer()
                                 if profile == service.selectedProfile {
@@ -94,17 +97,16 @@ struct SettingsView: View {
             }
             .navigationTitle("設定")
             .sheet(isPresented: $isAddingProfile) {
-                GunProfileEditor(profile: nil) { name, weight in
-                    let profile = GunProfile(name: name, bbWeightGrams: weight)
+                GunProfileEditor(profile: nil) { draft in
+                    let profile = draft.makeProfile()
                     modelContext.insert(profile)
                     try? modelContext.save()
                     if service.selectedProfile == nil { service.selectedProfile = profile }
                 }
             }
             .sheet(item: $editingProfile) { profile in
-                GunProfileEditor(profile: profile) { name, weight in
-                    profile.name = name
-                    profile.bbWeightGrams = weight
+                GunProfileEditor(profile: profile) { draft in
+                    draft.apply(to: profile)
                     try? modelContext.save()
                 }
             }
@@ -136,35 +138,97 @@ struct SettingsView: View {
     }
 }
 
+/// 編集中のプロファイルの下書き。
+///
+/// 項目が増えたので、シートの `onSave` に引数を並べるのをやめて 1 つの値にまとめた。
+/// `@Model` の `GunProfile` を編集中のシートに直接渡すと、キャンセルしても
+/// 途中の入力がストアへ書き戻ってしまう（SwiftData の変更は即時に反映される）ため、
+/// **値型の下書きを編集して、保存のときだけ書き戻す**。
+struct GunProfileDraft {
+    var name: String = ""
+    var manufacturer: String = ""
+    var model: String = ""
+    var powerSource: PowerSource = .electric
+    var bbWeightGrams: Double = 0.25
+    var innerBarrelLengthMm: Int?
+    var hopNotes: String = ""
+    var notes: String = ""
+
+    init() {}
+
+    init(profile: GunProfile) {
+        name = profile.name
+        manufacturer = profile.manufacturer
+        model = profile.model
+        powerSource = profile.powerSource
+        bbWeightGrams = profile.bbWeightGrams
+        innerBarrelLengthMm = profile.innerBarrelLengthMm
+        hopNotes = profile.hopNotes
+        notes = profile.notes
+    }
+
+    func apply(to profile: GunProfile) {
+        profile.name = name
+        profile.manufacturer = manufacturer
+        profile.model = model
+        profile.powerSource = powerSource
+        profile.bbWeightGrams = bbWeightGrams
+        profile.innerBarrelLengthMm = innerBarrelLengthMm
+        profile.hopNotes = hopNotes
+        profile.notes = notes
+    }
+
+    func makeProfile() -> GunProfile {
+        let profile = GunProfile(name: name, bbWeightGrams: bbWeightGrams)
+        apply(to: profile)
+        return profile
+    }
+}
+
 /// プロファイルの新規作成・編集シート。BB 重量はプリセット＋自由入力。
 struct GunProfileEditor: View {
     let profile: GunProfile?
-    let onSave: (String, Double) -> Void
+    let onSave: (GunProfileDraft) -> Void
 
     @Environment(\.dismiss) private var dismiss
-    @State private var name: String
-    @State private var weight: Double
+    @State private var draft: GunProfileDraft
     @State private var isCustomWeight: Bool
     @State private var customWeightText: String
+    @State private var barrelText: String
 
-    init(profile: GunProfile?, onSave: @escaping (String, Double) -> Void) {
+    init(profile: GunProfile?, onSave: @escaping (GunProfileDraft) -> Void) {
         self.profile = profile
         self.onSave = onSave
-        let initialWeight = profile?.bbWeightGrams ?? 0.25
-        _name = State(initialValue: profile?.name ?? "")
-        _weight = State(initialValue: initialWeight)
-        _isCustomWeight = State(initialValue: !GunProfile.weightPresets.contains(initialWeight))
-        _customWeightText = State(initialValue: String(format: "%.2f", initialWeight))
+        let draft = profile.map(GunProfileDraft.init(profile:)) ?? GunProfileDraft()
+        _draft = State(initialValue: draft)
+        _isCustomWeight = State(initialValue: !GunProfile.weightPresets.contains(draft.bbWeightGrams))
+        _customWeightText = State(initialValue: String(format: "%.2f", draft.bbWeightGrams))
+        _barrelText = State(initialValue: draft.innerBarrelLengthMm.map(String.init) ?? "")
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("名前") {
-                    TextField("例: 次世代 M4", text: $name)
+                Section("基本") {
+                    labeledField("名前", placeholder: "例: 次世代 M4", text: $draft.name)
+                    labeledField("メーカー", placeholder: "例: 東京マルイ", text: $draft.manufacturer)
+                    labeledField("モデル", placeholder: "例: HK416D", text: $draft.model)
                 }
-                Section("BB 重量") {
-                    Picker("プリセット", selection: $weight) {
+
+                Section {
+                    Picker("パワーソース", selection: $draft.powerSource) {
+                        ForEach(PowerSource.allCases) { source in
+                            Text(source.label).tag(source)
+                        }
+                    }
+                } header: {
+                    Text("パワーソース")
+                } footer: {
+                    Text("駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。")
+                }
+
+                Section("仕様") {
+                    Picker("BB 重量", selection: $draft.bbWeightGrams) {
                         ForEach(GunProfile.weightPresets, id: \.self) { preset in
                             Text(verbatim: GunProfile.weightLabel(preset)).tag(preset)
                         }
@@ -177,6 +241,34 @@ struct GunProfileEditor: View {
                         TextField("重量 (g)", text: $customWeightText)
                             .keyboardType(.decimalPad)
                     }
+
+                    HStack {
+                        Text("インナーバレル長")
+                        Spacer()
+                        TextField("未設定", text: $barrelText)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 90)
+                        Text(verbatim: "mm")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("メモ") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("ホップ調整")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("例: 押しゴム交換、1/4 戻し", text: $draft.hopNotes, axis: .vertical)
+                            .lineLimit(2...4)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("メモ")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("スプリング、内部カスタム、注意点など", text: $draft.notes, axis: .vertical)
+                            .lineLimit(3...8)
+                    }
                 }
             }
             .navigationTitle(profile == nil ? "プロファイルを追加" : "プロファイルを編集")
@@ -187,7 +279,7 @@ struct GunProfileEditor: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("保存") {
-                        onSave(trimmedName, effectiveWeight)
+                        onSave(resolvedDraft)
                         dismiss()
                     }
                     .disabled(trimmedName.isEmpty || effectiveWeight <= 0)
@@ -196,13 +288,47 @@ struct GunProfileEditor: View {
         }
     }
 
+    /// 「項目名 : 入力欄」の 1 行。設定アプリと同じ並びにして、入力済みでも
+    /// 何の欄なのか分かるようにする（プレースホルダだけだと埋めた瞬間に消える）。
+    private func labeledField(
+        _ title: LocalizedStringKey,
+        placeholder: LocalizedStringKey,
+        text: Binding<String>
+    ) -> some View {
+        HStack {
+            Text(title)
+            Spacer()
+            TextField(placeholder, text: text)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    /// テキスト入力の項目（重量・バレル長）を下書きへ畳み込んだもの。
+    private var resolvedDraft: GunProfileDraft {
+        var resolved = draft
+        resolved.name = trimmedName
+        resolved.manufacturer = draft.manufacturer.trimmingCharacters(in: .whitespacesAndNewlines)
+        resolved.model = draft.model.trimmingCharacters(in: .whitespacesAndNewlines)
+        resolved.bbWeightGrams = effectiveWeight
+        resolved.innerBarrelLengthMm = effectiveBarrelLength
+        return resolved
+    }
+
     private var trimmedName: String {
-        name.trimmingCharacters(in: .whitespacesAndNewlines)
+        draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var effectiveWeight: Double {
-        guard isCustomWeight else { return weight }
+        guard isCustomWeight else { return draft.bbWeightGrams }
         return Double(customWeightText.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+
+    /// 空欄・0 以下は「未設定」にする（0 mm のバレルは存在しない）。
+    private var effectiveBarrelLength: Int? {
+        guard let value = Int(barrelText.trimmingCharacters(in: .whitespacesAndNewlines)), value > 0 else {
+            return nil
+        }
+        return value
     }
 }
 

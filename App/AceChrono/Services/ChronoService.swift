@@ -199,10 +199,17 @@ final class ChronoService {
 
     /// 最初の 1 発でセッションを自動開始する。
     private func beginSession(in modelContext: ModelContext) -> Session {
+        // 銃の仕様はプロファイルへの参照ではなく**値でコピー**する。
+        // 後からプロファイルを直しても、過去の計測が何で撃たれたかは変わらないため。
+        let profile = selectedProfile
         let session = Session(
             startedAt: Date(),
             gunName: gunName,
-            bbWeightGrams: massGrams
+            bbWeightGrams: massGrams,
+            gunPowerSource: profile?.powerSource,
+            gunManufacturer: profile?.manufacturer ?? "",
+            gunModel: profile?.model ?? "",
+            gunInnerBarrelLengthMm: profile?.innerBarrelLengthMm
         )
         modelContext.insert(session)
         activeSession = session

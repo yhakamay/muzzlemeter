@@ -20,6 +20,15 @@ final class Session {
     /// 計測時の BB 重量（スナップショット、g）。
     var bbWeightGrams: Double
 
+    // 銃の仕様も**値としてコピー**する（`GunProfile` を参照しない）。
+    // 銃名・BB 重量と同じ理由で、後からプロファイルを直しても過去の計測の
+    // 記録が書き換わってはいけない。既定値付きなのでライトウェイトマイグレーション。
+    /// 計測時のパワーソース（`PowerSource.rawValue`）。空文字は「記録なし」。
+    var gunPowerSourceRaw: String = ""
+    var gunManufacturer: String = ""
+    var gunModel: String = ""
+    var gunInnerBarrelLengthMm: Int?
+
     @Relationship(deleteRule: .cascade, inverse: \ShotRecord.session)
     var shots: [ShotRecord] = []
 
@@ -28,13 +37,34 @@ final class Session {
         endedAt: Date? = nil,
         title: String? = nil,
         gunName: String,
-        bbWeightGrams: Double
+        bbWeightGrams: Double,
+        gunPowerSource: PowerSource? = nil,
+        gunManufacturer: String = "",
+        gunModel: String = "",
+        gunInnerBarrelLengthMm: Int? = nil
     ) {
         self.startedAt = startedAt
         self.endedAt = endedAt
         self.title = title
         self.gunName = gunName
         self.bbWeightGrams = bbWeightGrams
+        self.gunPowerSourceRaw = gunPowerSource?.rawValue ?? ""
+        self.gunManufacturer = gunManufacturer
+        self.gunModel = gunModel
+        self.gunInnerBarrelLengthMm = gunInnerBarrelLengthMm
+    }
+
+    /// 記録されているパワーソース。古いセッション（列が無かった頃）は nil。
+    var gunPowerSource: PowerSource? {
+        PowerSource(rawValue: gunPowerSourceRaw)
+    }
+
+    /// 「メーカー モデル」を 1 行にしたもの。どちらも空なら nil。
+    var gunMakeAndModel: String? {
+        let parts = [gunManufacturer, gunModel]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
     }
 
     // MARK: - 名前
