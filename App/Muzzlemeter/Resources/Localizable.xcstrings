@@ -1,6 +1,38 @@
 {
   "sourceLanguage": "ja",
   "strings": {
+    " %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %@"
+          }
+        }
+      }
+    },
+    "%@ J": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ J"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ J"
+          }
+        }
+      }
+    },
     "%@ を外す": {
       "extractionState": "manual",
       "localizations": {
@@ -69,6 +101,22 @@
         }
       }
     },
+    "%lld / 4": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld / 4"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld / 4"
+          }
+        }
+      }
+    },
     "%lld 台": {
       "extractionState": "manual",
       "localizations": {
@@ -99,6 +147,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 発"
+          }
+        }
+      }
+    },
+    "%lld 発 · 平均": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 発 · 平均"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld shots · mean"
           }
         }
       }
@@ -184,6 +248,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "0.25"
+          }
+        }
+      }
+    },
+    "0.98": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.98"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.98"
           }
         }
       }
@@ -562,6 +642,38 @@
         }
       }
     },
+    "compact": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "compact"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "compact"
+          }
+        }
+      }
+    },
+    "expanded": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "expanded"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "expanded"
+          }
+        }
+      }
+    },
     "· 最大 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -575,6 +687,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "· 最大 %@"
+          }
+        }
+      }
+    },
+    "—": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
           }
         }
       }
@@ -1820,6 +1948,22 @@
         }
       }
     },
+    "ホーム画面ウィジェット（見本）": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホーム画面ウィジェット（見本）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home Screen widget (sample)"
+          }
+        }
+      }
+    },
     "マイガン": {
       "extractionState": "manual",
       "localizations": {
@@ -1901,6 +2045,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "モデル"
+          }
+        }
+      }
+    },
+    "ロック画面 / Dynamic Island（見本）": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロック画面 / Dynamic Island（見本）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock Screen / Dynamic Island (sample)"
           }
         }
       }
@@ -2700,6 +2860,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均と SD は、このプロファイルで撃った全ショットをまとめて 1 つの標本として計算しています。"
+          }
+        }
+      }
+    },
+    "平均弾速 · %lld 発": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mean velocity · %lld shots"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均弾速 · %lld 発"
           }
         }
       }

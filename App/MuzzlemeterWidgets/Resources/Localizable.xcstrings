@@ -86,6 +86,22 @@
         }
       }
     },
+    "余裕": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "余裕"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Headroom"
+          }
+        }
+      }
+    },
     "平均 %@": {
       "extractionState": "manual",
       "localizations": {
@@ -154,6 +170,22 @@
         }
       }
     },
+    "注意": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        }
+      }
+    },
     "直近に締めたセッションの発数と平均弾速を表示します。": {
       "extractionState": "manual",
       "localizations": {
@@ -167,6 +199,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "直近に締めたセッションの発数と平均弾速を表示します。"
+          }
+        }
+      }
+    },
+    "超過": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over"
           }
         }
       }
