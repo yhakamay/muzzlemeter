@@ -1,4 +1,4 @@
-# AceChrono
+# ShotLog
 
 Acetech **AC6000 MKIII BT**（エアソフト用弾速計）を、公式アプリ「AceSoft」より使いやすい
 自作 iOS アプリで扱うためのプロジェクト。
@@ -6,9 +6,9 @@ Acetech **AC6000 MKIII BT**（エアソフト用弾速計）を、公式アプ�
 BLE プロトコルが非公開のため**プロトコル解析から始めた**が、**解析は完了して実機で検証済み**。
 現在は
 
-- Phase 0（土台）と解析用 macOS CLI `acechrono-sniff`
+- Phase 0（土台）と解析用 macOS CLI `shotlog-sniff`
 - Phase 1（BLE プロトコル解析 → `docs/PROTOCOL.md`。実機で確定）
-- Phase 2（`AceChronoKit`: フレームコーデック・鍵ハンドシェイク・CoreBluetooth トランスポート）
+- Phase 2（`ShotLogKit`: フレームコーデック・鍵ハンドシェイク・CoreBluetooth トランスポート）
 - Phase 3（iOS アプリ。実機接続とリプレイの両方で全画面が動く）
 
 まで完了。
@@ -38,28 +38,28 @@ BLE プロトコルが非公開のため**プロトコル解析から始めた**
 
 | パス | 内容 |
 |---|---|
-| `Sources/AceChronoKit/` | ドメイン・プロトコル・BLE 抽象（iOS / macOS 共通ライブラリ） |
-| `Sources/AceChronoSniff/` | macOS CLI。BLE スキャン / GATT 列挙 / パケットダンプ |
-| `Tests/AceChronoKitTests/` | Swift Testing によるテスト |
+| `Sources/ShotLogKit/` | ドメイン・プロトコル・BLE 抽象（iOS / macOS 共通ライブラリ） |
+| `Sources/ShotLogSniff/` | macOS CLI。BLE スキャン / GATT 列挙 / パケットダンプ |
+| `Tests/ShotLogKitTests/` | Swift Testing によるテスト |
 | `docs/PROTOCOL.md` | 解析結果（UUID・パケット形式・チェックサム） |
 | `tools/re/` | APK / jadx 出力 / キャプチャログ（gitignore） |
-| `App/AceChrono/` | iOS アプリ（SwiftUI + SwiftData） |
-| `App/AceChrono/Resources/Localizable.xcstrings` | UI 文言の String Catalog。**ベース言語は ja**、en は完全な翻訳 |
+| `App/ShotLog/` | iOS アプリ（SwiftUI + SwiftData） |
+| `App/ShotLog/Resources/Localizable.xcstrings` | UI 文言の String Catalog。**ベース言語は ja**、en は完全な翻訳 |
 | `App/Info.plist` | `CFBundleLocalizations` だけを持つ土台。他のキーはビルド設定から合成される |
-| `App/AceChrono/Resources/<lang>.lproj/InfoPlist.strings` | 権限の用途説明の ja / en。ビルド設定の値を実行時に差し替える |
-| `App/AceChrono.entitlements` | WeatherKit のエンタイトルメント（`CODE_SIGN_ENTITLEMENTS`） |
+| `App/ShotLog/Resources/<lang>.lproj/InfoPlist.strings` | 権限の用途説明の ja / en。ビルド設定の値を実行時に差し替える |
+| `App/ShotLog.entitlements` | WeatherKit のエンタイトルメント（`CODE_SIGN_ENTITLEMENTS`） |
 | `project.yml` | XcodeGen 定義。`.xcodeproj` はここから生成する |
 
-## acechrono-sniff の使い方
+## shotlog-sniff の使い方
 
 ### スキャン
 
 周囲の BLE アドバタイズを一覧表示する。本体の電源を入れて実行し、機器名を確認する。
 
 ```sh
-swift run acechrono-sniff scan
-swift run acechrono-sniff scan --seconds 30
-swift run acechrono-sniff scan --filter-service ffe0
+swift run shotlog-sniff scan
+swift run shotlog-sniff scan --seconds 30
+swift run shotlog-sniff scan --filter-service ffe0
 ```
 
 出力例（1 行 1 デバイス、identifier で重複排除）:
@@ -75,9 +75,9 @@ notify / indicate を全部購読 → 受信パケットをタイムスタンプ
 Ctrl-C で終了。切断されたら自動で再接続を試みる。
 
 ```sh
-swift run acechrono-sniff dump --name AC6000
-swift run acechrono-sniff dump --id 1A2B3C4D-5E6F-...   # scan で出た identifier
-swift run acechrono-sniff dump --name AC6000 --log tools/re/captures/single-shot.log
+swift run shotlog-sniff dump --name AC6000
+swift run shotlog-sniff dump --id 1A2B3C4D-5E6F-...   # scan で出た identifier
+swift run shotlog-sniff dump --name AC6000 --log tools/re/captures/single-shot.log
 ```
 
 パケット行の形式:
@@ -94,7 +94,7 @@ swift run acechrono-sniff dump --name AC6000 --log tools/re/captures/single-shot
 受信フレームは hex の次の行にデコード結果も表示される。
 
 ```sh
-swift run acechrono-sniff dump --name AC6000BT- --handshake
+swift run shotlog-sniff dump --name AC6000BT- --handshake
 ```
 
 期待される出力:
@@ -119,10 +119,10 @@ write 成功 9C6AA1EE-...
 `--handshake` と `--interactive` は併用できる（ハンドシェイク後に手で追試したいとき）:
 
 ```sh
-swift run acechrono-sniff dump --name AC6000BT- --handshake --interactive
+swift run shotlog-sniff dump --name AC6000BT- --handshake --interactive
 ```
 
-フレームの組み立て・検証は **`AceChronoKit` の `ChronoFrame` をそのまま使っている**ので、
+フレームの組み立て・検証は **`ShotLogKit` の `ChronoFrame` をそのまま使っている**ので、
 サニファで通ったバイト列はアプリでもそのまま通る。
 
 ### 初期化コマンドを送る
@@ -131,8 +131,8 @@ swift run acechrono-sniff dump --name AC6000BT- --handshake --interactive
 購読完了後に送信され、結果が表示される。`--write` は複数回指定できる。
 
 ```sh
-swift run acechrono-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
-swift run acechrono-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切りでも可
+swift run shotlog-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
+swift run shotlog-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切りでも可
 ```
 
 `--write` を複数指定した場合、既定では **200 ms 間隔**で 1 件ずつ送る。どの write に対する
@@ -140,7 +140,7 @@ swift run acechrono-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切�
 （`0` で連続送信）。
 
 ```sh
-swift run acechrono-sniff dump --name AC6000 --write ffe1 01 --write ffe1 02 --write-delay 500
+swift run shotlog-sniff dump --name AC6000 --write ffe1 01 --write ffe1 02 --write-delay 500
 ```
 
 #### write の種別（`--write-type`）
@@ -159,7 +159,7 @@ BLE の write には **withResponse**（相手が ATT の応答を返す）と *
 申告が当てにならない相手を試せることがこのオプションの目的だから。
 
 ```sh
-swift run acechrono-sniff dump --name AC6000 --write-type without --write ffe1 850600
+swift run shotlog-sniff dump --name AC6000 --write-type without --write ffe1 850600
 ```
 
 `--write-type` は `--write` と、対話モードの `<hex>` / `w` の**既定値**になる。
@@ -172,9 +172,9 @@ swift run acechrono-sniff dump --name AC6000 --write-type without --write ffe1 8
 なくなるので、未知のハンドシェイクを総当たりで探るときはこれを使う。
 
 ```sh
-swift run acechrono-sniff dump --name AC6000 --interactive
-swift run acechrono-sniff dump --name AC6000 -i --write ffe1 01a50000   # 初期化してから対話
-swift run acechrono-sniff dump --name AC6000 -i --write-type without    # 既定を without に
+swift run shotlog-sniff dump --name AC6000 --interactive
+swift run shotlog-sniff dump --name AC6000 -i --write ffe1 01a50000   # 初期化してから対話
+swift run shotlog-sniff dump --name AC6000 -i --write-type without    # 既定を without に
 ```
 
 受け付けるコマンド:
@@ -228,8 +228,8 @@ notify は入力中でも非同期に流れてくるため、プロンプト `> 
 `--write-delay` の間隔で 1 行ずつ処理する**ので、どの応答がどの行のものか分かる:
 
 ```sh
-printf '5a4b004b\n5a4b014c\n' | swift run acechrono-sniff dump --name AC6000 -i
-swift run acechrono-sniff dump --name AC6000 -i --write-delay 500 < candidates.txt
+printf '5a4b004b\n5a4b014c\n' | swift run shotlog-sniff dump --name AC6000 -i
+swift run shotlog-sniff dump --name AC6000 -i --write-delay 500 < candidates.txt
 ```
 
 ### macOS の Bluetooth 権限
@@ -245,18 +245,18 @@ CLI から CoreBluetooth を使うと、**ターミナルアプリ自体**に Bl
 重要な注意:
 
 - 権限の判定対象は **プロセスを起動した親アプリ（responsible process）** であって
-  `acechrono-sniff` 自身ではない。エディタや他のツールの統合ターミナルから起動すると
+  `shotlog-sniff` 自身ではない。エディタや他のツールの統合ターミナルから起動すると
   そのアプリに権限が無く、macOS が問答無用でプロセスを **SIGABRT で強制終了** する
   （その場合は原因を説明するメッセージを stderr に出して終了する）。
   **Terminal.app / iTerm.app から直接実行すること。**
 - CLI 実行ファイルには `NSBluetoothAlwaysUsageDescription` を含む Info.plist を
   `__TEXT,__info_plist` セクションに埋め込んでいる（`Package.swift` のリンカ設定と
-  `Sources/AceChronoSniff/Info.plist`）。これが無いと CoreBluetooth 初期化時に必ず落ちる。
+  `Sources/ShotLogSniff/Info.plist`）。これが無いと CoreBluetooth 初期化時に必ず落ちる。
 - Bluetooth がオフ、または権限が拒否されている場合は、その旨を表示して終了コード 1 で終わる。
 
 ## ビルド
 
-### AceChronoKit と CLI
+### ShotLogKit と CLI
 
 **Command Line Tools のツールチェーン（Swift 6.4）だけで動く**。
 
@@ -272,15 +272,15 @@ swift test
 **必ず最初に実行する**:
 
 ```sh
-xcodegen generate          # → AceChrono.xcodeproj
+xcodegen generate          # → ShotLog.xcodeproj
 ```
 
 その後:
 
 ```sh
-open AceChrono.xcodeproj
+open ShotLog.xcodeproj
 # または
-xcodebuild -project AceChrono.xcodeproj -scheme AceChrono \
+xcodebuild -project ShotLog.xcodeproj -scheme ShotLog \
   -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
@@ -300,18 +300,18 @@ CLI の `swift build` / `swift test` にはこれは**不要**。
 | シミュレータ | `ReplayTransport`（CoreBluetooth のハードウェアが無いため自動） |
 | 実機 + `--replay` | `ReplayTransport` |
 
-**デコーダと設定は両方で同じ**（`AceChronoDecoder` + `ChronoDevice.Configuration.ac6000()`）。
+**デコーダと設定は両方で同じ**（`ShotLogDecoder` + `ChronoDevice.Configuration.ac6000()`）。
 再生でも鍵ハンドシェイクまで実機と同じ経路を通るので、UI から見て挙動が変わらない
 （`ReplayTransport.demoPeripheral` が実機の広告 `00 05 08 c4 94 52 04` を持っている）。
 
 再生ソースは 2 つ:
 
-- 既定（`--replay`）: `App/AceChrono/Services/ReplaySupport.swift` の合成スクリプト。
+- 既定（`--replay`）: `App/ShotLog/Services/ReplaySupport.swift` の合成スクリプト。
   発数が多く UI を作り込みやすい。**バイト列は実プロトコルで組んでいる。**
-- `--replay-capture`: `App/AceChrono/Resources/acesoft-iphone-rx.txt`
+- `--replay-capture`: `App/ShotLog/Resources/acesoft-iphone-rx.txt`
   （公式アプリの実キャプチャそのもの。5 発 + 電源 OFF まで含む）を早送り再生
 
-`ReplayScript` は **`acechrono-sniff dump` のログ形式もそのまま読める**ので、
+`ReplayScript` は **`shotlog-sniff dump` のログ形式もそのまま読める**ので、
 新しくキャプチャを取ったらそのファイルを置くだけで再生できる。
 
 ### 環境（気温・湿度・気圧）
@@ -332,13 +332,13 @@ UI を目視確認できるように、`--replay-capture` かつシミュレー�
 2. **Terminal.app / iTerm.app から**（他アプリの統合ターミナルは不可）:
 
    ```sh
-   swift run acechrono-sniff dump --name AC6000BT- --handshake
+   swift run shotlog-sniff dump --name AC6000BT- --handshake
    ```
 
 3. `-> ACK for READ_KEY` が出ればハンドシェイク成功。そのまま BB を撃って
    `FIRE_REPORT rawSpeed=…` の行と**本体 LCD の表示**を突き合わせる
 4. ログは `tools/re/captures/<日時>.log` に残るので、そのまま
-   `Tests/AceChronoKitTests/Fixtures/` や再生スクリプトに使える
+   `Tests/ShotLogKitTests/Fixtures/` や再生スクリプトに使える
 
 まだ確かめられていないこと（`docs/PROTOCOL.md` §10）:
 

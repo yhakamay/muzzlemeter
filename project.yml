@@ -1,6 +1,6 @@
-# XcodeGen 定義。`xcodegen generate` で AceChrono.xcodeproj を作る。
+# XcodeGen 定義。`xcodegen generate` で ShotLog.xcodeproj を作る。
 # .xcodeproj は生成物なので .gitignore してある（README 参照）。
-name: AceChrono
+name: ShotLog
 
 options:
   bundleIdPrefix: com.yhakamay
@@ -15,8 +15,8 @@ options:
   knownRegions: [ja, en, Base]
 
 packages:
-  # ルートの Package.swift（AceChronoKit）をローカルパッケージとして参照する。
-  AceChronoKit:
+  # ルートの Package.swift（ShotLogKit）をローカルパッケージとして参照する。
+  ShotLogKit:
     path: .
 
 settings:
@@ -28,31 +28,31 @@ settings:
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
 targets:
-  AceChrono:
+  ShotLog:
     type: application
     platform: iOS
     sources:
-      - path: App/AceChrono
+      - path: App/ShotLog
     dependencies:
-      - package: AceChronoKit
-        product: AceChronoKit
+      - package: ShotLogKit
+        product: ShotLogKit
     settings:
       base:
-        PRODUCT_NAME: AceChrono
-        PRODUCT_BUNDLE_IDENTIFIER: com.yhakamay.acechrono
+        PRODUCT_NAME: ShotLog
+        PRODUCT_BUNDLE_IDENTIFIER: com.yhakamay.shotlog
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: AZHMSV7C5P
         # WeatherKit を使うためのエンタイトルメント（App ID 側でも有効化済み）。
-        CODE_SIGN_ENTITLEMENTS: App/AceChrono.entitlements
+        CODE_SIGN_ENTITLEMENTS: App/ShotLog.entitlements
         # Info.plist はビルド設定から合成する。`App/Info.plist` は「ビルド設定では
         # 配列を書けないキー」だけを持つ土台で、GENERATE_INFOPLIST_FILE と
         # INFOPLIST_KEY_* の内容がここへマージされる。
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: App/Info.plist
-        INFOPLIST_KEY_CFBundleDisplayName: AceChrono
+        INFOPLIST_KEY_CFBundleDisplayName: ShotLog
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "弾速計 AC6000 と接続して計測値を受け取るために Bluetooth を使用します。"
         # 用途説明はビルド設定に日本語（開発言語）を置き、各言語の文言は
         # Resources/<lang>.lproj/InfoPlist.strings が実行時に差し替える。
@@ -63,10 +63,10 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
 
 schemes:
-  AceChrono:
+  ShotLog:
     build:
       targets:
-        AceChrono: all
+        ShotLog: all
     run:
       config: Debug
       # シミュレータでは自動的にリプレイモードになるが、実機で UI を確認したいときのために

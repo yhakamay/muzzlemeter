@@ -7,35 +7,35 @@ import PackageDescription
 // 無いと CBCentralManager 生成時に TCC が SIGABRT でプロセスを落とす。
 let sniffInfoPlist = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent()
-    .appendingPathComponent("Sources/AceChronoSniff/Info.plist")
+    .appendingPathComponent("Sources/ShotLogSniff/Info.plist")
     .path
 
 let package = Package(
-    name: "AceChrono",
+    name: "ShotLog",
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
     ],
     products: [
-        .library(name: "AceChronoKit", targets: ["AceChronoKit"]),
-        .executable(name: "acechrono-sniff", targets: ["AceChronoSniff"]),
+        .library(name: "ShotLogKit", targets: ["ShotLogKit"]),
+        .executable(name: "shotlog-sniff", targets: ["ShotLogSniff"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.5.0"),
     ],
     targets: [
         .target(
-            name: "AceChronoKit",
-            path: "Sources/AceChronoKit",
+            name: "ShotLogKit",
+            path: "Sources/ShotLogKit",
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
         .executableTarget(
-            name: "AceChronoSniff",
+            name: "ShotLogSniff",
             dependencies: [
-                "AceChronoKit",
+                "ShotLogKit",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            path: "Sources/AceChronoSniff",
+            path: "Sources/ShotLogSniff",
             exclude: ["Info.plist"],
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")],
             linkerSettings: [
@@ -51,9 +51,9 @@ let package = Package(
             ]
         ),
         .testTarget(
-            name: "AceChronoKitTests",
-            dependencies: ["AceChronoKit"],
-            path: "Tests/AceChronoKitTests",
+            name: "ShotLogKitTests",
+            dependencies: ["ShotLogKit"],
+            path: "Tests/ShotLogKitTests",
             resources: [.copy("Fixtures")],
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
