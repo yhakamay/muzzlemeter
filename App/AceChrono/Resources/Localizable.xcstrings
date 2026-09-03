@@ -69,6 +69,23 @@
         }
       }
     },
+    "0.25": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.25"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.25"
+          }
+        }
+      }
+    },
     "BB 重量": {
       "extractionState": "manual",
       "localizations": {
@@ -596,70 +613,53 @@
         }
       }
     },
-    "ガス (CO2)": {
+    "ガス": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gas (CO2)"
+            "value": "Gas"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ガス (CO2)"
+            "value": "ガス"
           }
         }
       }
     },
-    "ガス (HFC134a)": {
+    "ガス種別": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gas (HFC134a)"
+            "value": "Gas type"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ガス (HFC134a)"
+            "value": "ガス種別"
           }
         }
       }
     },
-    "ガス (HFC152a)": {
+    "ガス種別の既定値": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gas (HFC152a)"
+            "value": "Default gas type"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ガス (HFC152a)"
-          }
-        }
-      }
-    },
-    "ガス (グリーンガス)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gas (green gas)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ガス (グリーンガス)"
+            "value": "ガス種別の既定値"
           }
         }
       }
@@ -834,6 +834,23 @@
         }
       }
     },
+    "セッション条件": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session conditions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション条件"
+          }
+        }
+      }
+    },
     "セッション統計": {
       "extractionState": "manual",
       "localizations": {
@@ -919,6 +936,23 @@
         }
       }
     },
+    "プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで編集、右スワイプで選択、左スワイプで削除。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A profile holds the gun itself plus the defaults for its measurement conditions. Tap to edit, swipe right to select, swipe left to delete."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで編集、右スワイプで選択、左スワイプで削除。"
+          }
+        }
+      }
+    },
     "プロファイルを作成": {
       "extractionState": "manual",
       "localizations": {
@@ -970,19 +1004,36 @@
         }
       }
     },
-    "ホップ調整": {
+    "ホップ": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hop-up"
+            "value": "Hop"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ホップ調整"
+            "value": "ホップ"
+          }
+        }
+      }
+    },
+    "ホップ %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hop %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホップ %@"
           }
         }
       }
@@ -1123,6 +1174,23 @@
         }
       }
     },
+    "例: 3 / 少し強め": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. 3 / a bit stronger"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例: 3 / 少し強め"
+          }
+        }
+      }
+    },
     "例: HK416D": {
       "extractionState": "manual",
       "localizations": {
@@ -1153,23 +1221,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "例: 屋内レンジ、風なし"
-          }
-        }
-      }
-    },
-    "例: 押しゴム交換、1/4 戻し": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "e.g. new hop rubber, backed off 1/4 turn"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "例: 押しゴム交換、1/4 戻し"
           }
         }
       }
@@ -1323,6 +1374,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "初速と BB 重量から計算した運動エネルギー（E = ½mv²）です。重量は選択中のプロファイルの値を使います。"
+          }
+        }
+      }
+    },
+    "区分": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "区分"
           }
         }
       }
@@ -1646,6 +1714,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "接続済み"
+          }
+        }
+      }
+    },
+    "新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New sessions start with these conditions. You can also change them for one session from the Live screen."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。"
           }
         }
       }
@@ -2007,23 +2092,6 @@
         }
       }
     },
-    "種類": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Type"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "種類"
-          }
-        }
-      }
-    },
     "空にすると、日時と銃名の自動タイトルに戻ります。": {
       "extractionState": "manual",
       "localizations": {
@@ -2194,6 +2262,40 @@
         }
       }
     },
+    "規制上限": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energy limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "規制上限"
+          }
+        }
+      }
+    },
+    "規制上限は日本の法令上限 0.98 J が既定です。フィールド独自の上限があるときは、その値に変えられます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The limit defaults to 0.98 J, the Japanese legal limit. If your field has its own limit, enter that instead."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "規制上限は日本の法令上限 0.98 J が既定です。フィールド独自の上限があるときは、その値に変えられます。"
+          }
+        }
+      }
+    },
     "計測に使うプロファイル": {
       "extractionState": "manual",
       "localizations": {
@@ -2207,6 +2309,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "計測に使うプロファイル"
+          }
+        }
+      }
+    },
+    "計測の既定値": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Measurement defaults"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "計測の既定値"
           }
         }
       }
@@ -2313,36 +2432,19 @@
         }
       }
     },
-    "選択中のプロファイルの BB 重量でジュールを計算します。タップで編集、右スワイプで選択、左スワイプで削除。": {
+    "重量": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Joules are calculated with the BB weight of the selected profile. Tap to edit, swipe right to select, swipe left to delete."
+            "value": "Weight"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択中のプロファイルの BB 重量でジュールを計算します。タップで編集、右スワイプで選択、左スワイプで削除。"
-          }
-        }
-      }
-    },
-    "重量 (g)": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weight (g)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重量 (g)"
+            "value": "重量"
           }
         }
       }
@@ -2432,19 +2534,19 @@
         }
       }
     },
-    "駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。": {
+    "駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。ガス種別はセッションごとに変えられます。": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Different power sources react differently to temperature, so this helps when you look back at a session."
+            "value": "Power sources react differently to temperature, which helps when you look back at your data. The gas type is set per session."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。"
+            "value": "駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。ガス種別はセッションごとに変えられます。"
           }
         }
       }

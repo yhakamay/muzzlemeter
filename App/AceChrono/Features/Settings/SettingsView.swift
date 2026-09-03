@@ -43,8 +43,8 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(profile.name)
                                     HStack(spacing: 6) {
-                                        PowerSourceBadge(source: profile.powerSource)
-                                        Text(GunProfile.weightLabel(profile.bbWeightGrams))
+                                        PowerCategoryBadge(category: profile.powerCategory)
+                                        Text(GunProfile.weightLabel(profile.defaultBBWeightGrams))
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
@@ -72,7 +72,7 @@ struct SettingsView: View {
                 } footer: {
                     // スワイプの向きは実装と一致させる: 選択は leading（右スワイプ）、
                     // 削除は onDelete（左スワイプ）。逆に書くと破壊的操作に誘導してしまう。
-                    Text("選択中のプロファイルの BB 重量でジュールを計算します。タップで編集、右スワイプで選択、左スワイプで削除。")
+                    Text("プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで編集、右スワイプで選択、左スワイプで削除。")
                 }
 
                 Section {
@@ -148,10 +148,13 @@ struct GunProfileDraft {
     var name: String = ""
     var manufacturer: String = ""
     var model: String = ""
-    var powerSource: PowerSource = .electric
-    var bbWeightGrams: Double = 0.25
+    var powerCategory: PowerCategory = .electric
     var innerBarrelLengthMm: Int?
-    var hopNotes: String = ""
+    var energyLimitJoules: Double = 0.98
+    // 計測の既定値（セッション変数の初期値）。
+    var defaultBBWeightGrams: Double = 0.25
+    var defaultGasType: GasType = .hfc134a
+    var defaultHopSetting: String = ""
     var notes: String = ""
 
     init() {}
@@ -160,10 +163,12 @@ struct GunProfileDraft {
         name = profile.name
         manufacturer = profile.manufacturer
         model = profile.model
-        powerSource = profile.powerSource
-        bbWeightGrams = profile.bbWeightGrams
+        powerCategory = profile.powerCategory
         innerBarrelLengthMm = profile.innerBarrelLengthMm
-        hopNotes = profile.hopNotes
+        energyLimitJoules = profile.energyLimitJoules
+        defaultBBWeightGrams = profile.defaultBBWeightGrams
+        defaultGasType = profile.defaultGasType
+        defaultHopSetting = profile.defaultHopSetting
         notes = profile.notes
     }
 
@@ -171,15 +176,17 @@ struct GunProfileDraft {
         profile.name = name
         profile.manufacturer = manufacturer
         profile.model = model
-        profile.powerSource = powerSource
-        profile.bbWeightGrams = bbWeightGrams
+        profile.powerCategory = powerCategory
         profile.innerBarrelLengthMm = innerBarrelLengthMm
-        profile.hopNotes = hopNotes
+        profile.energyLimitJoules = energyLimitJoules
+        profile.defaultBBWeightGrams = defaultBBWeightGrams
+        profile.defaultGasType = defaultGasType
+        profile.defaultHopSetting = defaultHopSetting.trimmingCharacters(in: .whitespacesAndNewlines)
         profile.notes = notes
     }
 
     func makeProfile() -> GunProfile {
-        let profile = GunProfile(name: name, bbWeightGrams: bbWeightGrams)
+        let profile = GunProfile(name: name, bbWeightGrams: defaultBBWeightGrams)
         apply(to: profile)
         return profile
     }
@@ -192,18 +199,16 @@ struct GunProfileEditor: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var draft: GunProfileDraft
-    @State private var isCustomWeight: Bool
-    @State private var customWeightText: String
     @State private var barrelText: String
+    @State private var limitText: String
 
     init(profile: GunProfile?, onSave: @escaping (GunProfileDraft) -> Void) {
         self.profile = profile
         self.onSave = onSave
         let draft = profile.map(GunProfileDraft.init(profile:)) ?? GunProfileDraft()
         _draft = State(initialValue: draft)
-        _isCustomWeight = State(initialValue: !GunProfile.weightPresets.contains(draft.bbWeightGrams))
-        _customWeightText = State(initialValue: String(format: "%.2f", draft.bbWeightGrams))
         _barrelText = State(initialValue: draft.innerBarrelLengthMm.map(String.init) ?? "")
+        _limitText = State(initialValue: String(format: "%.2f", draft.energyLimitJoules))
     }
 
     var body: some View {
@@ -216,41 +221,29 @@ struct GunProfileEditor: View {
                 }
 
                 Section {
-                    // セクション見出しが「パワーソース」なので、行の見出しは「種類」にする
+                    // セクション見出しが「パワーソース」なので、行の見出しは「区分」にする
                     // （同じ語が 2 段続くと、どちらが何なのか読み取れない）。
-                    Picker("種類", selection: $draft.powerSource) {
-                        ForEach(PowerSource.allCases) { source in
-                            Text(source.label).tag(source)
+                    Picker("区分", selection: $draft.powerCategory) {
+                        ForEach(PowerCategory.allCases) { category in
+                            Text(category.label).tag(category)
+                        }
+                    }
+                    // ガス種別は**その回ごとに変わる**のでセッション側が本体。ここにあるのは
+                    // 新しいセッションを始めるときの初期値なので、ガスのときだけ訊く。
+                    if draft.powerCategory.usesGas {
+                        Picker("ガス種別の既定値", selection: $draft.defaultGasType) {
+                            ForEach(GasType.allCases) { gas in
+                                Text(gas.label).tag(gas)
+                            }
                         }
                     }
                 } header: {
                     Text("パワーソース")
                 } footer: {
-                    Text("駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。")
+                    Text("駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。ガス種別はセッションごとに変えられます。")
                 }
 
-                Section("仕様") {
-                    // `.wheel` はピッカーのラベルを描かないので、何を選んでいるのか
-                    // 分かるように見出しを自前で出す（表示単位の設定と同じ扱い）。
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("BB 重量")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Picker("BB 重量", selection: $draft.bbWeightGrams) {
-                            ForEach(GunProfile.weightPresets, id: \.self) { preset in
-                                Text(verbatim: GunProfile.weightLabel(preset)).tag(preset)
-                            }
-                        }
-                        .pickerStyle(.wheel)
-                        .disabled(isCustomWeight)
-                    }
-
-                    Toggle("自由入力", isOn: $isCustomWeight)
-                    if isCustomWeight {
-                        TextField("重量 (g)", text: $customWeightText)
-                            .keyboardType(.decimalPad)
-                    }
-
+                Section {
                     HStack {
                         Text("インナーバレル長")
                         Spacer()
@@ -261,23 +254,40 @@ struct GunProfileEditor: View {
                         Text(verbatim: "mm")
                             .foregroundStyle(.secondary)
                     }
+
+                    HStack {
+                        Text("規制上限")
+                        Spacer()
+                        TextField("0.98", text: $limitText)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 90)
+                        Text(verbatim: "J")
+                            .foregroundStyle(.secondary)
+                    }
+                } header: {
+                    Text("仕様")
+                } footer: {
+                    Text("規制上限は日本の法令上限 0.98 J が既定です。フィールド独自の上限があるときは、その値に変えられます。")
+                }
+
+                Section {
+                    BBWeightPicker(grams: $draft.defaultBBWeightGrams)
+                    HStack {
+                        Text("ホップ")
+                        Spacer()
+                        TextField("例: 3 / 少し強め", text: $draft.defaultHopSetting)
+                            .multilineTextAlignment(.trailing)
+                    }
+                } header: {
+                    Text("計測の既定値")
+                } footer: {
+                    Text("新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。")
                 }
 
                 Section("メモ") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("ホップ調整")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("例: 押しゴム交換、1/4 戻し", text: $draft.hopNotes, axis: .vertical)
-                            .lineLimit(2...4)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("その他")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("スプリング、内部カスタム、注意点など", text: $draft.notes, axis: .vertical)
-                            .lineLimit(3...8)
-                    }
+                    TextField("スプリング、内部カスタム、注意点など", text: $draft.notes, axis: .vertical)
+                        .lineLimit(3...8)
                 }
             }
             .navigationTitle(profile == nil ? "プロファイルを追加" : "プロファイルを編集")
@@ -291,7 +301,7 @@ struct GunProfileEditor: View {
                         onSave(resolvedDraft)
                         dismiss()
                     }
-                    .disabled(trimmedName.isEmpty || effectiveWeight <= 0)
+                    .disabled(trimmedName.isEmpty || draft.defaultBBWeightGrams <= 0)
                 }
             }
         }
@@ -312,14 +322,14 @@ struct GunProfileEditor: View {
         }
     }
 
-    /// テキスト入力の項目（重量・バレル長）を下書きへ畳み込んだもの。
+    /// テキスト入力の項目（バレル長・規制上限）を下書きへ畳み込んだもの。
     private var resolvedDraft: GunProfileDraft {
         var resolved = draft
         resolved.name = trimmedName
         resolved.manufacturer = draft.manufacturer.trimmingCharacters(in: .whitespacesAndNewlines)
         resolved.model = draft.model.trimmingCharacters(in: .whitespacesAndNewlines)
-        resolved.bbWeightGrams = effectiveWeight
         resolved.innerBarrelLengthMm = effectiveBarrelLength
+        resolved.energyLimitJoules = effectiveEnergyLimit
         return resolved
     }
 
@@ -327,9 +337,13 @@ struct GunProfileEditor: View {
         draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var effectiveWeight: Double {
-        guard isCustomWeight else { return draft.bbWeightGrams }
-        return Double(customWeightText.replacingOccurrences(of: ",", with: ".")) ?? 0
+    /// 空欄・0 以下は既定の 0.98 J に戻す（上限 0 J は意味を成さない）。
+    private var effectiveEnergyLimit: Double {
+        let normalized = limitText
+            .trimmingCharacters(in: .whitespaces)
+            .replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(normalized), value > 0 else { return 0.98 }
+        return value
     }
 
     /// 空欄・0 以下は「未設定」にする（0 mm のバレルは存在しない）。

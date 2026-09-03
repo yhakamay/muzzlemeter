@@ -52,14 +52,71 @@ final class ChronoService {
     /// 選択中の銃プロファイル。ジュール計算と新規セッションのスナップショットに使う。
     var selectedProfile: GunProfile? {
         didSet {
+            guard selectedProfile != oldValue else { return }
             defaults.set(selectedProfile?.name, forKey: Keys.selectedProfileName)
+            // 銃を替えたら、次のセッションの条件はその銃の既定値から始める。
+            // 前の銃の 0.20 g が黙って引き継がれると、ジュールが静かに間違う。
+            pendingVariables = selectedProfile?.defaultVariables ?? SessionVariables()
             recomputeStats()
         }
     }
 
-    /// 統計・ジュール計算に使う BB 重量。プロファイル未選択なら 0.25 g。
-    var massGrams: Double { selectedProfile?.bbWeightGrams ?? 0.25 }
+    /// **次のセッションが始まるときの条件**。待機中に編集できるのはこれ。
+    ///
+    /// セッションはまだ存在しない（1 発目で作られる）ので、条件を置いておく場所が要る。
+    /// プロファイルの既定値からコピーして持ち、1 発目でセッションへ焼き込む。
+    private(set) var pendingVariables = SessionVariables()
+
+    /// いま効いている計測条件。計測中はセッションの値、待機中は `pendingVariables`。
+    ///
+    /// 書き込むと、計測中ならセッション全体（統計・ジュール・CSV）が計算し直される。
+    var variables: SessionVariables {
+        get { activeSession?.variables ?? pendingVariables }
+        set {
+            let normalized = newValue.normalized
+            if let session = activeSession {
+                session.variables = normalized
+                try? modelContext?.save()
+            } else {
+                pendingVariables = normalized
+            }
+            recomputeStats()
+        }
+    }
+
+    /// いま効いているパワーソース区分。ガス種別を訊くかどうかの判定に使う。
+    var powerCategory: PowerCategory {
+        activeSession?.gunPowerCategory ?? selectedProfile?.powerCategory ?? .electric
+    }
+
+    /// いま効いている規制上限（J）。
+    var energyLimitJoules: Double {
+        activeSession?.energyLimitJoules ?? selectedProfile?.energyLimitJoules ?? 0.98
+    }
+
+    /// 統計・ジュール計算に使う BB 重量。
+    var massGrams: Double { variables.bbWeightGrams }
     var gunName: String { selectedProfile?.name ?? String(localized: "未設定") }
+
+    /// いまの条件をプロファイルの既定値として書き戻す。
+    func saveVariablesAsProfileDefaults() {
+        guard let profile = selectedProfile else { return }
+        let current = variables
+        profile.defaultBBWeightGrams = current.bbWeightGrams
+        profile.defaultGasType = current.gasType
+        profile.defaultHopSetting = current.hopSetting
+        try? modelContext?.save()
+    }
+
+    /// 条件をプロファイルの既定値へ戻す。
+    func resetVariablesToProfileDefaults() {
+        variables = selectedProfile?.defaultVariables ?? SessionVariables()
+    }
+
+    /// プロファイルの既定値と一致しているか（「既定値に戻す」を出すかの判定）。
+    var variablesMatchProfileDefaults: Bool {
+        variables.normalized == (selectedProfile?.defaultVariables ?? SessionVariables()).normalized
+    }
 
     // MARK: - 内部
 
@@ -106,6 +163,8 @@ final class ChronoService {
     /// SwiftData のコンテキストを渡してイベントの取り込みを始める。View の `.task` から呼ぶ。
     func start(modelContext: ModelContext) {
         if self.modelContext == nil { self.modelContext = modelContext }
+        // プロファイルを読む前に走らせる。旧「パワーソース」を区分とガス種別へ割る。
+        StoreMigration.run(in: modelContext)
         restoreSelectedProfileIfNeeded()
         closeSessionsLeftOpen(in: modelContext)
         guard eventTask == nil else { return }
@@ -205,12 +264,14 @@ final class ChronoService {
     private func beginSession(in modelContext: ModelContext) -> Session {
         // 銃の仕様はプロファイルへの参照ではなく**値でコピー**する。
         // 後からプロファイルを直しても、過去の計測が何で撃たれたかは変わらないため。
+        // セッション変数は「次に始まる条件」（待機中に触れる値）をそのまま焼き込む。
         let profile = selectedProfile
         let session = Session(
             startedAt: Date(),
             gunName: gunName,
-            bbWeightGrams: massGrams,
-            gunPowerSource: profile?.powerSource,
+            variables: pendingVariables,
+            gunPowerCategory: profile?.powerCategory,
+            energyLimitJoules: profile?.energyLimitJoules ?? 0.98,
             gunManufacturer: profile?.manufacturer ?? "",
             gunModel: profile?.model ?? "",
             gunInnerBarrelLengthMm: profile?.innerBarrelLengthMm
@@ -257,6 +318,9 @@ final class ChronoService {
         guard let session = activeSession else { return }
         session.endedAt = Date()
         try? modelContext?.save()
+        // 続けて撃つときは同じ条件のはず。締めた条件を次のセッションへ引き継ぐ
+        // （プロファイルの既定値へ戻したいときは「既定値に戻す」で戻せる）。
+        pendingVariables = session.variables
         activeSession = nil
         currentShots = []
         lastShot = nil
@@ -266,6 +330,7 @@ final class ChronoService {
     /// 進行中セッションを破棄する（誤射などをまとめて捨てる）。
     func discardSession() {
         if let session = activeSession, let modelContext {
+            pendingVariables = session.variables
             modelContext.delete(session)
             try? modelContext.save()
         }

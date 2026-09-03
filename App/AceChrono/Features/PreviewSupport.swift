@@ -23,8 +23,23 @@ enum PreviewSupport {
     }()
 
     static func seed(into context: ModelContext) {
-        let profile = GunProfile(name: "次世代 M4", bbWeightGrams: 0.25)
+        let profile = GunProfile(
+            name: "次世代 M4",
+            bbWeightGrams: 0.25,
+            powerCategory: .electric,
+            defaultHopSetting: "3",
+            manufacturer: "東京マルイ",
+            model: "HK416D"
+        )
         context.insert(profile)
+        context.insert(
+            GunProfile(
+                name: "ハンドガン",
+                bbWeightGrams: 0.20,
+                powerCategory: .gas,
+                defaultGasType: .hfc134a
+            )
+        )
 
         let velocities: [[Double]] = [
             [91.2, 92.5, 90.8, 93.1, 91.7, 92.9, 90.1, 92.2],
@@ -36,7 +51,10 @@ enum PreviewSupport {
                 startedAt: start,
                 endedAt: start.addingTimeInterval(Double(group.count) * 2),
                 gunName: index == 0 ? "次世代 M4" : "ハンドガン",
-                bbWeightGrams: index == 0 ? 0.25 : 0.20
+                variables: index == 0
+                    ? SessionVariables(bbWeightGrams: 0.25, hopSetting: "3")
+                    : SessionVariables(bbWeightGrams: 0.20, gasType: .hfc134a, hopSetting: "弱め"),
+                gunPowerCategory: index == 0 ? .electric : .gas
             )
             context.insert(session)
             for (shotIndex, velocity) in group.enumerated() {
@@ -56,6 +74,6 @@ enum PreviewSupport {
     static var sampleSession: Session {
         let descriptor = FetchDescriptor<Session>()
         return (try? container.mainContext.fetch(descriptor))?.first
-            ?? Session(gunName: "サンプル", bbWeightGrams: 0.25)
+            ?? Session(gunName: "サンプル")
     }
 }

@@ -17,14 +17,35 @@ final class Session {
     var title: String?
     /// 計測時の銃プロファイル名（スナップショット）。
     var gunName: String
-    /// 計測時の BB 重量（スナップショット、g）。
+
+    // MARK: - セッション変数（その回の条件）
+    //
+    // プロファイルの既定値を**開始時にコピー**したもの。あとから変えられ、変えれば
+    // このセッション全体のジュールが計算し直される（`SessionVariables` のコメント参照）。
+
+    /// 計測時の BB 重量（g）。
     var bbWeightGrams: Double
+    /// 計測時のガス種別（`GasType.rawValue`）。区分がガスのときだけ意味を持つ。
+    var gasTypeRaw: String = GasType.hfc134a.rawValue
+    /// 計測時のホップ設定（自由記述）。空文字は「記録なし」。
+    var hopSetting: String = ""
+    /// タグ。改行区切りの 1 列で持つ（絞り込み UI は Round C）。
+    ///
+    /// `[String]` を transformable にすると述語で扱えず、別モデルにするとテーブルが
+    /// 増える。件数が高々数個なので、**文字列 1 列**で足りる。
+    var tagsRaw: String = ""
 
     // 銃の仕様も**値としてコピー**する（`GunProfile` を参照しない）。
     // 銃名・BB 重量と同じ理由で、後からプロファイルを直しても過去の計測の
     // 記録が書き換わってはいけない。既定値付きなのでライトウェイトマイグレーション。
-    /// 計測時のパワーソース（`PowerSource.rawValue`）。空文字は「記録なし」。
+
+    /// 旧スキーマの「パワーソース」（区分とガス種別が混ざっていた）。移行元としてだけ残す。
     var gunPowerSourceRaw: String = ""
+    /// 計測時のパワーソース区分（`PowerCategory.rawValue`）。空文字は「記録なし」。
+    var gunPowerCategoryRaw: String = ""
+    /// 計測時に適用していた規制上限（J）。あとからプロファイルの上限を変えても、
+    /// 「そのときは何 J までのつもりで撃っていたか」は変わってはいけない。
+    var energyLimitJoules: Double = 0.98
     var gunManufacturer: String = ""
     var gunModel: String = ""
     var gunInnerBarrelLengthMm: Int?
@@ -68,8 +89,9 @@ final class Session {
         endedAt: Date? = nil,
         title: String? = nil,
         gunName: String,
-        bbWeightGrams: Double,
-        gunPowerSource: PowerSource? = nil,
+        variables: SessionVariables = SessionVariables(),
+        gunPowerCategory: PowerCategory? = nil,
+        energyLimitJoules: Double = 0.98,
         gunManufacturer: String = "",
         gunModel: String = "",
         gunInnerBarrelLengthMm: Int? = nil
@@ -78,16 +100,65 @@ final class Session {
         self.endedAt = endedAt
         self.title = title
         self.gunName = gunName
-        self.bbWeightGrams = bbWeightGrams
-        self.gunPowerSourceRaw = gunPowerSource?.rawValue ?? ""
+        let variables = variables.normalized
+        self.bbWeightGrams = variables.bbWeightGrams
+        self.gasTypeRaw = variables.gasType.rawValue
+        self.hopSetting = variables.hopSetting
+        self.gunPowerCategoryRaw = gunPowerCategory?.rawValue ?? ""
+        self.energyLimitJoules = energyLimitJoules
         self.gunManufacturer = gunManufacturer
         self.gunModel = gunModel
         self.gunInnerBarrelLengthMm = gunInnerBarrelLengthMm
     }
 
-    /// 記録されているパワーソース。古いセッション（列が無かった頃）は nil。
-    var gunPowerSource: PowerSource? {
-        PowerSource(rawValue: gunPowerSourceRaw)
+    /// 記録されているパワーソース区分。古いセッション（列が無かった頃）は nil。
+    var gunPowerCategory: PowerCategory? {
+        PowerCategory(rawValue: gunPowerCategoryRaw)
+    }
+
+    /// 記録されているガス種別。区分がガスでなければ nil（出しても意味が無い）。
+    var gasType: GasType? {
+        guard gunPowerCategory?.usesGas == true else { return nil }
+        return GasType(rawValue: gasTypeRaw)
+    }
+
+    // MARK: - セッション変数
+
+    /// その回の計測条件。書き込むと BB 重量が変わり、統計・ジュールが計算し直される。
+    var variables: SessionVariables {
+        get {
+            SessionVariables(
+                bbWeightGrams: bbWeightGrams,
+                gasType: GasType(rawValue: gasTypeRaw) ?? .hfc134a,
+                hopSetting: hopSetting
+            )
+        }
+        set {
+            let normalized = newValue.normalized
+            bbWeightGrams = normalized.bbWeightGrams
+            gasTypeRaw = normalized.gasType.rawValue
+            hopSetting = normalized.hopSetting
+        }
+    }
+
+    /// 詳細画面などに出す 1 行（`0.25 g · HFC134a · ホップ 3`）。
+    var variablesSummary: String {
+        variables.summary(category: gunPowerCategory ?? .electric)
+    }
+
+    /// タグ。改行区切りの 1 列を配列として読み書きする窓口。
+    var tags: [String] {
+        get {
+            tagsRaw.split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+        }
+        set {
+            tagsRaw = newValue
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+                .joined(separator: "\n")
+        }
     }
 
     /// 「メーカー モデル」を 1 行にしたもの。どちらも空なら nil。

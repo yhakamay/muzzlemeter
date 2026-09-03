@@ -21,14 +21,38 @@ struct SessionDetailView: View {
                 if let makeAndModel = session.gunMakeAndModel {
                     LabeledContent("メーカー / モデル", value: makeAndModel)
                 }
-                if let powerSource = session.gunPowerSource {
+                if let category = session.gunPowerCategory {
                     LabeledContent("パワーソース") {
-                        PowerSourceBadge(source: powerSource)
+                        PowerCategoryBadge(category: category)
                     }
                 }
-                LabeledContent("BB 重量", value: GunProfile.weightLabel(session.bbWeightGrams))
                 if let barrel = session.gunInnerBarrelLengthMm {
                     LabeledContent("インナーバレル長", value: "\(barrel) mm")
+                }
+            }
+
+            // 「その回の条件」。統計とジュールはすべてこの値で計算されているので、
+            // 銃の仕様とは別のまとまりとして、数字より先に読める位置に置く。
+            Section {
+                LabeledContent("BB 重量", value: GunProfile.weightLabel(session.bbWeightGrams))
+                if let gasType = session.gasType {
+                    LabeledContent("ガス種別", value: gasType.label)
+                }
+                if !session.hopSetting.isEmpty {
+                    LabeledContent("ホップ", value: session.hopSetting)
+                }
+                LabeledContent(
+                    "規制上限",
+                    value: GunProfile.energyLimitLabel(session.energyLimitJoules)
+                )
+            } header: {
+                HStack {
+                    Text("セッション条件")
+                    Spacer()
+                    // 一瞥用の 1 行。Live 画面のピル直下に出ているものと同じ書式にして、
+                    // 「あのとき見ていた条件」とそのまま突き合わせられるようにする。
+                    Text(verbatim: session.variablesSummary)
+                        .textCase(nil)
                 }
             }
 

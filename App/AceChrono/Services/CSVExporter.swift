@@ -13,11 +13,14 @@ enum CSVExporter {
         "session_id",
         "session_title",
         "gun",
-        "power_source",
+        "power_category",
         "manufacturer",
         "model",
         "inner_barrel_mm",
         "bb_weight_g",
+        "gas_type",
+        "hop_setting",
+        "energy_limit_j",
         "velocity_mps",
         "velocity_fps",
         "joules",
@@ -47,9 +50,14 @@ enum CSVExporter {
         let sessionID = Self.identifier(for: session)
         let gun = escape(session.gunName)
         let title = escape(session.displayTitle)
-        // パワーソースは表示名ではなく raw 値を出す。表計算で集計するときに
+        // 区分とガス種別は表示名ではなく raw 値を出す。表計算で集計するときに
         // 言語設定で列の中身が変わってしまうと使い物にならない。
-        let powerSource = session.gunPowerSourceRaw
+        let powerCategory = session.gunPowerCategoryRaw
+        // ガス種別は区分がガスのときだけ意味を持つ。それ以外は空欄にする
+        // （電動の行に「hfc134a」が並ぶと、集計の邪魔にしかならない）。
+        let gasType = session.gasType?.rawValue ?? ""
+        let hopSetting = escape(session.hopSetting)
+        let energyLimit = String(format: "%.2f", session.energyLimitJoules)
         let manufacturer = escape(session.gunManufacturer)
         let model = escape(session.gunModel)
         let barrel = session.gunInnerBarrelLengthMm.map(String.init) ?? ""
@@ -71,11 +79,14 @@ enum CSVExporter {
                 sessionID,
                 title,
                 gun,
-                powerSource,
+                powerCategory,
                 manufacturer,
                 model,
                 barrel,
                 String(format: "%.2f", session.bbWeightGrams),
+                gasType,
+                hopSetting,
+                energyLimit,
                 String(format: "%.2f", mps),
                 String(format: "%.1f", SpeedUnit.feetPerSecond.value(fromMetersPerSecond: mps)),
                 String(format: "%.3f", shot.joules(massGrams: session.bbWeightGrams)),
