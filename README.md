@@ -44,6 +44,8 @@ BLE プロトコルが非公開のため**プロトコル解析から始めた**
 | `docs/PROTOCOL.md` | 解析結果（UUID・パケット形式・チェックサム） |
 | `tools/re/` | APK / jadx 出力 / キャプチャログ（gitignore） |
 | `App/AceChrono/` | iOS アプリ（SwiftUI + SwiftData） |
+| `App/AceChrono/Resources/Localizable.xcstrings` | UI 文言の String Catalog。**ベース言語は ja**、en は完全な翻訳 |
+| `App/Info.plist` | `CFBundleLocalizations` だけを持つ土台。他のキーはビルド設定から合成される |
 | `project.yml` | XcodeGen 定義。`.xcodeproj` はここから生成する |
 
 ## acechrono-sniff の使い方

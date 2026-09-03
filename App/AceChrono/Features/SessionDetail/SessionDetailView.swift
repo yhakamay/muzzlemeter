@@ -35,7 +35,7 @@ struct SessionDetailView: View {
             Section("ショット") {
                 ForEach(Array(shots.enumerated()), id: \.element.persistentModelID) { index, shot in
                     HStack {
-                        Text("\(index + 1)")
+                        Text(verbatim: "\(index + 1)")
                             .font(.caption.monospacedDigit())
                             .foregroundStyle(.tertiary)
                             .frame(width: 32, alignment: .leading)
@@ -90,13 +90,13 @@ struct SessionDetailView: View {
             Chart {
                 if let mean, let sd {
                     RectangleMark(
-                        yStart: .value("−SD", mean - sd),
-                        yEnd: .value("+SD", mean + sd)
+                        yStart: .value(String(localized: "−SD"), mean - sd),
+                        yEnd: .value(String(localized: "+SD"), mean + sd)
                     )
                     .foregroundStyle(.blue.opacity(0.12))
                 }
                 if let mean {
-                    RuleMark(y: .value("平均", mean))
+                    RuleMark(y: .value(String(localized: "平均"), mean))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                         .foregroundStyle(.secondary)
                         .annotation(position: .top, alignment: .leading, spacing: 2) {
@@ -111,13 +111,13 @@ struct SessionDetailView: View {
                 }
                 ForEach(values, id: \.index) { point in
                     LineMark(
-                        x: .value("発", point.index),
-                        y: .value("速度", point.value)
+                        x: .value(String(localized: "発"), point.index),
+                        y: .value(String(localized: "速度"), point.value)
                     )
                     .foregroundStyle(.blue)
                     PointMark(
-                        x: .value("発", point.index),
-                        y: .value("速度", point.value)
+                        x: .value(String(localized: "発"), point.index),
+                        y: .value(String(localized: "速度"), point.value)
                     )
                     .symbolSize(24)
                     .foregroundStyle(.blue)
@@ -127,7 +127,7 @@ struct SessionDetailView: View {
             // 見たいのは「どれだけ散っているか」なので、データの範囲だけを取る。
             .chartYScale(domain: .automatic(includesZero: false))
             .chartYAxisLabel(unit.symbol)
-            .chartXAxisLabel("発目")
+            .chartXAxisLabel { Text("発目") }
         }
     }
 }

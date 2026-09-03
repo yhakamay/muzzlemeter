@@ -59,7 +59,7 @@ final class ChronoService {
 
     /// 統計・ジュール計算に使う BB 重量。プロファイル未選択なら 0.25 g。
     var massGrams: Double { selectedProfile?.bbWeightGrams ?? 0.25 }
-    var gunName: String { selectedProfile?.name ?? "未設定" }
+    var gunName: String { selectedProfile?.name ?? String(localized: "未設定") }
 
     // MARK: - 内部
 
@@ -268,7 +268,7 @@ final class ChronoService {
         let profiles = (try? modelContext.fetch(FetchDescriptor<GunProfile>())) ?? []
         if profiles.isEmpty {
             // 初回起動: 既定プロファイルを 1 つ作る。設定を強要しない。
-            let profile = GunProfile(name: "マイガン", bbWeightGrams: 0.25)
+            let profile = GunProfile(name: String(localized: "マイガン"), bbWeightGrams: 0.25)
             modelContext.insert(profile)
             try? modelContext.save()
             selectedProfile = profile

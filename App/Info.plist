@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 残りのキーは GENERATE_INFOPLIST_FILE と INFOPLIST_KEY_* から合成される。
+	     ここには「ビルド設定では配列を書けないキー」だけを置く。 -->
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ja</string>
+		<string>en</string>
+	</array>
+</dict>
+</plist>

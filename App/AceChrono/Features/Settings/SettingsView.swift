@@ -21,15 +21,15 @@ struct SettingsView: View {
                     // 分かるように見出しを自前で出す（「RPS / RPM」だけでは意味が読めない）。
                     segmented("弾速") {
                         Picker("弾速", selection: $service.speedUnit) {
-                            Text("m/s").tag(SpeedUnit.metersPerSecond)
-                            Text("fps").tag(SpeedUnit.feetPerSecond)
+                            Text(verbatim: "m/s").tag(SpeedUnit.metersPerSecond)
+                            Text(verbatim: "fps").tag(SpeedUnit.feetPerSecond)
                         }
                     }
 
                     segmented("連射速度") {
                         Picker("連射速度", selection: $service.rateOfFireUnit) {
-                            Text("RPS").tag(RateOfFireUnit.rps)
-                            Text("RPM").tag(RateOfFireUnit.rpm)
+                            Text(verbatim: "RPS").tag(RateOfFireUnit.rps)
+                            Text(verbatim: "RPM").tag(RateOfFireUnit.rpm)
                         }
                     }
                 }
@@ -112,7 +112,10 @@ struct SettingsView: View {
     }
 
     /// セグメンテッドピッカーに見出しを添えた 1 行。
-    private func segmented(_ title: String, @ViewBuilder content: () -> some View) -> some View {
+    ///
+    /// 見出しは `LocalizedStringKey` で受ける。`String` にすると、呼び出し側が書いた
+    /// 日本語リテラルがそのまま `Text` に渡って**翻訳されない**（実際に一度そうなった）。
+    private func segmented(_ title: LocalizedStringKey, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.subheadline)
@@ -163,7 +166,7 @@ struct GunProfileEditor: View {
                 Section("BB 重量") {
                     Picker("プリセット", selection: $weight) {
                         ForEach(GunProfile.weightPresets, id: \.self) { preset in
-                            Text(GunProfile.weightLabel(preset)).tag(preset)
+                            Text(verbatim: GunProfile.weightLabel(preset)).tag(preset)
                         }
                     }
                     .pickerStyle(.wheel)

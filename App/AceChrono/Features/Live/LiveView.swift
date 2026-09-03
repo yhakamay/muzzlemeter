@@ -295,7 +295,8 @@ struct ConnectionPill: View {
         case .pairing: String(localized: "準備中")
         case .ready: String(localized: "接続済み")
         case .disconnected(let reason):
-            reason.map { String(localized: "切断: \($0)") } ?? String(localized: "切断されました")
+            reason.map { String(localized: "切断: \(ConnectionReasonText.localized($0))") }
+                ?? String(localized: "切断されました")
         }
         return isReplaying ? String(localized: "\(base)（デモ再生）") : base
     }

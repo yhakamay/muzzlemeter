@@ -8,6 +8,11 @@ options:
   deploymentTarget:
     iOS: "17.0"
   groupSortPosition: top
+  # UI 文言は日本語で書き、English は翻訳として持つ（詳細は該当コミットの ADR）。
+  # developmentLanguage は CFBundleDevelopmentRegion に、knownRegions は
+  # プロジェクトの既知リージョン（= 各 .lproj の生成対象）になる。
+  developmentLanguage: ja
+  knownRegions: [ja, en, Base]
 
 packages:
   # ルートの Package.swift（AceChronoKit）をローカルパッケージとして参照する。
@@ -17,6 +22,8 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "6.0"
+    # String Catalog へ文言を抽出するために必要（未設定だと .xcstrings が同期されない）。
+    SWIFT_EMIT_LOC_STRINGS: YES
     SWIFT_STRICT_CONCURRENCY: complete
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
@@ -38,8 +45,11 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: AZHMSV7C5P
-        # Info.plist はビルド設定から生成する（別ファイルを持たない）。
+        # Info.plist はビルド設定から合成する。`App/Info.plist` は「ビルド設定では
+        # 配列を書けないキー」だけを持つ土台で、GENERATE_INFOPLIST_FILE と
+        # INFOPLIST_KEY_* の内容がここへマージされる。
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: AceChrono
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "弾速計 AC6000 と接続して計測値を受け取るために Bluetooth を使用します。"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
