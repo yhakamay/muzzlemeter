@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
 
-# 同じブランチ / PR で走っている古いジョブは打ち切る。
+# Cancel superseded runs for the same branch / PR.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -17,10 +17,13 @@ permissions:
 jobs:
   build:
     name: build
-    # Xcode 26 が要る。Xcode 16.4 では @Observable マクロの展開が
-    # `!=` を要求し、SwiftData の @Model 型（GunProfile）が Equatable でないため
-    # アプリのビルドが落ちる（Observation の実装が Xcode 26 で変わっている）。
-    runs-on: macos-26
+    # Xcode 27 (image label `xcode-27`, currently a preview image) matches the
+    # toolchain the app is developed against. Older toolchains have broken this
+    # project twice in ways that only show up at compile time: Xcode 16.4's
+    # @Observable expansion required Equatable on a SwiftData @Model, and
+    # Xcode 27 dropped a conformance that Xcode 26 had supplied. Building on the
+    # same major version the developer uses is what keeps CI honest.
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v7
 
@@ -29,31 +32,27 @@ jobs:
           swift --version
           xcodebuild -version
 
-      # MuzzlemeterKit と muzzlemeter-sniff は SwiftPM だけでビルド・テストできる。
+      # MuzzlemeterKit and muzzlemeter-sniff build and test with SwiftPM alone.
       - name: swift test
         run: swift test
 
-      # .xcodeproj は生成物なのでリポジトリに無い。XcodeGen で作ってからビルドする。
-      # 署名は CI では不要（CODE_SIGNING_ALLOWED=NO）。
+      # The .xcodeproj is generated, so it is not in the repository.
+      # Signing is not needed in CI (CODE_SIGNING_ALLOWED=NO).
       - name: Install XcodeGen
         run: brew install xcodegen
 
       - name: xcodegen generate
         run: xcodegen generate
 
-      # Round E: Muzzlemeter は MuzzlemeterWidgets（ウィジェット拡張）と
-      # MuzzlemeterWatch（watchOS コンパニオンアプリ）を埋め込むようになった。
-      # スキームの検証時に対応プラットフォームの Simulator ランタイムが
-      # 入っていないと「watchOS x.y must be installed」でビルドが落ちる。
-      # ランナーに無いことがあるため、明示的に取得しておく（既にあれば数秒で終わる）。
+      # Muzzlemeter embeds MuzzlemeterWidgets (widget extension) and
+      # MuzzlemeterWatch (watchOS companion app). Scheme validation fails with
+      # "watchOS x.y must be installed" when the runner lacks that simulator
+      # runtime, so fetch it explicitly (a no-op of a few seconds if present).
       - name: Ensure watchOS simulator runtime
         run: xcodebuild -downloadPlatform watchOS
 
-      # -scheme Muzzlemeter は「build: Muzzlemeter / MuzzlemeterWidgets /
-      # MuzzlemeterWatch を all」で構成してある（project.yml）ので、
-      # このコマンド 1 つでアプリ本体・ウィジェット拡張・Watch アプリの
-      # 3 ターゲットすべてがビルドされる。署名は CI では不要
-      # （CODE_SIGNING_ALLOWED=NO）。
+      # The Muzzlemeter scheme builds all three targets (app, widget extension,
+      # watch app) — see project.yml — so this single command covers them.
       - name: Build iOS app + widgets + watch app
         run: |
           xcodebuild -project Muzzlemeter.xcodeproj -scheme Muzzlemeter \
