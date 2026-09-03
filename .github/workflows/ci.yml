@@ -22,7 +22,7 @@ jobs:
     # アプリのビルドが落ちる（Observation の実装が Xcode 26 で変わっている）。
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Show toolchain
         run: |
