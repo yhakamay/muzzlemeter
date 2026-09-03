@@ -1,22 +1,22 @@
 import CoreBluetooth
 import Foundation
 
-// MARK: - バイト列の整形
+// MARK: - Byte string formatting
 
 enum Hex {
-    /// `Data` を "0a 1b 2c" 形式に整形する。
+    /// Formats `Data` as `"0a 1b 2c"`.
     static func string(_ data: Data) -> String {
         data.map { String(format: "%02x", $0) }.joined(separator: " ")
     }
 
-    /// 表示可能 ASCII のみを残し、それ以外を "." に置き換える。
+    /// Keeps only printable ASCII, replacing everything else with `"."`.
     static func ascii(_ data: Data) -> String {
         String(data.map { byte in
             (byte >= 0x20 && byte < 0x7F) ? Character(UnicodeScalar(byte)) : "."
         })
     }
 
-    /// "0a1b2c" / "0a 1b 2c" / "0x0a,0x1b" などを `Data` に変換する。
+    /// Converts `"0a1b2c"` / `"0a 1b 2c"` / `"0x0a,0x1b"` and similar forms into `Data`.
     static func parse(_ text: String) -> Data? {
         var cleaned = text.lowercased()
         for token in ["0x", " ", ",", ":", "-", "_"] {
@@ -36,10 +36,11 @@ enum Hex {
     }
 }
 
-// MARK: - UUID ユーティリティ
+// MARK: - UUID utilities
 
 enum UUIDText {
-    /// 16bit / 32bit の短縮 UUID を 128bit の正規形に揃える（比較用）。
+    /// Normalizes a 16-bit / 32-bit short UUID to its 128-bit canonical form (for
+    /// comparison).
     static func canonical(_ uuid: CBUUID) -> String {
         canonical(uuid.uuidString)
     }
@@ -53,7 +54,8 @@ enum UUIDText {
         }
     }
 
-    /// `CBUUID(string:)` は不正な文字列で ObjC 例外を投げて即死するため、事前に検証する。
+    /// `CBUUID(string:)` throws an ObjC exception (and crashes immediately) on an
+    /// invalid string, so this validates it beforehand.
     static func makeCBUUID(_ text: String) -> CBUUID? {
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         let hexDigits = CharacterSet(charactersIn: "0123456789abcdefABCDEF")
@@ -70,7 +72,7 @@ enum UUIDText {
     }
 }
 
-// MARK: - Characteristic プロパティ
+// MARK: - Characteristic properties
 
 extension CBCharacteristicProperties {
     var descriptions: [String] {
@@ -89,9 +91,9 @@ extension CBCharacteristicProperties {
     }
 }
 
-// MARK: - ログ出力
+// MARK: - Log output
 
-/// stdout と（指定されていれば）ログファイルの両方へ 1 行書き出す。
+/// Writes one line to both stdout and (if given) a log file.
 final class LogWriter: @unchecked Sendable {
     private let handle: FileHandle?
     let path: String?
@@ -127,10 +129,10 @@ final class LogWriter: @unchecked Sendable {
     }
 }
 
-// MARK: - タイムスタンプ
+// MARK: - Timestamps
 
 enum Timestamp {
-    /// ミリ秒付き ISO8601（ローカルタイムゾーン）。
+    /// ISO8601 with milliseconds (local time zone).
     static func iso8601(_ date: Date) -> String {
         formatter.string(from: date)
     }

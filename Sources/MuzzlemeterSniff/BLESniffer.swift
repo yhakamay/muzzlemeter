@@ -2,7 +2,7 @@ import MuzzlemeterKit
 @preconcurrency import CoreBluetooth
 import Foundation
 
-/// 接続対象の指定方法。
+/// How the target to connect to is specified.
 enum PeripheralMatcher: Sendable {
     case name(String)
     case identifier(String)
@@ -20,44 +20,46 @@ enum PeripheralMatcher: Sendable {
     }
 }
 
-/// 送信したい初期化コマンド。
+/// An initialization command to send.
 struct PendingWrite: Sendable {
-    let characteristicUUID: String  // 正規化済み 128bit 文字列
+    let characteristicUUID: String  // normalized 128-bit string
     let payload: Data
     let rawUUIDText: String
     let writeType: WriteTypePreference
 }
 
-/// `dump` サブコマンドの設定。
+/// Settings for the `dump` subcommand.
 ///
-/// タプルの連想値だと、項目が増えるたびに `case .dump(_, _, _, _, let x, _)` の
-/// アンダースコアの数を数えることになる。**構造体にして名前で読む。**
+/// With a tuple's associated values, every new field means counting underscores in
+/// `case .dump(_, _, _, _, let x, _)`. **A struct read by name instead.**
 struct DumpOptions: Sendable {
     let matcher: PeripheralMatcher
     let writes: [PendingWrite]
-    /// `--write` を連続で送るときの間隔（秒）。応答をどの write に対するものか
-    /// 対応付けられるように、既定でも 0 にはしない。
+    /// The interval (seconds) between consecutive `--write`s. Never defaults to 0, so a
+    /// response can be matched to the write that caused it.
     let writeDelay: Double
-    /// `--write-type`。対話モードで種別を明示しなかった write の既定値。
+    /// `--write-type`. The default for a write in interactive mode that didn't specify a
+    /// type explicitly.
     let writeType: WriteTypePreference
-    /// 購読・初期 write 完了後に stdin から追加コマンドを受け付けるか。
+    /// Whether to accept further commands from stdin after subscribing and sending the
+    /// initial writes.
     let interactive: Bool
-    /// 広告の manufacturer data から鍵を取り出し、購読後に `0x4B` READ_KEY を
-    /// 自動で送るか（`--handshake`）。
+    /// Whether to extract the key from the advertisement's manufacturer data and
+    /// automatically send `0x4B` READ_KEY after subscribing (`--handshake`).
     let handshake: Bool
-    /// ハンドシェイクの後に本体内ログ（`0x62` → `0x63`）を読み出すか（`--read-log`）。
-    /// **`0x61`（消去）は決して送らない。**
+    /// Whether to read the device's internal log (`0x62` -> `0x63`) after the handshake
+    /// (`--read-log`). **`0x61` (erase) is never sent.**
     let readLog: Bool
 }
 
-/// 動作モード。
+/// The operating mode.
 enum SniffMode: Sendable {
     case scan(seconds: Double)
     case dump(DumpOptions)
 }
 
-/// CoreBluetooth のデリゲートは専用の DispatchQueue 上で動く。
-/// 内部状態の読み書きはすべてこのキュー上でのみ行うため `@unchecked Sendable`。
+/// CoreBluetooth delegate callbacks run on a dedicated DispatchQueue.
+/// All reads/writes of internal state happen only on that queue, hence `@unchecked Sendable`.
 final class BLESniffer: NSObject, @unchecked Sendable {
     private let mode: SniffMode
     private let serviceFilter: [CBUUID]?
@@ -66,61 +68,67 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 
     private var central: CBCentralManager!
     private var seenPeripherals = [UUID: Date]()
-    /// 接続対象を強参照で保持しないと CoreBluetooth が解放してしまう。
+    /// A strong reference to the connection target — without it, CoreBluetooth would
+    /// deallocate it.
     private var target: CBPeripheral?
     private var pendingServiceCount = 0
     private var pendingReads = Set<String>()
     private var lastPacketAt: Date?
     private var didStartSession = false
 
-    /// 広告の manufacturer data から取り出したチェックサム鍵（`--handshake` 用）。
-    /// 取れなければ 0/0 のまま。受信フレームの復号にも使う。
+    /// The checksum key extracted from the advertisement's manufacturer data (for
+    /// `--handshake`). Stays 0/0 if it couldn't be read. Also used to decrypt received
+    /// frames.
     private var keys: DeviceKeys = .zero
 
-    // MARK: 対話モードの状態（すべて `queue` 上でのみ触る）
+    // MARK: Interactive mode state (touched only on `queue`)
 
-    /// stdin リーダースレッドを起動済みか（再接続で二重に起動しないため）。
+    /// Whether the stdin reader thread has already started (so a reconnect doesn't
+    /// start a second one).
     private var interactiveStarted = false
-    /// プロンプト "> " が画面に出たまま改行されていない。
+    /// Whether the "> " prompt is on screen without a trailing newline yet.
     private var promptShown = false
-    /// write / read の結果を待っていて、返ってきたらプロンプトを出す。
+    /// Waiting for a write / read result; show the prompt once it comes back.
     private var promptPending = false
-    /// 応答が返らなかったときの保険タイマーを、最新の要求だけに効かせるための世代番号。
+    /// A generation number so the fallback timer for a missing response only fires for
+    /// the latest request.
     private var promptToken = 0
-    /// `q` / EOF による終了処理中。再接続を抑止する。
+    /// Currently shutting down via `q` / EOF. Suppresses reconnecting.
     private var isQuitting = false
 
-    // MARK: `--read-log` の状態（すべて `queue` 上でのみ触る）
+    // MARK: `--read-log` state (touched only on `queue`)
 
-    /// いま何の応答を待っているか。
+    /// What response is currently being waited for.
     enum LogReadStep: Sendable, Equatable {
         case idle
         case awaitingCount
         case awaitingRecord(index: Int, total: Int)
     }
-    /// 読み出しの進行状態。
+    /// The readout's progress.
     var logReadStep: LogReadStep = .idle
-    /// 応答が来なかったときの打ち切りタイマーを、最新の要求だけに効かせる世代番号。
+    /// A generation number so the give-up timer for a missing response only fires for
+    /// the latest request.
     var logReadToken = 0
-    /// 受け取った `0x63` の生 payload（最後にまとめて出す）。
+    /// The raw `0x63` payloads received (printed together at the end).
     var logRecordLines = [String]()
 
-    /// dump の設定。scan モードでは nil。
+    /// The dump settings. `nil` in scan mode.
     private var dumpOptions: DumpOptions? {
         if case .dump(let options) = mode { return options }
         return nil
     }
 
-    /// `--write-delay`（秒）。dump 以外では使わない。
+    /// `--write-delay` (seconds). Unused outside of dump.
     private var writeDelay: Double { dumpOptions?.writeDelay ?? 0 }
 
-    /// `--write-type`。対話モードで種別を明示しなかった write に使う。
+    /// `--write-type`. Used for a write in interactive mode that didn't specify a type
+    /// explicitly.
     private var defaultWriteType: WriteTypePreference { dumpOptions?.writeType ?? .auto }
 
-    /// `--handshake`。購読後に鍵付き `0x4B` を自動送信するか。
+    /// `--handshake`. Whether to automatically send the keyed `0x4B` after subscribing.
     private var wantsHandshake: Bool { dumpOptions?.handshake ?? false }
 
-    /// `--read-log`。ハンドシェイク後に本体内ログを読み出すか。
+    /// `--read-log`. Whether to read the device's internal log after the handshake.
     private var wantsLogRead: Bool { dumpOptions?.readLog ?? false }
 
     init(mode: SniffMode, serviceFilter: [CBUUID]?, logger: LogWriter) {
@@ -136,9 +144,9 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         installSignalHandler()
     }
 
-    /// Bluetooth の TCC 権限が無い場合、CoreBluetooth は
-    /// `CBCentralManager` の生成時に何も出力せず SIGABRT でプロセスを落とす。
-    /// 原因が分かるようにヒントを出してから既定の動作に戻す。
+    /// Without Bluetooth TCC permission, CoreBluetooth prints nothing and kills the
+    /// process with SIGABRT the moment `CBCentralManager` is created.
+    /// This prints a hint explaining why, then restores the default handler.
     private func installAbortHint() {
         signal(SIGABRT) { _ in
             let hint = """
@@ -158,11 +166,12 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         }
     }
 
-    // MARK: - 出力ヘルパ
+    // MARK: - Output helpers
 
     private func out(_ line: String) {
-        // プロンプトを出したまま notify が飛んでくると "> [2026-..." と繋がってしまうので、
-        // 先に改行だけ入れる（プロンプトはログファイルには書かない）。
+        // If a notification arrives while the prompt is still showing, it would run
+        // into it as "> [2026-...", so a newline is inserted first (the prompt itself
+        // is never written to the log file).
         if promptShown {
             print("")
             promptShown = false
@@ -189,7 +198,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 
     private var signalSource: DispatchSourceSignal?
 
-    // MARK: - 状態
+    // MARK: - State
 
     private func handle(state: CBManagerState) {
         switch state {
@@ -258,7 +267,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         }
     }
 
-    // MARK: - スキャン結果の表示
+    // MARK: - Displaying scan results
 
     private func describeAdvertisement(_ data: [String: Any], rssi: NSNumber, peripheral: CBPeripheral) -> String {
         let name = peripheral.name
@@ -295,7 +304,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         return parts.joined(separator: "  ")
     }
 
-    // MARK: - 接続後の処理
+    // MARK: - Post-connection processing
 
     private func startDiscovery(_ peripheral: CBPeripheral) {
         pendingServiceCount = 0
@@ -339,18 +348,21 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         performWrites(peripheral)
     }
 
-    /// `--write` を `writeDelay` 間隔で 1 件ずつ送り、終わったら対話モードへ入る。
+    /// Sends `--write` one at a time, spaced `writeDelay` apart, then enters interactive
+    /// mode once done.
     private func performWrites(_ peripheral: CBPeripheral) {
         guard let options = dumpOptions else { return }
         let delay = options.writeDelay
-        // 購読が確定してから送るため少し待つ（AceSoft は CCCD 応答の 564 ms 後に送っていた）。
+        // Wait a bit before sending, since subscription needs to settle first (AceSoft
+        // sent 564 ms after the CCCD response).
         queue.asyncAfter(deadline: .now() + 0.7) { [weak self] in
             guard let self else { return }
             self.sendHandshakeIfNeeded(peripheral)
             let extra = self.wantsHandshake ? max(delay, 0.3) : 0
             self.queue.asyncAfter(deadline: .now() + extra) { [weak self] in
                 guard let self else { return }
-                // ログ読み出しは応答を待ちながら進むので、終わってから --write に移る。
+                // A log readout waits on responses as it proceeds, so it moves on to
+                // --write only after it finishes.
                 if self.wantsLogRead {
                     self.beginLogRead(on: peripheral)
                 } else {
@@ -360,17 +372,20 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         }
     }
 
-    /// ログ読み出しが終わった（または諦めた）ら、残りの `--write` と対話モードへ進む。
+    /// Once the log readout finishes (or gives up), moves on to the remaining
+    /// `--write`s and interactive mode.
     private func finishLogRead(on peripheral: CBPeripheral) {
         guard let options = dumpOptions else { return }
         runWrite(at: 0, of: options.writes, delay: options.writeDelay, on: peripheral)
     }
 
-    /// `--handshake`: 広告から取った鍵を載せた `0x4B` を write characteristic へ送る。
+    /// `--handshake`: sends `0x4B` carrying the key taken from the advertisement to the
+    /// write characteristic.
     ///
-    /// 実機で確認済みの手順（`docs/PROTOCOL.md` §4.3）:
-    /// `aa 06 4b <k1> <k2> <cks>` → 数十 ms 後に `aa 05 41 4b <cks>`（ACK）。
-    /// 鍵が広告に載っていなければ 0/0 で送る（初回ペアリング。本体の電源ボタン押下が要る）。
+    /// The procedure confirmed on real hardware (`docs/PROTOCOL.md` §4.3):
+    /// `aa 06 4b <k1> <k2> <cks>` -> tens of ms later, `aa 05 41 4b <cks>` (ACK).
+    /// If the advertisement doesn't carry a key, this sends 0/0 instead (first-time
+    /// pairing, which requires pressing the device's power button).
     private func sendHandshakeIfNeeded(_ peripheral: CBPeripheral) {
         guard wantsHandshake else { return }
         let target = findCharacteristic(
@@ -386,12 +401,13 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         } else {
             out("handshake: 広告から鍵を取得しました \(keys)")
         }
-        // READ_KEY は鍵確立前のフレームなので 0/0 で署名される（ChronoRequest が面倒を見る）。
+        // READ_KEY is a pre-key-establishment frame, so it's signed with 0/0
+        // (`ChronoRequest` handles this).
         _ = send(
             ChronoCommand.readKey(keys: keys),
             to: target,
             on: peripheral,
-            preference: .with   // 実機の AceSoft は全フレームを Write Request で送っていた
+            preference: .with   // The real AceSoft app sent every frame as a Write Request
         )
     }
 
@@ -411,17 +427,20 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         } else {
             out("write: \(pending.rawUUIDText) が見つかりません（スキップ）")
         }
-        // 応答をどの write のものか対応付けられるよう、次の送信まで間隔を空ける。
+        // Space out until the next send, so a response can be matched to the write that
+        // caused it.
         queue.asyncAfter(deadline: .now() + delay) { [weak self] in
             self?.runWrite(at: index + 1, of: writes, delay: delay, on: peripheral)
         }
     }
 
-    /// `--write-type` / `wr` / `wn` の指定を実際の `CBCharacteristicWriteType` に落とす。
+    /// Resolves a `--write-type` / `wr` / `wn` choice into the actual
+    /// `CBCharacteristicWriteType`.
     ///
-    /// `auto` だけは characteristic のプロパティに従い、書けなければ nil（スキップ）を返す。
-    /// `with` / `without` はプロパティに関わらず**強制する**。プロパティを正しく申告しない
-    /// ファームウェアが相手でも試せることが、このオプションの存在理由だから。
+    /// Only `auto` follows the characteristic's properties, returning nil (skip) if it
+    /// can't be written to. `with` / `without` **force it regardless of the
+    /// properties** — being able to try a firmware that doesn't declare its properties
+    /// correctly is the whole reason this option exists.
     private func resolveWriteType(
         _ preference: WriteTypePreference,
         for characteristic: CBCharacteristic
@@ -446,7 +465,8 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         }
     }
 
-    /// 1 件送信して、応答を待つ必要がある（withResponse）かどうかを返す。
+    /// Sends one write, returning whether a response needs to be waited for
+    /// (withResponse).
     private func send(
         _ payload: Data,
         to characteristic: CBCharacteristic,
@@ -479,8 +499,9 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         return nil
     }
 
-    /// 完全一致（16bit / 32bit の短縮形も正規化して比較）を先に試し、
-    /// 見つからなければ UUID 文字列の前置一致で探す。曖昧なら候補を出して nil を返す。
+    /// Tries an exact match first (normalizing 16-bit / 32-bit short forms for
+    /// comparison too), then falls back to a prefix match on the UUID string. Returns
+    /// nil and prints the candidates if the match is ambiguous.
     private func resolveCharacteristic(_ text: String, in peripheral: CBPeripheral) -> CBCharacteristic? {
         let all = (peripheral.services ?? []).flatMap { $0.characteristics ?? [] }
         if UUIDText.makeCBUUID(text) != nil {
@@ -507,8 +528,8 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         }
     }
 
-    /// 既定の write 先。write（応答あり）を持つものを優先し、無ければ
-    /// writeWithoutResponse を持つ最初のものを使う。
+    /// The default write target. Prefers one with `write` (with response); falls back
+    /// to the first with `writeWithoutResponse`.
     private func defaultWriteCharacteristic(in peripheral: CBPeripheral) -> CBCharacteristic? {
         let all = (peripheral.services ?? []).flatMap { $0.characteristics ?? [] }
         if let withResponse = all.first(where: { $0.properties.contains(.write) }) {
@@ -517,9 +538,10 @@ final class BLESniffer: NSObject, @unchecked Sendable {
         return all.first { $0.properties.contains(.writeWithoutResponse) }
     }
 
-    /// 1 回の write で送れる最大バイト数。ATT_MTU の実測値として使える
-    /// （withoutResponse は ATT_MTU-3、withResponse は最大 512 が返るのが普通）。
-    /// フレームが途中で切れているのか、そもそも届いていないのかを切り分けるために出す。
+    /// The maximum number of bytes sendable in one write. Usable as a measured ATT_MTU
+    /// value (withoutResponse is typically ATT_MTU-3; withResponse usually reports up to
+    /// 512). Printed to help tell whether a frame is being cut short mid-way, or not
+    /// arriving at all.
     private func printMaximumWriteLengths(_ peripheral: CBPeripheral) {
         let withResponse = peripheral.maximumWriteValueLength(for: .withResponse)
         let withoutResponse = peripheral.maximumWriteValueLength(for: .withoutResponse)
@@ -553,14 +575,16 @@ final class BLESniffer: NSObject, @unchecked Sendable {
     }
 }
 
-// MARK: - 対話モード
+// MARK: - Interactive mode
 
 extension BLESniffer {
-    /// 購読と `--write` が済んだ後に呼ばれる。stdin リーダーは 1 回だけ起動する。
+    /// Called once subscription and `--write` have finished. The stdin reader starts
+    /// only once.
     private func startInteractiveIfNeeded(_ peripheral: CBPeripheral) {
         guard dumpOptions?.interactive == true else { return }
         guard !interactiveStarted else {
-            // 再接続後。既定の write 先を出し直してプロンプトに戻る。
+            // After a reconnect: reprint the default write target and return to the
+            // prompt.
             announceDefaultWriteCharacteristic(peripheral)
             prompt()
             return
@@ -583,11 +607,12 @@ extension BLESniffer {
         out("既定の write 種別: --write-type \(defaultWriteType.rawValue)（wr / wn で 1 回ずつ上書きできます）")
     }
 
-    /// `readLine()` はブロックするので専用スレッドで回し、BLE 操作は CoreBluetooth の
-    /// キューへ hop させる。内部状態を触るのは常に `queue` 上だけになる。
+    /// `readLine()` blocks, so it runs on its own thread; BLE operations hop onto
+    /// CoreBluetooth's queue. Internal state is always touched only on `queue`.
     private func startStdinReader() {
-        // 端末なら人間が打つ速度で十分だが、パイプやリダイレクトだと全行が一瞬で
-        // 流れ込んで write が連続してしまう。--write と同じ間隔で読むペースを落とす。
+        // A human typing at a terminal is slow enough on its own, but a pipe or
+        // redirect can dump every line in an instant, sending writes back-to-back. This
+        // paces reads at the same interval as --write.
         let pacing = (isatty(STDIN_FILENO) != 0) ? 0 : writeDelay
         let thread = Thread { [weak self] in
             var isFirst = true
@@ -598,7 +623,8 @@ extension BLESniffer {
                 self.queue.async { self.handle(line: line) }
             }
             guard let self else { return }
-            // 最後のコマンドの応答が出てから終わるよう、少し待ってから終了する。
+            // Wait a bit before quitting, so the last command's response has a chance to
+            // print first.
             Thread.sleep(forTimeInterval: max(pacing, 0.2))
             self.queue.async { self.quit(reason: "EOF") }
         }
@@ -608,7 +634,8 @@ extension BLESniffer {
     }
 
     private func handle(line: String) {
-        // ユーザーが Enter を押した時点で端末側が改行しているので、プロンプトは消えている。
+        // The terminal already printed a newline when the user pressed Enter, so the
+        // prompt is already gone.
         promptShown = false
 
         let commands = InteractiveCommand.parseLine(line)
@@ -619,8 +646,8 @@ extension BLESniffer {
         run(commands, at: 0)
     }
 
-    /// `;` 区切りの複数コマンドを `--write-delay` 間隔で順に実行する。
-    /// プロンプトは最後の 1 つが終わってから出す。
+    /// Runs `;`-separated commands in order, spaced `--write-delay` apart.
+    /// The prompt is shown only once the last one finishes.
     private func run(_ commands: [InteractiveCommand], at index: Int) {
         guard !isQuitting, index < commands.count else { return }
         let waitsForResponse = execute(commands[index])
@@ -633,14 +660,16 @@ extension BLESniffer {
             }
             return
         }
-        // 応答をどのフレームのものか対応付けられるよう、--write と同じ間隔を空ける。
+        // Space out the same as --write, so a response can be matched to the frame that
+        // caused it.
         queue.asyncAfter(deadline: .now() + writeDelay) { [weak self] in
             self?.run(commands, at: index + 1)
         }
     }
 
-    /// 1 コマンドを実行し、非同期の応答（write/read/notify 設定）を待つ必要があるかを返す。
-    /// プロンプトの出し入れは呼び出し側（`run`）の責任。
+    /// Runs one command, returning whether an asynchronous response (write/read/notify
+    /// setting) needs to be waited for. Showing/hiding the prompt is the caller's
+    /// (`run`'s) responsibility.
     private func execute(_ command: InteractiveCommand) -> Bool {
         switch command {
         case .none:
@@ -683,7 +712,7 @@ extension BLESniffer {
                 if characteristic == nil { out("書き込める characteristic がありません。") }
             }
             guard let characteristic else { return false }
-            // 種別を明示していなければ --write-type に従う。
+            // Falls back to --write-type when the type wasn't specified explicitly.
             return send(
                 payload,
                 to: characteristic,
@@ -704,7 +733,7 @@ extension BLESniffer {
             }
             pendingReads.insert(UUIDText.canonical(characteristic.uuid))
             peripheral.readValue(for: characteristic)
-            return true  // didUpdateValueFor を待つ
+            return true  // wait for didUpdateValueFor
 
         case .setNotify(let targetText, let enabled):
             guard let peripheral = target,
@@ -720,7 +749,7 @@ extension BLESniffer {
             }
             out("\(enabled ? "subscribe" : "unsubscribe"): \(characteristic.uuid.uuidString)")
             peripheral.setNotifyValue(enabled, for: characteristic)
-            return true  // didUpdateNotificationStateFor を待つ
+            return true  // wait for didUpdateNotificationStateFor
 
         case .invalid(let message):
             out(message)
@@ -729,19 +758,21 @@ extension BLESniffer {
         }
     }
 
-    /// 結果行の直後・起動直後だけプロンプトを出す。notify は非同期に流れ続けるので、
-    /// 毎回プロンプトを出し直すと画面が埋まってしまう。
+    /// Shows the prompt only right after a result line, or right after startup. Since
+    /// notifications keep streaming in asynchronously, reprinting the prompt every time
+    /// would flood the screen.
     private func prompt() {
         guard interactiveStarted, !isQuitting else { return }
         promptPending = false
-        // stdout は行バッファなので、改行の無いプロンプトは明示的に流す。
+        // stdout is line-buffered, so a prompt with no trailing newline needs to be
+        // flushed explicitly.
         print("> ", terminator: "")
         fflush(stdout)
         promptShown = true
     }
 
-    /// 応答（write/read/notify 設定）が返ってきたらプロンプトを出す。
-    /// 応答が来ないまま固まらないよう保険のタイマーも仕掛ける。
+    /// Shows the prompt once a response (write/read/notify setting) comes back.
+    /// Also arms a fallback timer so it doesn't hang forever waiting for one.
     private func deferPrompt(timeout: Double = 3.0) {
         guard interactiveStarted else { return }
         promptPending = true
@@ -753,7 +784,7 @@ extension BLESniffer {
         }
     }
 
-    /// 応答ハンドラから呼ぶ。待っていた場合だけプロンプトを出す。
+    /// Called from a response handler. Shows the prompt only if it was being waited for.
     fileprivate func promptIfWaiting() {
         if promptPending { prompt() }
     }
@@ -766,7 +797,7 @@ extension BLESniffer {
             central.cancelPeripheralConnection(target)
         }
         if let path = logger.path { print("log: \(path)") }
-        // cancelPeripheralConnection が実際に飛ぶ猶予を与えてから抜ける。
+        // Give cancelPeripheralConnection a moment to actually go out before exiting.
         queue.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.logger.close()
             exit(0)
@@ -798,7 +829,8 @@ extension BLESniffer: CBCentralManagerDelegate {
             guard options.matcher.matches(peripheral: peripheral, advertisementData: advertisementData)
             else { return }
             central.stopScan()
-            // 鍵は広告にしか載っていない。接続してからでは取れないのでここで拾う。
+            // The key only appears in the advertisement — it can't be recovered after
+            // connecting, so it's picked up here.
             if let mfg = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data,
                let advertised = DeviceKeys(manufacturerData: mfg) {
                 keys = advertised
@@ -944,19 +976,25 @@ extension BLESniffer: CBPeripheralDelegate {
 }
 
 
-// MARK: - --read-log（本体内ログの吸い上げ）
+// MARK: - --read-log (pulling the device's internal log)
 
-/// `0x62`（件数）→ `0x63`（1 件ずつ、1 始まり index）を順に投げて、応答を生のまま書き出す。
+/// Sends `0x62` (count) -> `0x63` (one at a time, 1-based index) in sequence and writes
+/// out the raw responses.
 ///
-/// **実機確定の形式**（`docs/PROTOCOL.md` §6.5 / §6.6, 2026-09-03/04 実機追試）で読む。
-/// そのため:
-/// * 読めない応答が返っても**止めずに最後まで読む**。サニファの仕事は解釈ではなく採取で、
-///   1 件で止めると未知のファームウェア差異を推し量る材料が集まらない（アプリ側は逆に、
-///   嘘の数字を保存しないよう最初の 1 件で止める）。
-/// * 応答が来なければ数秒で諦めて先へ進む。**本体を待ち続けて操作不能にしない。**
-/// * 🚫 `0x61`（CLEAR_LOG）は**絶対に送らない**。ビルダ自体が存在しない。
+/// Reads using the **format confirmed on real hardware**
+/// (`docs/PROTOCOL.md` §6.5 / §6.6, from on-device testing on 2026-09-03/04). Because of
+/// that:
+/// * Even if an unparseable response comes back, **it keeps reading to the end without
+///   stopping**. The sniffer's job is collection, not interpretation — stopping at the
+///   first one wouldn't gather enough material to work out unknown firmware variance
+///   (the app, conversely, stops at the first one so it never saves a false number).
+/// * If no response arrives, it gives up after a few seconds and moves on. **It never
+///   locks up waiting on the device.**
+/// * `0x61` (CLEAR_LOG) is **never sent under any circumstances**. No builder for it
+///   even exists.
 extension BLESniffer {
-    /// 応答待ちの上限（秒）。実測の応答は 45–63 ms なので、これで足りなければ形式違い。
+    /// The upper bound on waiting for a response (seconds). Measured responses take
+    /// 45-63 ms, so if this isn't enough the format must be different.
     private static let logReadTimeout: Double = 3.0
 
     func beginLogRead(on peripheral: CBPeripheral) {
@@ -981,7 +1019,8 @@ extension BLESniffer {
         scheduleLogReadTimeout(on: peripheral)
     }
 
-    /// 通知から読み出しの応答を拾う。関係の無いフレーム（射撃・自発通知）は素通りさせる。
+    /// Picks the readout's response out of notifications. Unrelated frames (shots,
+    /// spontaneous notifications) pass straight through.
     func handleLogRead(_ data: Data, on peripheral: CBPeripheral) {
         guard logReadStep != .idle else { return }
         let bytes = [UInt8](data)
@@ -994,7 +1033,7 @@ extension BLESniffer {
 
         case .awaitingCount:
             guard bytes[2] == ChronoCommand.logCount.rawValue, payload.count >= 1 else { return }
-            // payload = [count, 0x01 固定]（§6.5・実機確定）。
+            // payload = [count, fixed 0x01] (§6.5, confirmed on real hardware).
             let count = Int(payload[0])
             out("read-log: 本体内ログ \(count) 件")
             guard count > 0 else {
@@ -1002,7 +1041,7 @@ extension BLESniffer {
                 endLogRead(on: peripheral)
                 return
             }
-            // index は 1 始まり。0 には応答が来ない（実機確定）。
+            // The index is 1-based. No response for 0 (confirmed on real hardware).
             requestLogRecord(index: 1, total: count, on: peripheral)
 
         case .awaitingRecord(let index, let total):
@@ -1037,7 +1076,8 @@ extension BLESniffer {
             return
         }
         logReadStep = .awaitingRecord(index: index, total: total)
-        // 実測の初期化シーケンスに合わせて 1 本ずつ ~300 ms 間隔で送る（§4.2）。
+        // Sends one at a time, ~300 ms apart, matching the measured initialization
+        // sequence (§4.2).
         queue.asyncAfter(deadline: .now() + max(writeDelay, 0.3)) { [weak self] in
             guard let self, case .awaitingRecord(let waiting, _) = self.logReadStep,
                   waiting == index
@@ -1069,7 +1109,8 @@ extension BLESniffer {
         }
     }
 
-    /// 採取したものをまとめて出してから、残りの `--write` と対話モードへ進む。
+    /// Prints everything collected together, then moves on to the remaining `--write`s
+    /// and interactive mode.
     private func endLogRead(on peripheral: CBPeripheral) {
         logReadStep = .idle
         logReadToken += 1
@@ -1085,7 +1126,8 @@ extension BLESniffer {
         finishLogRead(on: peripheral)
     }
 
-    /// 書き込み先。実機の write characteristic を優先し、無ければ書ける最初のもの。
+    /// The write target. Prefers the real hardware's write characteristic; falls back to
+    /// the first writable one.
     private func logWriteTarget(in peripheral: CBPeripheral) -> CBCharacteristic? {
         findCharacteristic(
             UUIDText.canonical(ChronoUUIDs.writeCharacteristic.uuidString),

@@ -1,49 +1,53 @@
 import Foundation
 
-/// write を withResponse / withoutResponse のどちらで送るかの指定。
+/// Whether a write is sent as withResponse or withoutResponse.
 ///
-/// 相手が write without response しか処理しない実装だったり、逆に withResponse を
-/// 要求したりすることがあるため、解析中は明示的に切り替えられる必要がある。
+/// Some implementations on the other end only process write-without-response, while
+/// others require withResponse, so this needs to be switchable explicitly while
+/// reverse-engineering.
 enum WriteTypePreference: String, CaseIterable, Sendable {
-    /// characteristic のプロパティから決める（write があれば withResponse）。
+    /// Decide from the characteristic's properties (withResponse if `write` is present).
     case auto
-    /// 常に withResponse。
+    /// Always withResponse.
     case with
-    /// 常に withoutResponse。
+    /// Always withoutResponse.
     case without
 }
 
-/// `dump --interactive` で stdin から 1 行ずつ読んだ入力を解釈した結果。
+/// The result of interpreting one line of input read from stdin during
+/// `dump --interactive`.
 ///
-/// BLE には一切触らない純粋なパーサなので、CoreBluetooth を持たない環境でも意味を持つ。
+/// A pure parser that never touches BLE at all, so it's meaningful even in an
+/// environment without CoreBluetooth.
 enum InteractiveCommand: Equatable, Sendable {
-    /// 空行・コメント行。何もしない。
+    /// A blank line or comment line. Does nothing.
     case none
-    /// 切断して終了する。
+    /// Disconnect and quit.
     case quit
-    /// GATT ツリーを再表示する。
+    /// Redisplay the GATT tree.
     case list
-    /// 1 回の write で送れる最大バイト数を表示する。
+    /// Show the maximum number of bytes that can be sent in one write.
     case mtu
-    /// 使い方を表示する。
+    /// Show usage.
     case help
-    /// `target` が nil なら既定の write characteristic へ送る。
-    /// `type` が nil なら `--write-type` の指定に従う。
+    /// Sent to the default write characteristic when `target` is nil.
+    /// Follows the `--write-type` setting when `type` is nil.
     case write(target: String?, payload: Data, type: WriteTypePreference?)
     case read(target: String)
     case setNotify(target: String, enabled: Bool)
-    /// 解釈できなかった入力。`message` は理由。
+    /// Input that couldn't be parsed. `message` is why.
     case invalid(message: String)
 
-    /// 未知の入力に対して 1 行で出す使い方。
+    /// The one-line usage shown for unrecognized input.
     static let usage =
         "usage: <hex> | w <char> <hex> | wr|wn [<char>] <hex> | r <char> | sub <char> | unsub <char> | mtu | list | q"
 
-    /// 1 行を `;` で区切って複数コマンドとして解釈する。
+    /// Splits one line on `;` and interprets it as multiple commands.
     ///
-    /// `85 06 4b 00 00 d6 ; 85 05 5a 00 e4` のように 1 行で複数フレームを送れるようにするため。
-    /// どれか 1 つでも解釈できなければ**何も実行しない**（打ち間違いで前半だけ送るのを防ぐ）ので、
-    /// その `.invalid` だけを返す。
+    /// Lets multiple frames be sent from a single line, like
+    /// `85 06 4b 00 00 d6 ; 85 05 5a 00 e4`. If even one of them can't be parsed,
+    /// **nothing is executed** (to avoid sending only the first half on a typo), so just
+    /// that `.invalid` is returned.
     static func parseLine(_ rawLine: String) -> [InteractiveCommand] {
         let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !line.isEmpty, !line.hasPrefix("#") else { return [] }
@@ -78,7 +82,8 @@ enum InteractiveCommand: Equatable, Sendable {
         case "h", "help", "?":
             return .help
         case "w", "write":
-            // 既存の形。characteristic は常に明示する。write type は --write-type に従う。
+            // The original form. The characteristic is always explicit; the write type
+            // follows --write-type.
             guard rest.count >= 2 else {
                 return .invalid(message: "w は <charUUID|prefix> <hex> の 2 引数が必要です")
             }
@@ -103,7 +108,8 @@ enum InteractiveCommand: Equatable, Sendable {
             }
             return .setNotify(target: rest[0], enabled: false)
         default:
-            // コマンド語でなければ既定 characteristic 宛ての hex とみなす。
+            // If it isn't a command word, treat it as hex bound for the default
+            // characteristic.
             if let payload = Hex.parse(parts.joined()) {
                 return .write(target: nil, payload: payload, type: nil)
             }
@@ -111,11 +117,12 @@ enum InteractiveCommand: Equatable, Sendable {
         }
     }
 
-    /// `wr` / `wn` は `<hex>` と `<char> <hex>` の両方を取る。
+    /// `wr` / `wn` accept both `<hex>` and `<char> <hex>`.
     ///
-    /// 先頭トークンが UUID の形（4 / 8 / 36 桁）で、かつ後ろにトークンが続く場合だけ
-    /// characteristic 指定とみなす。`wn 85 06 4b` の `85` は 2 桁なので hex のまま。
-    /// 4 桁区切りの hex を既定 characteristic へ送りたいときは空白を詰めて 1 トークンにする。
+    /// Only treated as a characteristic when the first token has a UUID-like shape
+    /// (4 / 8 / 36 digits) and more tokens follow it. In `wn 85 06 4b`, `85` is only 2
+    /// digits, so it stays hex. To send 4-digit-grouped hex to the default
+    /// characteristic, join it into a single token with no spaces.
     private static func parseTypedWrite(
         _ rest: [String],
         type: WriteTypePreference,
@@ -142,7 +149,7 @@ enum InteractiveCommand: Equatable, Sendable {
         return .write(target: target, payload: payload, type: type)
     }
 
-    /// CoreBluetooth に触らずに「UUID っぽいか」だけを判定する。
+    /// Judges only "does this look like a UUID," without touching CoreBluetooth.
     private static func looksLikeCharacteristicToken(_ token: String) -> Bool {
         switch token.count {
         case 4, 8:
@@ -154,7 +161,7 @@ enum InteractiveCommand: Equatable, Sendable {
         }
     }
 
-    /// 対話モード開始時に出すヘルプ。
+    /// The help shown when interactive mode starts.
     static let helpText = """
         --- interactive mode ---
           <hex>                 既定の write characteristic へ送る  (例: 5a 4b 00 4b / 5a4b004b)

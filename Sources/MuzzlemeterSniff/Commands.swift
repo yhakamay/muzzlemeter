@@ -2,7 +2,7 @@ import ArgumentParser
 import CoreBluetooth
 import Foundation
 
-/// `dispatchMain()` の後もインスタンスを生かしておくための保持箱。
+/// A holder that keeps the instance alive even after `dispatchMain()`.
 enum SnifferHolder {
     nonisolated(unsafe) static var current: BLESniffer?
 }
@@ -190,8 +190,9 @@ extension SniffCommand {
                         writeDelay: Double(writeDelay) / 1000,
                         writeType: writeType,
                         interactive: interactive,
-                        // ログ読み出しは鍵付きフレームを送るので、鍵の確立が前提。
-                        // 付け忘れて「無反応」で悩まないよう、ここで有効にしてしまう。
+                        // Log reads send keyed frames, so this depends on the key being
+                        // established. Enabled here automatically, so forgetting the
+                        // flag doesn't leave someone puzzled by "no response."
                         handshake: handshake || readLog,
                         readLog: readLog
                     )
@@ -206,10 +207,11 @@ extension SniffCommand {
     }
 }
 
-// MARK: - 共通のパース
+// MARK: - Shared parsing
 
-/// `--write-type auto|with|without` を受け取れるようにする。
-/// `CaseIterable` + `RawRepresentable` なので候補は ArgumentParser が --help に出してくれる。
+/// Lets `--write-type auto|with|without` be accepted as an argument.
+/// Since it's `CaseIterable` + `RawRepresentable`, ArgumentParser lists the choices in
+/// --help automatically.
 extension WriteTypePreference: ExpressibleByArgument {}
 
 private func parseServiceFilter(_ text: String?) throws -> [CBUUID]? {
@@ -220,8 +222,8 @@ private func parseServiceFilter(_ text: String?) throws -> [CBUUID]? {
     return [uuid]
 }
 
-/// `--write ffe1 0102 --write ffe2 03` のように 2 値ずつ与えられたトークン列を解釈する。
-/// `--write ffe1=0102` 形式も受け付ける。
+/// Interprets a token list given two-at-a-time, like `--write ffe1 0102 --write ffe2 03`.
+/// Also accepts the `--write ffe1=0102` form.
 private func parseWrites(_ tokens: [String], type: WriteTypePreference) throws -> [PendingWrite] {
     var result = [PendingWrite]()
     var index = 0

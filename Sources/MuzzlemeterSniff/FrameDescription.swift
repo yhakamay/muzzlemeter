@@ -1,14 +1,14 @@
 import MuzzlemeterKit
 import Foundation
 
-/// 受信・送信した生バイト列を、AC6000 のフレームとして読める形に整形する。
+/// Formats received/sent raw bytes into a readable rendering of an AC6000 frame.
 ///
-/// **`MuzzlemeterKit` のコーデックをそのまま使う**のが要点。サニファ側に 2 つ目の
-/// 実装を持つと、どちらが正しいのか分からなくなる。
+/// The key point is **reusing `MuzzlemeterKit`'s own codec as-is**. Having a second
+/// implementation on the sniffer side would leave no way to tell which one is correct.
 enum FrameDescription {
-    /// hex の隣に出す 1 行。フレームとして読めなければ `nil`。
+    /// The line shown next to the hex dump. `nil` if it can't be read as a frame.
     static func describe(_ data: Data, keys: DeviceKeys) -> String? {
-        // 1 バイトの 00 は本体の電源 OFF シグネチャ（docs/PROTOCOL.md §5.1）。
+        // A single 0x00 byte is the device's power-off signature (docs/PROTOCOL.md §5.1).
         if data.count == 1, data.first == 0x00 {
             return "POWER_OFF（本体の電源 OFF。約 0.76 秒後に切断される）"
         }
@@ -60,12 +60,14 @@ enum FrameDescription {
             )
 
         case .logCount where frame.payload.count >= 1:
-            // payload = [count, 0x01 固定]（§6.5・実機確定）。2 バイト目は意味不明なので生のまま添える。
+            // payload = [count, fixed 0x01] (§6.5, confirmed on real hardware). The
+            // second byte's meaning is unknown, so it's appended raw.
             let raw = frame.payload.count >= 2 ? String(format: " raw[1]=0x%02x", frame.payload[1]) : ""
             return "\(name) count=\(frame.payload[0])\(raw)"
 
         case .logRecord:
-            // **実機確定**（`docs/PROTOCOL.md` §6.6）。全ゼロはログの終端（エラーではない）。
+            // **Confirmed on real hardware** (`docs/PROTOCOL.md` §6.6). All-zero means
+            // end of log (not an error).
             guard let record = DeviceLogWireRecord(payload: frame.payload) else {
                 return "\(name) 応答レイアウトとして読めません  payload: \(payload)"
             }
