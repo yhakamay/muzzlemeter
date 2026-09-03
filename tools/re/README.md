@@ -1,32 +1,34 @@
-# tools/re — プロトコル調査の作業ディレクトリ
+# tools/re — the working directory for protocol research
 
-`docs/PROTOCOL.md` を埋めるための材料置き場。中身（キャプチャログ・作業メモ）は
-`.gitignore` 済みで、リポジトリにはコミットされない（`README.md` と
-`captures/.gitkeep` だけを追跡している）。
+The material used to fill in `docs/PROTOCOL.md`. The contents (capture logs, working
+notes) are gitignored and never committed to the repository (only `README.md` and
+`captures/.gitkeep` are tracked).
 
-## 通信キャプチャ
+## Communication captures
 
-`docs/PROTOCOL.md` の内容は、次の 2 つの実測から得ている。
+`docs/PROTOCOL.md`'s content comes from two kinds of measurement.
 
-1. **iPhone の HCI ログ**（Apple の PacketLogger で取得した `.pklg`）。
-   公式アプリと本体のあいだで実際に流れたフレームをそのまま観察する。
-2. **自作クライアントでの追試**。仮説を立てて本体に投げ、応答を確かめる。
+1. **iPhone HCI logs** (`.pklg` files captured with Apple's PacketLogger). Observing the
+   frames that actually flowed between the official app and the device, directly.
+2. **On-device testing with the custom client.** Forming a hypothesis, sending it to the
+   device, and checking the response.
 
-### 自作サニファでのキャプチャ
+### Capturing with the custom sniffer
 
 ```sh
 swift run muzzlemeter-sniff scan --seconds 10
 swift run muzzlemeter-sniff dump --name AC6000BT- --handshake
 ```
 
-ログは `tools/re/captures/<yyyyMMdd-HHmmss>.log` に自動保存される（gitignore 済み）。
-`ReplayScript` がこの形式をそのまま読めるので、取ったログはアプリの再生にも使える。
+The log is saved automatically to `tools/re/captures/<yyyyMMdd-HHmmss>.log` (gitignored).
+`ReplayScript` can read this format directly, so a freshly captured log can also be used
+to replay the app.
 
-解析が済んだ代表パケットは `Tests/MuzzlemeterKitTests/Fixtures/` に手で書き出して
-回帰テストにする。
+Once a representative packet has been analyzed, it's hand-transcribed into
+`Tests/MuzzlemeterKitTests/Fixtures/` and turned into a regression test.
 
-### 注意
+### Caution
 
-- `docs/PROTOCOL.md` に載せるのは**自分で観測した事実**だけにすること。
-- 危険な opcode（`0x61` CLEAR_LOG、OTA characteristic への書き込み）は
-  送らない。`docs/PROTOCOL.md` §11 を読むこと。
+- Only put **facts you observed yourself** into `docs/PROTOCOL.md`.
+- Never send a dangerous opcode (`0x61` CLEAR_LOG, or a write to the OTA
+  characteristic). Read `docs/PROTOCOL.md` §11 first.

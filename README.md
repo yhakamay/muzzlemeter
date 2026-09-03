@@ -1,43 +1,49 @@
 # Muzzlemeter
 
-> **English summary** — Muzzlemeter is an **unofficial** iOS companion app for the
-> **Acetech AC6000 BT** airsoft chronograph. It connects over Bluetooth LE, shows each
-> shot's velocity and energy live, and keeps a searchable history per gun profile.
-> Built with SwiftUI, SwiftData and CoreBluetooth. The BLE protocol is not published by
-> the vendor, so it was worked out from packet captures of my own device and verified
-> against the unit's own LCD; the result is documented in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
-> Not affiliated with Acetech. MIT licensed.
+Muzzlemeter is an **unofficial** iOS companion app for the **Acetech AC6000 BT** airsoft
+chronograph. It connects over Bluetooth LE, shows each shot's velocity and energy live,
+and keeps a searchable history per gun profile. Built with SwiftUI, SwiftData and
+CoreBluetooth. The BLE protocol is not published by the vendor, so it was worked out from
+packet captures of my own device and verified against the unit's own LCD; the result is
+documented in [`docs/PROTOCOL.md`](docs/PROTOCOL.md). Not affiliated with Acetech. MIT
+licensed.
 
-エアソフト用弾速計 Acetech **AC6000 BT** を iPhone から使うための**非公式**アプリ。
-撃つたびに初速とエネルギーを大きく表示し、銃のプロファイルごとにセッションを記録する。
+> **This app is unofficial and unaffiliated with Acetech. Acetech and AC6000 are
+> trademarks of their respective owners.**
 
-> **本アプリは Acetech 社とは無関係の非公式アプリです。Acetech、AC6000 は各社の商標です。**
+## Supported devices
 
-## 対応機種
-
-| 機種 | 状況 |
+| Device | Status |
 |---|---|
-| **AC6000 MKIII BT** | **実機で確認済み**（本体 LCD と突き合わせて検証） |
-| AC6000 BT | 動くはず（広告名 `AC6000BT-` の前方一致で拾い、同じフレーム形式） |
-| その他の Acetech 製品（Bifrost など） | **未対応**（プロトコルが異なる可能性が高い） |
+| **AC6000 MKIII BT** | **Confirmed on real hardware** (verified against the unit's own LCD) |
+| AC6000 BT | Should work (matched by a prefix match on the advertised name `AC6000BT-`; same frame format) |
+| Other Acetech products (e.g. Bifrost) | **Not supported** (the protocol is very likely different) |
 
-## できること
+## Features
 
-- BLE で本体に自動接続（前回つないだ個体を憶えて再接続する）
-- 1 発ごとの初速（m/s / fps）とエネルギー（J）をライブ表示
-- セッション統計: 平均 / 最大 / 最小 / SD / ES / 連射速度
-- 銃プロファイル（メーカー・モデル・パワーソース区分・インナーバレル長・規制上限 J・
-  BB 重量などの既定値）とセッション変数（BB 重量・ガス種別・ホップ設定）
-- 計測時の気温・湿度・気圧を WeatherKit から 1 回だけ取得して記録（手で上書きも可）
-- 履歴の閲覧・リネーム・CSV 書き出し
-- セッション比較（2〜3 件の統計並置・弾速の重ね合わせ・ばらつきの要約）
-- タグ付けと、タグ・銃・文字列による履歴の絞り込み
-- プロファイルごとの推移（平均弾速の時系列 ±SD、気温との散布図）
-- 日本語 / 英語（ベース言語は日本語）
-- 本体が無くても UI を確認できるリプレイモード（実キャプチャの再生）
-- 本体内に溜まったログの取り込み（`0x62` / `0x63`。**実機で確認済み**の形式。ログは
-  volatile なので、機器ごとに前回どこまで取り込んだかを覚えて差分だけ読む）
-- 解析用の macOS CLI `muzzlemeter-sniff`（BLE スキャン / GATT 列挙 / パケットダンプ）
+- Automatically connects to the device over BLE (remembers the last-connected unit and
+  reconnects to it)
+- Live display of each shot's velocity (m/s / fps) and energy (J)
+- Session statistics: mean / max / min / SD / ES / rate of fire
+- Gun profiles (manufacturer, model, power-source category, inner barrel length,
+  regulation limit in J, default BB weight, etc.) and per-session variables (BB weight,
+  gas type, hop setting)
+- Records temperature, humidity, and pressure at the time of measurement, fetched once
+  from WeatherKit (can also be overridden by hand)
+- Browse, rename, and export history to CSV
+- Session comparison (side-by-side stats for 2-3 sessions, overlaid velocity charts, a
+  spread summary)
+- Tagging, and filtering history by tag, gun, or free text
+- Per-profile trends (a time series of mean velocity ± SD, and a scatter plot against
+  temperature)
+- Japanese / English (base language is Japanese)
+- A replay mode that lets you review the UI without the physical device (plays back a
+  real capture)
+- Importing the log stored on the device itself (`0x62` / `0x63`, **confirmed on real
+  hardware**. The log is volatile, so the app remembers how far it read into each
+  device's log last time and reads only the difference)
+- A macOS CLI for protocol analysis, `muzzlemeter-sniff` (BLE scanning / GATT
+  enumeration / packet dumping)
 
 ## What it takes to talk to the AC6000 (essentials)
 
@@ -61,27 +67,27 @@ See `docs/PROTOCOL.md` for the full detail. Here's the minimum an implementer ne
 The device also sends frames **you never asked for** (`0x47` / `0x5A` periodically,
 roughly every 10 s after connecting). Don't treat "unexpected" as an error.
 
-## 構成
+## Layout
 
-| パス | 内容 |
+| Path | Contents |
 |---|---|
-| `Sources/MuzzlemeterKit/` | ドメイン・プロトコル・BLE 抽象（iOS / macOS 共通ライブラリ） |
-| `Sources/MuzzlemeterSniff/` | macOS CLI。BLE スキャン / GATT 列挙 / パケットダンプ |
-| `Tests/MuzzlemeterKitTests/` | Swift Testing によるテスト |
-| `docs/PROTOCOL.md` | 解析結果（UUID・パケット形式・チェックサム） |
-| `tools/re/` | プロトコル調査の作業ディレクトリ。キャプチャログ置き場（gitignore） |
-| `App/Muzzlemeter/` | iOS アプリ（SwiftUI + SwiftData） |
-| `App/Muzzlemeter/Resources/Localizable.xcstrings` | UI 文言の String Catalog。**ベース言語は ja**、en は完全な翻訳 |
-| `App/Info.plist` | `CFBundleLocalizations` だけを持つ土台。他のキーはビルド設定から合成される |
-| `App/Muzzlemeter/Resources/<lang>.lproj/InfoPlist.strings` | 権限の用途説明の ja / en。ビルド設定の値を実行時に差し替える |
-| `App/Muzzlemeter.entitlements` | WeatherKit のエンタイトルメント（`CODE_SIGN_ENTITLEMENTS`） |
-| `project.yml` | XcodeGen 定義。`.xcodeproj` はここから生成する |
+| `Sources/MuzzlemeterKit/` | Domain / protocol / BLE abstractions (a library shared by iOS and macOS) |
+| `Sources/MuzzlemeterSniff/` | The macOS CLI: BLE scanning / GATT enumeration / packet dumping |
+| `Tests/MuzzlemeterKitTests/` | Tests written with Swift Testing |
+| `docs/PROTOCOL.md` | The reverse-engineering results (UUIDs, packet format, checksum) |
+| `tools/re/` | The working directory for protocol research; capture log storage (gitignored) |
+| `App/Muzzlemeter/` | The iOS app (SwiftUI + SwiftData) |
+| `App/Muzzlemeter/Resources/Localizable.xcstrings` | The String Catalog for UI text. **Base language is ja**, en is a complete translation |
+| `App/Info.plist` | A minimal base holding only `CFBundleLocalizations`; every other key is synthesized from build settings |
+| `App/Muzzlemeter/Resources/<lang>.lproj/InfoPlist.strings` | ja / en purpose strings for permission prompts, substituting build-setting values at runtime |
+| `App/Muzzlemeter.entitlements` | The WeatherKit entitlement (`CODE_SIGN_ENTITLEMENTS`) |
+| `project.yml` | The XcodeGen definition that `.xcodeproj` is generated from |
 
-## muzzlemeter-sniff の使い方
+## Using muzzlemeter-sniff
 
-### スキャン
+### Scan
 
-周囲の BLE アドバタイズを一覧表示する。本体の電源を入れて実行し、機器名を確認する。
+Lists nearby BLE advertisements. Run it with the device powered on to check its name.
 
 ```sh
 swift run muzzlemeter-sniff scan
@@ -89,42 +95,44 @@ swift run muzzlemeter-sniff scan --seconds 30
 swift run muzzlemeter-sniff scan --filter-service ffe0
 ```
 
-出力例（1 行 1 デバイス、identifier で重複排除）:
+Example output (one device per line, deduplicated by identifier):
 
 ```
 name: AC6000  id: 1A2B3C4D-...  rssi: -54  services: [FFE0]  mfg: 4c 00 12 ...
 ```
 
-### ダンプ（接続して解析する）
+### Dump (connect and analyze)
 
-接続 → 全 service / characteristic を列挙 → read 可能なものを 1 回ずつ read →
-notify / indicate を全部購読 → 受信パケットをタイムスタンプ付き hex で流し続ける。
-Ctrl-C で終了。切断されたら自動で再接続を試みる。
+Connects, enumerates every service / characteristic, reads each readable one once,
+subscribes to every notify / indicate, and streams incoming packets as timestamped hex.
+Ctrl-C to quit. Automatically tries to reconnect if disconnected.
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000
-swift run muzzlemeter-sniff dump --id 1A2B3C4D-5E6F-...   # scan で出た identifier
+swift run muzzlemeter-sniff dump --id 1A2B3C4D-5E6F-...   # identifier from scan output
 swift run muzzlemeter-sniff dump --name AC6000 --log tools/re/captures/single-shot.log
 ```
 
-パケット行の形式:
+The format of a packet line:
 
 ```
 [2026-09-02T22:31:04.512+09:00] [+412.7 ms] FFE1 len=8 hex: aa 55 01 5a ... ascii: .U.Z....
 ```
 
-ログは指定しなければ `tools/re/captures/<yyyyMMdd-HHmmss>.log` に自動保存される。
+Unless given explicitly, the log is saved automatically to
+`tools/re/captures/<yyyyMMdd-HHmmss>.log`.
 
-### ハンドシェイク（`--handshake`）— 実機検証はこれを使う
+### Handshake (`--handshake`) — use this for on-device verification
 
-広告の manufacturer data から鍵を取り出し、**購読完了後に `0x4B` READ_KEY を自動送信する**。
-受信フレームは hex の次の行にデコード結果も表示される。
+Extracts the key from the advertisement's manufacturer data and **automatically sends
+`0x4B` READ_KEY once subscription completes**. The decoded meaning of each received frame
+is shown on the line right after its hex dump.
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000BT- --handshake
 ```
 
-期待される出力:
+Expected output:
 
 ```
 見つかりました: name: AC6000BT-009809  ...  mfg: 00 05 08 c4 94 52 04
@@ -133,40 +141,42 @@ handshake: 広告から鍵を取得しました key1=0xc4 key2=0x94
   -> READ_KEY key1=0xc4 key2=0x94
 write 成功 9C6AA1EE-...
 [2026-09-03T...] [+55.0 ms] 3337E46E-... len=5 hex: aa 05 41 4b 93 ascii: ..AK.
-  -> ACK for READ_KEY                     ← これが出れば成功
+  -> ACK for READ_KEY                     ← success looks like this
 ```
 
-そのまま BB を撃つと `FIRE_REPORT` がデコードされて出る:
+Firing a BB from here decodes as a `FIRE_REPORT`:
 
 ```
 [+...] 3337E46E-... len=10 hex: aa 0a 52 00 00 45 01 00 00 a4
   -> FIRE_REPORT rawSpeed=325 (3.25 m/s) rawRev=0 flags=0
 ```
 
-`--handshake` と `--interactive` は併用できる（ハンドシェイク後に手で追試したいとき）:
+`--handshake` and `--interactive` can be combined (to poke around further by hand after
+the handshake):
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000BT- --handshake --interactive
 ```
 
-フレームの組み立て・検証は **`MuzzlemeterKit` の `ChronoFrame` をそのまま使っている**ので、
-サニファで通ったバイト列はアプリでもそのまま通る。
+Frame building and validation **reuse `MuzzlemeterKit`'s own `ChronoFrame` directly**, so
+any byte sequence that gets through the sniffer will also get through the app.
 
-### 本体内ログの吸い上げ（`--read-log`）— **0x63 の形式は未検証**
+### Pulling the device's internal log (`--read-log`) — **the `0x63` format is unverified**
 
-本体は計測結果を内部に溜めている。件数（`0x62`）は実測で確認できているが、
-**1 件ずつ取り出す `0x63` は要求の形も応答の形も 1 度も観測できていない**
-（`docs/PROTOCOL.md` §6.6）。`--read-log` は推定した要求
-（payload = `index` の LE16）を index 順に投げ、**応答を生のまま**書き出す。
+The device accumulates measurement results internally. The record count (`0x62`) has
+been confirmed by measurement, but **`0x63`, which reads records one at a time, has never
+once been observed** — neither the shape of the request nor of the response
+(`docs/PROTOCOL.md` §6.6). `--read-log` sends the guessed request (payload = the LE16
+`index`) in index order and writes out **the raw response as-is**.
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000BT- --read-log
 ```
 
-`--read-log` は鍵付きフレームを送るので、**`--handshake` を自動的に有効にする**
-（付け忘れて「無反応」で悩まないため）。
+`--read-log` sends keyed frames, so it **automatically enables `--handshake`** (so no one
+gets stuck wondering why nothing responds because they forgot the flag).
 
-期待される出力:
+Expected output:
 
 ```
 === --read-log: 本体内ログを読み出します（0x62 → 0x63。0x61 は送りません） ===
@@ -183,205 +193,226 @@ read-log: record 0/1 rawSpeed=282 (2.82 m/s) rawRev=0  payload: 00 00 1a 01 00 0
 === ここまで。この部分をそのまま共有してください ===
 ```
 
-**この出力（またはログファイル）がそのまま `0x63` の正体を決める材料になる。**
-次のどれになっても意味がある:
+**This output (or the log file) is exactly the material that will settle what `0x63`
+actually is.** Any of the following outcomes would be useful:
 
-- `record N/M rawSpeed=…` と読めた → 推定どおり `FIRE_REPORT` と同じ並び
-- `未知の形式  payload: …` → 別レイアウト。生 payload から読み解く
-- `0x63 index=0 に応答がありませんでした` → **要求の形が違う**
-  （`[0x01, index]` など別の形を `--interactive` で試す）
+- It reads as `record N/M rawSpeed=…` → matches the guessed layout, the same as
+  `FIRE_REPORT`
+- `未知の形式  payload: …` ("unknown format, payload: ...") → a different layout; work it
+  out from the raw payload
+- `0x63 index=0 に応答がありませんでした` ("no response to 0x63 index=0") → **the
+  request shape is wrong**; try a different shape (e.g. `[0x01, index]`) with
+  `--interactive`
 
-> 🚫 **`0x61`（CLEAR_LOG）は送らない。** ビルダ自体を用意していないので、
-> 手で hex を組まない限り送りようがない（`docs/PROTOCOL.md` §11）。
+> 🚫 **`0x61` (CLEAR_LOG) is never sent.** No builder for it exists at all, so it can't
+> be sent unless someone hand-assembles the hex themselves (`docs/PROTOCOL.md` §11).
 
-### 初期化コマンドを送る
+### Sending an initialization command
 
-本体が「計測開始コマンド」を要求する場合に使う（試したいバイト列を明示的に送る）。
-購読完了後に送信され、結果が表示される。`--write` は複数回指定できる。
+Used when the device requires a "start measurement" command (sends whatever byte
+sequence you want to try, explicitly). Sent once subscription completes, with the result
+shown. `--write` can be given multiple times.
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
-swift run muzzlemeter-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切りでも可
+swift run muzzlemeter-sniff dump --name AC6000 --write ffe1=01a50000   # "=" separator also works
 ```
 
-`--write` を複数指定した場合、既定では **200 ms 間隔**で 1 件ずつ送る。どの write に対する
-応答なのかを対応付けられるようにするためで、間隔は `--write-delay <ms>` で変えられる
-（`0` で連続送信）。
+When `--write` is given multiple times, they're sent one at a time, **200 ms apart** by
+default — so a response can be matched to the write that caused it. The interval can be
+changed with `--write-delay <ms>` (`0` sends them back-to-back).
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000 --write ffe1 01 --write ffe1 02 --write-delay 500
 ```
 
-#### write の種別（`--write-type`）
+#### Write type (`--write-type`)
 
-BLE の write には **withResponse**（相手が ATT の応答を返す）と **withoutResponse**
-（撃ちっぱなし）がある。どちらを受け付けるかはファームウェア次第で、**片方しか処理しない**
-実装や、プロパティの申告と実際の挙動が食い違う実装がある。そのため種別は明示的に選べる。
+A BLE write can be **withResponse** (the peer returns an ATT response) or
+**withoutResponse** (fire-and-forget). Which one a device accepts depends on its
+firmware — some only process one of the two, and some declare one property but actually
+behave differently. Because of that, the type can be chosen explicitly.
 
-| 値 | 動作 |
+| Value | Behavior |
 |---|---|
-| `auto`（既定） | `write` プロパティがあれば withResponse、無ければ withoutResponse |
-| `with` | プロパティに関わらず **常に withResponse** |
-| `without` | プロパティに関わらず **常に withoutResponse** |
+| `auto` (default) | withResponse if the `write` property is present, otherwise withoutResponse |
+| `with` | **Always withResponse**, regardless of the property |
+| `without` | **Always withoutResponse**, regardless of the property |
 
-`with` / `without` はプロパティを持たない characteristic に対しても強制的に送る（注意行を出す）。
-申告が当てにならない相手を試せることがこのオプションの目的だから。
+`with` / `without` force the write even to a characteristic that doesn't declare the
+property (with a warning line). The whole point of this option is being able to try a
+peer whose declared properties can't be trusted.
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000 --write-type without --write ffe1 850600
 ```
 
-`--write-type` は `--write` と、対話モードの `<hex>` / `w` の**既定値**になる。
-対話モードでは `wr` / `wn` で 1 回ごとに上書きできる。
+`--write-type` becomes the **default** for `--write` and for `<hex>` / `w` in interactive
+mode. In interactive mode it can be overridden per-command with `wr` / `wn`.
 
-### 対話モード（ハンドシェイクの試行錯誤用）
+### Interactive mode (for handshake trial and error)
 
-`--interactive`（短縮 `-i`）を付けると、GATT 列挙・購読・`--write` の送信が終わった後に
-**stdin から 1 行ずつコマンドを受け付ける**。バイト列を 1 つ試すたびに接続し直す必要が
-なくなるので、未知のハンドシェイクを総当たりで探るときはこれを使う。
+Adding `--interactive` (short form `-i`) makes it **read commands from stdin one line at
+a time** once GATT enumeration, subscription, and any `--write`s have finished. This
+removes the need to reconnect for every byte sequence you want to try, so it's the tool
+of choice when brute-forcing an unknown handshake.
 
 ```sh
 swift run muzzlemeter-sniff dump --name AC6000 --interactive
-swift run muzzlemeter-sniff dump --name AC6000 -i --write ffe1 01a50000   # 初期化してから対話
-swift run muzzlemeter-sniff dump --name AC6000 -i --write-type without    # 既定を without に
+swift run muzzlemeter-sniff dump --name AC6000 -i --write ffe1 01a50000   # initialize, then interact
+swift run muzzlemeter-sniff dump --name AC6000 -i --write-type without    # default to without
 ```
 
-受け付けるコマンド:
+Accepted commands:
 
-| 入力 | 動作 |
+| Input | Action |
 |---|---|
-| `5a 4b 00 4b` / `5a4b004b` | **既定の write characteristic** へ送る（種別は `--write-type`） |
-| `w <char> <hex>` | characteristic を指定して write（種別は `--write-type`） |
-| `wr [<char>] <hex>` | **withResponse** で write |
-| `wn [<char>] <hex>` | **withoutResponse** で write |
-| `r <char>` | characteristic を read |
-| `sub <char>` / `unsub <char>` | notify の購読 / 解除 |
-| `mtu` | 1 回の write で送れる最大バイト数を表示 |
-| `list` | GATT ツリーを再表示（`*notifying*` 付き） |
-| `h` | ヘルプ |
-| `q` / Ctrl-D | 切断して終了 |
+| `5a 4b 00 4b` / `5a4b004b` | Send to the **default write characteristic** (type follows `--write-type`) |
+| `w <char> <hex>` | Write to a specified characteristic (type follows `--write-type`) |
+| `wr [<char>] <hex>` | Write **with response** |
+| `wn [<char>] <hex>` | Write **without response** |
+| `r <char>` | Read a characteristic |
+| `sub <char>` / `unsub <char>` | Subscribe to / unsubscribe from notify |
+| `mtu` | Show the max bytes sendable in one write |
+| `list` | Redisplay the GATT tree (with `*notifying*` markers) |
+| `h` | Help |
+| `q` / Ctrl-D | Disconnect and quit |
 
-- `<char>` は characteristic UUID（`ffe1` のような短縮形も可）か、**一意に決まる前置一致**。
-  複数に当たる場合は候補を表示して何もしない。
-- **既定の write characteristic** は、write（応答あり）を持つ最初の characteristic。
-  無ければ writeWithoutResponse を持つ最初のもの。開始時に write の既定種別と一緒に表示される。
-- `wr` / `wn` の `<char>` は省略できる。**トークンが 2 つ以上あり、先頭が 4 / 8 / 36 桁**の
-  ときだけ characteristic 指定と解釈する。`wn 85 06 4b` の `85` は 2 桁なので hex のまま。
-  4 桁区切りの hex を既定の宛先へ送りたいときは `wn 85064b00` と空白を詰める。
-- **1 行に `;` 区切りで複数フレームを書ける**。`--write-delay` の間隔で順に送られるので、
-  ハンドシェイクのように続けて投げる必要がある列を 1 行で試せる:
+- `<char>` can be a characteristic UUID (a short form like `ffe1` also works), or a
+  **prefix match that resolves uniquely**. If it matches more than one, the candidates
+  are printed and nothing is sent.
+- The **default write characteristic** is the first characteristic with write (with
+  response); if none, the first with writeWithoutResponse. It's shown at startup
+  together with the default write type.
+- `<char>` can be omitted for `wr` / `wn`. It's interpreted as a characteristic only when
+  **there are 2 or more tokens and the first one is 4, 8, or 36 digits long**. In
+  `wn 85 06 4b`, `85` is only 2 digits, so it stays hex. To send 4-digit-grouped hex to
+  the default target, join it into one token: `wn 85064b00`.
+- **Multiple frames can be written on one line, separated by `;`**. They're sent in order
+  spaced `--write-delay` apart, so a sequence that needs to be sent back-to-back (like a
+  handshake) can be tried on a single line:
 
   ```
   > 85 06 4b 00 00 d6 ; 85 05 5a 00 e4
   > wn 8506 ; wr ffe1 5a00 ; r ffe1
   ```
 
-  どれか 1 つでも解釈できない場合は**何も送らない**（打ち間違いで前半だけ送るのを防ぐため）。
-- 空行と `#` で始まる行は無視される。解釈できない入力は 1 行の usage を出す。
-- 対話中の write / read / 結果は**キャプチャログにもそのまま記録される**ので、
-  後から `ReplayScript` で読み直せる。
+  If even one segment can't be parsed, **nothing is sent at all** (to prevent a typo from
+  sending only the first half).
+- Blank lines and lines starting with `#` are ignored. Unparseable input prints a
+  one-line usage message.
+- Every write / read / result during the session **is recorded in the capture log too**,
+  so it can be replayed later with `ReplayScript`.
 
-`mtu`（と接続直後の自動表示）が出す `maximumWriteValueLength` は、フレームが長すぎて
-途中で切られているのか、そもそも届いていないのかを切り分けるのに使う。withoutResponse は
-ネゴシエートされた ATT_MTU から 3 バイト引いた値、withResponse は分割送信されるため
-最大 512 が返るのが普通。
+`maximumWriteValueLength`, shown by `mtu` (and automatically right after connecting), is
+useful for telling apart "the frame is too long and getting cut off" from "it's not
+arriving at all." withoutResponse is typically the negotiated ATT_MTU minus 3 bytes;
+withResponse is usually reported as up to 512, since it's split into multiple packets.
 
 ```
 最大 write 長: withResponse=512 bytes  withoutResponse=182 bytes
 ```
 
-notify は入力中でも非同期に流れてくるため、プロンプト `> ` は**起動直後と各コマンドの結果の
-直後だけ**表示される（毎回出すとパケットで画面が埋まるため）。
+Since notify keeps streaming in asynchronously even while typing, the `> ` prompt is only
+shown **right after startup and right after each command's result** (showing it every
+time would flood the screen with packets).
 
-候補のバイト列をファイルやパイプで流し込むこともできる。**端末以外から読んでいるときは
-`--write-delay` の間隔で 1 行ずつ処理する**ので、どの応答がどの行のものか分かる:
+Candidate byte sequences can also be piped or redirected in from a file. **When reading
+from something other than a terminal, lines are processed one at a time, `--write-delay`
+apart**, so it's still clear which response belongs to which line:
 
 ```sh
 printf '5a4b004b\n5a4b014c\n' | swift run muzzlemeter-sniff dump --name AC6000 -i
 swift run muzzlemeter-sniff dump --name AC6000 -i --write-delay 500 < candidates.txt
 ```
 
-### macOS の Bluetooth 権限
+### macOS Bluetooth permission
 
-CLI から CoreBluetooth を使うと、**ターミナルアプリ自体**に Bluetooth 権限が必要になる。
-初回実行時に許可ダイアログが出る。出ない・拒否してしまった場合は
+Using CoreBluetooth from the CLI requires Bluetooth permission for **the terminal app
+itself**. A permission dialog appears the first time it runs. If it doesn't appear, or
+you accidentally denied it, go to
 
-**システム設定 > プライバシーとセキュリティ > Bluetooth**
+**System Settings > Privacy & Security > Bluetooth**
 
-で Terminal.app（または iTerm.app など実行元のアプリ）を ON にし、
-**そのアプリを再起動**してから実行し直す。
+turn on Terminal.app (or iTerm.app, or whichever app you're running it from), and
+**restart that app** before running it again.
 
-重要な注意:
+Important notes:
 
-- 権限の判定対象は **プロセスを起動した親アプリ（responsible process）** であって
-  `muzzlemeter-sniff` 自身ではない。エディタや他のツールの統合ターミナルから起動すると
-  そのアプリに権限が無く、macOS が問答無用でプロセスを **SIGABRT で強制終了** する
-  （その場合は原因を説明するメッセージを stderr に出して終了する）。
-  **Terminal.app / iTerm.app から直接実行すること。**
-- CLI 実行ファイルには `NSBluetoothAlwaysUsageDescription` を含む Info.plist を
-  `__TEXT,__info_plist` セクションに埋め込んでいる（`Package.swift` のリンカ設定と
-  `Sources/MuzzlemeterSniff/Info.plist`）。これが無いと CoreBluetooth 初期化時に必ず落ちる。
-- Bluetooth がオフ、または権限が拒否されている場合は、その旨を表示して終了コード 1 で終わる。
+- Permission is evaluated against **the parent app that launched the process (the
+  responsible process)**, not `muzzlemeter-sniff` itself. Launching it from an editor's
+  or another tool's integrated terminal means that app lacks permission, and macOS kills
+  the process outright with **SIGABRT** (in that case, a message explaining why is
+  printed to stderr before exiting). **Run it directly from Terminal.app / iTerm.app.**
+- The CLI executable embeds an Info.plist containing `NSBluetoothAlwaysUsageDescription`
+  in its `__TEXT,__info_plist` section (via `Package.swift`'s linker settings and
+  `Sources/MuzzlemeterSniff/Info.plist`). Without it, CoreBluetooth initialization always
+  crashes.
+- If Bluetooth is off, or permission has been denied, this prints that fact and exits
+  with status code 1.
 
-## ビルド
+## Build
 
-### MuzzlemeterKit と CLI
+### MuzzlemeterKit and the CLI
 
-**Command Line Tools のツールチェーン（Swift 6.4）だけで動く**。
+**Works with just the Command Line Tools toolchain (Swift 6.4).**
 
 ```sh
 swift build
 swift test
 ```
 
-### iOS アプリ
+### The iOS app
 
-`.xcodeproj` は `project.yml` から **XcodeGen で生成する成果物**であり、リポジトリには
-含まれていない（gitignore）。クローン後、あるいは `project.yml` やファイル構成を変えたら
-**必ず最初に実行する**:
+`.xcodeproj` is a **build artifact generated from `project.yml` via XcodeGen**, and is
+not included in the repository (gitignored). **Always run this first** after cloning, or
+after changing `project.yml` or the file layout:
 
 ```sh
-xcodegen generate          # → Muzzlemeter.xcodeproj
+xcodegen generate          # -> Muzzlemeter.xcodeproj
 ```
 
-**iOS アプリのビルドには Xcode 26 以降が必要**（Xcode 16 系だと `@Observable` の
-マクロ展開が `!=` を要求し、SwiftData の `@Model` 型で落ちる）。
-`MuzzlemeterKit` / `muzzlemeter-sniff` だけなら Command Line Tools のツールチェーンで足りる。
+**Building the iOS app requires Xcode 26 or later** (with the Xcode 16 series, macro
+expansion for `@Observable` requires `!=` and fails to build on SwiftData `@Model`
+types). The Command Line Tools toolchain is enough for `MuzzlemeterKit` /
+`muzzlemeter-sniff` alone.
 
-その後:
+After that:
 
 ```sh
 open Muzzlemeter.xcodeproj
-# または
+# or
 xcodebuild -project Muzzlemeter.xcodeproj -scheme Muzzlemeter \
   -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
-`xcodebuild` を使うには Xcode 側のツールチェーンが必要（**ユーザー作業**、要パスワード）:
+Using `xcodebuild` requires Xcode's own toolchain to be selected (**a one-time step you
+do yourself**, requires your password):
 
 ```sh
 sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 ```
 
-CLI の `swift build` / `swift test` にはこれは**不要**。
+This is **not needed** for the CLI's `swift build` / `swift test`.
 
-#### 署名（DEVELOPMENT_TEAM）
+#### Signing (DEVELOPMENT_TEAM)
 
-`project.yml` の `DEVELOPMENT_TEAM` には作者の Team ID が直書きしてある
-（`xcodegen generate` のたびに Xcode で入れ直さなくて済むように）。
-**フォークして実機で動かす場合は自分の Team ID に書き換えること。**
-シミュレータ向けなら署名不要で、`CODE_SIGNING_ALLOWED=NO` を付ければそのまま通る。
+`project.yml`'s `DEVELOPMENT_TEAM` has the author's own Team ID hardcoded (so it doesn't
+need to be re-entered in Xcode after every `xcodegen generate`). **If you fork this and
+run it on real hardware, change it to your own Team ID.** For the simulator no signing
+is needed — add `CODE_SIGNING_ALLOWED=NO` and it builds as-is.
 
-WeatherKit を使うので、実機ビルドには **WeatherKit を有効にした App ID** が要る。
-不要なら `App/Muzzlemeter.entitlements` の `com.apple.developer.weatherkit` を外す
-（環境データが空になるだけで、計測そのものには影響しない）。
+Since the app uses WeatherKit, building for real hardware requires an **App ID with
+WeatherKit enabled**. If you don't need it, remove
+`com.apple.developer.weatherkit` from `App/Muzzlemeter.entitlements` (environmental data
+will just be empty; measurement itself is unaffected).
 
-#### iCloud Drive（デスクトップ）配下に置いている場合
+#### If the repo lives under iCloud Drive (Desktop)
 
-リポジトリが iCloud 同期対象のフォルダにあると、同期の競合コピー
-（`Foo 2.swift` のような重複ファイル）がビルドディレクトリに紛れ込み、
-`filename "..." used twice` で SwiftPM のビルドが落ちることがある。
-**中間生成物を同期対象の外に出す**と安定する:
+When the repository sits in a folder synced by iCloud, sync conflict copies (duplicate
+files like `Foo 2.swift`) can end up in the build directory, and SwiftPM's build fails
+with `filename "..." used twice`. **Moving intermediate build products outside the
+synced folder** fixes this:
 
 ```sh
 swift build --scratch-path /tmp/muzzlemeter-build
@@ -391,153 +422,175 @@ xcodebuild -project Muzzlemeter.xcodeproj -scheme Muzzlemeter \
   -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
-### 実機モードとリプレイモード
+### Real-hardware mode and replay mode
 
-| 実行環境 | トランスポート |
+| Environment | Transport |
 |---|---|
-| iPhone 実機 | `CoreBluetoothTransport`（実際に AC6000 へ接続する） |
-| シミュレータ | `ReplayTransport`（CoreBluetooth のハードウェアが無いため自動） |
-| 実機 + `--replay` | `ReplayTransport` |
+| Real iPhone | `CoreBluetoothTransport` (actually connects to the AC6000) |
+| Simulator | `ReplayTransport` (automatic, since there's no CoreBluetooth hardware) |
+| Real hardware + `--replay` | `ReplayTransport` |
 
-**デコーダと設定は両方で同じ**（`MuzzlemeterDecoder` + `ChronoDevice.Configuration.ac6000()`）。
-再生でも鍵ハンドシェイクまで実機と同じ経路を通るので、UI から見て挙動が変わらない
-（`ReplayTransport.demoPeripheral` が実機の広告 `00 05 08 c4 94 52 04` を持っている）。
+**The decoder and configuration are the same in both cases**
+(`MuzzlemeterDecoder` + `ChronoDevice.Configuration.ac6000()`). Replay goes through the
+same key-handshake path as real hardware, so behavior looks identical from the UI's
+perspective (`ReplayTransport.demoPeripheral` carries the real device's own advertisement
+`00 05 08 c4 94 52 04`).
 
-再生ソースは 2 つ:
+There are two replay sources:
 
-- 既定（`--replay`）: `App/Muzzlemeter/Services/ReplaySupport.swift` の合成スクリプト。
-  発数が多く UI を作り込みやすい。**バイト列は実プロトコルで組んでいる。**
-- `--replay-capture`: `App/Muzzlemeter/Resources/acesoft-iphone-rx.txt`
-  （公式アプリの実キャプチャそのもの。5 発 + 電源 OFF まで含む）を早送り再生
+- Default (`--replay`): a synthesized script in
+  `App/Muzzlemeter/Services/ReplaySupport.swift`. Has many shots, making it easy to build
+  out the UI. **The byte sequences are built using the real protocol.**
+- `--replay-capture`: fast-forward playback of
+  `App/Muzzlemeter/Resources/acesoft-iphone-rx.txt` (an actual capture from the official
+  app itself, including 5 shots and the power-off)
 
-`ReplayScript` は **`muzzlemeter-sniff dump` のログ形式もそのまま読める**ので、
-新しくキャプチャを取ったらそのファイルを置くだけで再生できる。
+`ReplayScript` can **also read the log format produced by `muzzlemeter-sniff dump`
+directly**, so a freshly captured log can be dropped in and replayed as-is.
 
-#### 目視確認用の起動引数（Debug かつシミュレータのみ）
+#### Launch arguments for visual verification (Debug builds on the simulator only)
 
-規制上限の色分けや N 発モードは「特定の値が入っている状態」でないと見えない。
-シミュレータを手で操作せずにその状態を作れるよう、`ScreenshotSupport` が
-**Debug ビルドのシミュレータでだけ**次の引数を解釈する（リリースビルドでは
-引数の解釈自体を行わないので、製品の挙動には関わらない）。
+Things like the regulation-limit color coding or N-shot mode are only visible when
+"specific values happen to be present." So that this state can be produced without
+manually operating the simulator, `ScreenshotSupport` interprets the following arguments
+**only on Debug builds running in the simulator** (a release build never even parses
+these arguments, so they have no effect on the shipped behavior):
 
 ```sh
 xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
-  --demo-energy-limit 0.001 \   # 選択中プロファイルの規制上限を上書き（J）
-  --demo-target-shots 5 \       # 目標発数を上書き（0 で手動に戻す）
-  --demo-tab settings \         # 起動時のタブ（live / sessions / settings）
-  --demo-scan-sheet \           # 起動直後に機器選択シートを開く
-  --demo-latest-session \       # 履歴タブで最新セッションの詳細を開く
-  --demo-seed-sessions \        # 見本セッションを 5 件流し込む（ストアが空のときだけ）
-  --demo-compare \              # 履歴タブで直近 3 件の比較画面を開く
-  --demo-tag-editor \           # 見本セッションの詳細とタグ編集シートを開く
-  --demo-filter 屋内 \          # 履歴タブにタグの絞り込みを掛ける
-  --demo-profile-detail \        # 設定タブで最初のプロファイルの詳細を開く
-  --demo-device-log 12 \         # 擬似本体が「本体内ログ 12 件」を持っている状態にする
-  --demo-device-log-broken 4 \   # そのうち 5 件目を未対応の形式で返す
-  --demo-device-log-auto         # 帯を押さずに取り込みを始める（進捗・結果の目視用）
+  --demo-energy-limit 0.001 \   # override the selected profile's regulation limit (J)
+  --demo-target-shots 5 \       # override the target shot count (0 reverts to manual)
+  --demo-tab settings \         # the tab shown at launch (live / sessions / settings)
+  --demo-scan-sheet \           # open the device selection sheet right at launch
+  --demo-latest-session \       # open the latest session's detail in the history tab
+  --demo-seed-sessions \        # seed 5 sample sessions (only when the store is empty)
+  --demo-compare \              # open the comparison screen for the last 3 sessions in the history tab
+  --demo-tag-editor \           # open a sample session's detail and its tag editor sheet
+  --demo-filter 屋内 \          # apply a tag filter to the history tab
+  --demo-profile-detail \        # open the first profile's detail in the settings tab
+  --demo-device-log 12 \         # make the mock device report "12 records in its internal log"
+  --demo-device-log-broken 4 \   # return the 5th of those records in an unsupported format
+  --demo-device-log-auto         # start the import without tapping the banner (for visually checking progress/results)
 ```
 
-`--demo-seed-sessions` は比較・タグ・推移のように**複数のセッションが溜まっていないと
-出ない画面**のために入れてある。既にセッションがあるときは何もしない。
+`--demo-seed-sessions` exists for screens that **only appear once multiple sessions have
+accumulated**, like comparison, tags, and trends. It does nothing if sessions already
+exist.
 
-`--demo-device-log` は本体内ログの取り込みのために入れてある。再生用の擬似本体
-（`ReplayTransport` の responder）が `0x62` / `0x63` に答えるので、**アプリ側は実機と
-同じ経路**（write → notify → デコード）を通る。既定でも 1 件持っている
-（実キャプチャの `0x62` が答えていた件数と揃えてある）。
-`--demo-device-log-broken <n>` を付けると n 番目のレコードだけ読めない形で返るので、
-「未対応の形式でした。ログを保存しました」と生データの書き出しを目視確認できる。
-`--demo-device-log-auto` は「取り込む」を押した後の画面（進捗・結果）を出すためのもの。
-実キャプチャの再生は**繋がっている時間が 10 秒足らず**なので、その間に手で押して
-進捗を捉えるのは運任せになる。付けると件数が分かった時点で取り込みが始まる。
+`--demo-device-log` exists for importing the device's internal log. The mock device (the
+`ReplayTransport` responder) answers `0x62` / `0x63`, so **the app side goes through the
+same path as real hardware** (write -> notify -> decode). It holds 1 record by default
+(matched to the count that `0x62` answered with in the real capture).
+Adding `--demo-device-log-broken <n>` makes only the nth record come back unreadable, so
+the "unsupported format — the log was saved" message and the raw-data export can be
+checked visually. `--demo-device-log-auto` exists to show the screen right after tapping
+"import" (progress and results). Since a real-capture replay stays connected for **less
+than 10 seconds**, tapping it by hand and catching the progress in time is a matter of
+luck. With this flag, the import starts automatically as soon as the count is known.
 
-> ⚠️ 擬似本体が返す `0x63` の中身は**推定**（`docs/PROTOCOL.md` §6.6）。
-> 実機の形式が判明したら `ReplayTransport.deviceLogResponder` ごと差し替える。
+> ⚠️ What the mock device returns for `0x63` is a **guess**
+> (`docs/PROTOCOL.md` §6.6). Once the real-hardware format is known,
+> `ReplayTransport.deviceLogResponder` will be replaced along with it.
 
-### 環境（気温・湿度・気圧）
+### Environment (temperature, humidity, pressure)
 
-セッションの 1 発目で、WeatherKit と CoreLocation から現況を 1 回だけ取って
-`Session` に記録する（`SessionEnvironmentService`）。取得は切り離したタスクで
-行うので**計測は一切待たされず**、失敗しても自動値が空のままになるだけ。
-値は詳細画面の「環境」から手で上書きでき、実効値は `manual ?? auto`。
+On the first shot of a session, the current conditions are fetched once from WeatherKit
+and CoreLocation and recorded on the `Session` (`SessionEnvironmentService`). The fetch
+runs as a detached task, so **measurement is never blocked at all**; if it fails, the
+automatic value is simply left empty. The values can be overridden by hand from the
+detail screen's "Environment" section, and the effective value is `manual ?? auto`.
 
-**シミュレータでは WeatherKit のエンタイトルメントが効かないので値が取れない。**
-UI を目視確認できるように、`--replay-capture` かつシミュレータのときだけ
-見本の値を返す経路が `SessionEnvironmentService` にある（`#if targetEnvironment(simulator)`）。
-実機のコードパスには入らない。
+**The WeatherKit entitlement doesn't work in the simulator, so no value can be fetched
+there.** So the UI can still be checked visually, `SessionEnvironmentService` has a path
+that returns sample values, but only when running `--replay-capture` in the simulator
+(`#if targetEnvironment(simulator)`). It never runs on the real-hardware code path.
 
-## 実機での検証手順
+## Verifying against real hardware
 
-1. 本体の電源を入れ、Mac の近くに置く
-2. **Terminal.app / iTerm.app から**（他アプリの統合ターミナルは不可）:
+1. Power on the device and place it near the Mac
+2. **From Terminal.app / iTerm.app** (an integrated terminal from another app won't
+   work):
 
    ```sh
    swift run muzzlemeter-sniff dump --name AC6000BT- --handshake
    ```
 
-3. `-> ACK for READ_KEY` が出ればハンドシェイク成功。そのまま BB を撃って
-   `FIRE_REPORT rawSpeed=…` の行と**本体 LCD の表示**を突き合わせる
-4. ログは `tools/re/captures/<日時>.log` に残るので、そのまま
-   `Tests/MuzzlemeterKitTests/Fixtures/` や再生スクリプトに使える
+3. If `-> ACK for READ_KEY` appears, the handshake succeeded. Fire a BB and compare the
+   `FIRE_REPORT rawSpeed=…` line against **the device's own LCD**
+4. The log is kept at `tools/re/captures/<date-time>.log`, ready to use directly in
+   `Tests/MuzzlemeterKitTests/Fixtures/` or a replay script
 
-まだ確かめられていないこと（`docs/PROTOCOL.md` §10）:
+Things still unverified (`docs/PROTOCOL.md` §10):
 
-- `rawRev`（連射速度）の単位 → フルオートで数発撃って連射間隔と突き合わせる
-- アモ重量のワイヤスケール（×100 か ×1000 か）→ 本体で重量設定を変えながら `0x47` を見る
-- 鍵未知の初回ペアリング経路（実装はしてあるが実物を見ていない）
-- **`0x63`（本体内ログ 1 件）の要求・応答の形** →
-  `swift run muzzlemeter-sniff dump --name AC6000BT- --read-log` の出力を見る
+- The unit of `rawRev` (rate of fire) — fire several rounds full-auto and compare against
+  the interval between shots
+- The wire scale for BB weight (×100 or ×1000) — watch `0x47` while changing the weight
+  setting on the device
+- The first-pairing path when the key is unknown (implemented, but never observed against
+  a real device)
+- **The request/response shape for `0x63` (one device-log record)** — see the output of
+  `swift run muzzlemeter-sniff dump --name AC6000BT- --read-log`
 
-## プロトコル
+## Protocol
 
-BLE の仕様はメーカーから公開されていないため、**自分の個体との通信を実測して**組み立てた。
+Since the BLE spec isn't published by the manufacturer, it was worked out **by measuring
+communication with my own unit**.
 
-- 結果: [`docs/PROTOCOL.md`](docs/PROTOCOL.md)（UUID・フレーム形式・チェックサム・
-  鍵ハンドシェイク・opcode 表）
-- 出典は 2 つだけ:
-  1. 自分の iPhone で取った HCI ログ（Apple PacketLogger の `.pklg`）
-  2. 自作クライアント `muzzlemeter-sniff` による実機での追試
-- 調査の進め方は [`tools/re/README.md`](tools/re/README.md)
+- Results: [`docs/PROTOCOL.md`](docs/PROTOCOL.md) (UUIDs, frame format, checksum, key
+  handshake, opcode table)
+- Only two sources were used:
+  1. HCI logs captured on my own iPhone (a `.pklg` from Apple's PacketLogger)
+  2. On-device testing with the custom client `muzzlemeter-sniff`
+- See [`tools/re/README.md`](tools/re/README.md) for how the research was carried out
 
-`docs/PROTOCOL.md` に書いてあるのは**観測できた事実**だけで、確度（確定 / 推定 / 未検証）を
-明記してある。まだ埋まっていない項目は §10 にまとめてある。
+`docs/PROTOCOL.md` documents only **observed facts**, each labeled with its confidence
+(confirmed / presumed / unverified). What's still unfilled is collected in §10.
 
-## プライバシー
+## Privacy
 
-- **Bluetooth** は弾速計との通信にのみ使う。他のデバイスへ接続することはない。
-- **位置情報**はセッションの 1 発目に一度だけ取得し、その地点の気温・湿度・気圧を
-  **WeatherKit** から引くためだけに使う。位置そのものは保存しない。
-- 計測データは**端末内の SwiftData ストアにのみ**保存される。CSV 書き出しは
-  ユーザーが明示的に操作したときだけ動く。
-- **解析・トラッキング SDK は一切入っていない。**
-- **WeatherKit 以外のネットワーク通信は行わない。**
+- **Bluetooth** is used only to talk to the chronograph. It never connects to any other
+  device.
+- **Location** is fetched once, on a session's first shot, solely to look up
+  temperature/humidity/pressure at that spot via **WeatherKit**. The location itself is
+  never stored.
+- Measurement data is stored **only in the on-device SwiftData store**. CSV export only
+  runs when the user explicitly triggers it.
+- **No analytics or tracking SDK is included, at all.**
+- **No network traffic occurs other than WeatherKit.**
 
-## 免責
+## Disclaimer
 
-- 本アプリは **Acetech 社とは無関係**の非公式アプリであり、メーカーの承認・支援・
-  保証を受けていない。**Acetech**、**AC6000**、**AceSoft** は各社の商標。
-- 本アプリは**法令・レギュレーション適合を判定するツールではない**。表示される初速・
-  エネルギーは弾速計の出力をそのまま換算した参考値であり、測定誤差・弾の個体差・
-  設定ミスの影響を受ける。**銃口初速やエネルギーが法令やフィールド規則の上限を
-  超えていないことの確認は、使用者自身の責任**で、公的に認められた方法で行うこと。
-- 本ソフトウェアは MIT ライセンスの定めるとおり**無保証**で提供される。本体への
-  書き込みは読み取り系に限定してあるが、機器の故障・データ喪失を含むいかなる損害
-  についても作者は責任を負わない。
+- This app is an unofficial app **unaffiliated with Acetech**, and is not approved,
+  supported, or warranted by the manufacturer. **Acetech**, **AC6000**, and **AceSoft**
+  are trademarks of their respective owners.
+- This app is **not a tool for determining legal or regulatory compliance**. The
+  displayed velocity and energy are reference values converted directly from the
+  chronograph's own output, and are subject to measurement error, BB-to-BB variance, and
+  configuration mistakes. **Confirming that muzzle velocity or energy does not exceed the
+  limits set by law or field rules is the user's own responsibility**, to be done through
+  officially recognized methods.
+- This software is provided **with no warranty**, as stated by the MIT license. Writes to
+  the device are restricted to read-only operations, but the author accepts no
+  responsibility for any damage, including device failure or data loss.
 
-## コントリビュート
+## Contributing
 
-Issue / Pull Request は歓迎する。特に **AC6000 BT（MKIII でないもの）で動いたか**の
-報告と、`docs/PROTOCOL.md` §10 の未検証項目を潰すキャプチャがありがたい。
+Issues and pull requests are welcome. Reports on **whether it works on an AC6000 BT
+(non-MKIII)** are especially appreciated, along with captures that resolve any of the
+unverified items in `docs/PROTOCOL.md` §10.
 
-- コミットメッセージには **ADR**（Context / Decision / Alternatives considered /
-  Consequences）を本文に書く。設計上の選択を後から追えるようにするため。
-  詳細は [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)。
-- PR を出す前に `swift test` を通し、`xcodegen generate` が必要な変更なら
-  `project.yml` の側を直す（`.xcodeproj` はコミットしない）。
-- **他者のアプリを逆コンパイルして得た情報は受け付けない。** `docs/PROTOCOL.md` に
-  載せるのは、自分で取得した通信キャプチャと実機での追試から得た観測事実だけにする。
-- 危険な操作（OTA characteristic への書き込み、`0x61` CLEAR_LOG）を追加する PR は
-  受け付けない。`docs/PROTOCOL.md` §11 を参照。
+- Commit messages must carry an **ADR** (Context / Decision / Alternatives considered /
+  Consequences) in the body, for any commit that involves a design choice, so it can be
+  traced later. See [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)
+  for details.
+- Run `swift test` before opening a PR, and if the change needs `xcodegen generate`, edit
+  `project.yml` accordingly (`.xcodeproj` itself is never committed).
+- **Information obtained by decompiling someone else's app is not accepted.** Only
+  observed facts obtained from your own communication captures and on-device testing may
+  be added to `docs/PROTOCOL.md`.
+- PRs that add dangerous operations (writing to the OTA characteristic, `0x61`
+  CLEAR_LOG) will not be accepted. See `docs/PROTOCOL.md` §11.
 
-## ライセンス
+## License
 
 [MIT](LICENSE) © 2026 Yusuke Hakamaya

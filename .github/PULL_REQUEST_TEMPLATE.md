@@ -1,35 +1,37 @@
-## 概要 / Summary
+## Summary
 
-<!-- 何を変えるのか、1〜3 行で。 -->
+<!-- What does this change, in 1-3 lines? -->
 
-## ADR（設計上の選択がある場合は必須）
+## ADR (required whenever the change involves a design choice)
 
-このリポジトリでは、**設計・アーキテクチャの選択を含むコミットはコミットメッセージ本文に
-ADR を書く**ことになっている。squash merge の本文にはこの PR の本文がそのまま入るので、
-以下を埋めておくとマージ後の履歴にそのまま残る。
-（typo・整形・選択の無い依存更新のような機械的な変更は ADR を省いてよい。）
+In this repository, **any commit that involves a design or architecture choice must
+carry an ADR in the commit message body.** A squash merge's commit body inherits this
+PR's own body, so filling in the sections below keeps that record in the merged history.
+(Purely mechanical changes — typos, formatting, a dependency bump with no real choice
+involved — may skip the ADR.)
 
 ### Context
 
-<!-- なぜこの変更が必要か。制約は何か。 -->
+<!-- Why is this change needed? What are the constraints? -->
 
 ### Decision
 
-<!-- 何を選んだか。具体的に。 -->
+<!-- What was chosen? Be concrete. -->
 
 ### Alternatives considered
 
-<!-- 却下した案と、却下した理由。1 案 1 行以上。 -->
+<!-- Each rejected option, and why it was rejected. At least one line per option. -->
 
 ### Consequences
 
-<!-- トレードオフ、フォローアップ、何が楽になり何が面倒になるか。 -->
+<!-- Trade-offs, follow-ups, what becomes easier or harder. -->
 
-## 確認したこと / Checks
+## Checks
 
-- [ ] `swift test` が通る
-- [ ] `xcodegen generate` → iOS アプリがビルドできる（`project.yml` を触った場合）
-- [ ] 実機 or リプレイで動作を確認した（UI を触った場合）
-- [ ] `docs/PROTOCOL.md` に足した記述は**自分で観測した事実**である
-      （他者のアプリを逆コンパイルして得た情報は受け付けない）
-- [ ] 破壊的な opcode（`0x61` CLEAR_LOG、OTA characteristic への書き込み）を追加していない
+- [ ] `swift test` passes
+- [ ] `xcodegen generate` → the iOS app builds (if `project.yml` was touched)
+- [ ] Verified behavior on real hardware or via replay (if the UI was touched)
+- [ ] Anything added to `docs/PROTOCOL.md` is a fact **observed firsthand**
+      (information obtained by decompiling someone else's app is not accepted)
+- [ ] No destructive opcode was added (`0x61` CLEAR_LOG, or a write to the OTA
+      characteristic)

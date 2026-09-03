@@ -1,101 +1,132 @@
-# UX ロードマップ（2026-09-03 ユーザー合意）
+# UX Roadmap (agreed with the user on 2026-09-03)
 
-## データモデルの棲み分け（Round A・実装済み）
+## Splitting the data model (Round A, shipped)
 
-| 置き場所 | 項目 |
+| Where it lives | Fields |
 |---|---|
-| プロファイル（銃そのもの） | 名前 / メーカー / モデル / パワーソース区分（電動・ガス・エアコッキング・HPA）/ インナーバレル長 / 規制上限 J（既定 0.98、変更可）/ メモ / セッション変数の既定値（BB 重量・ガス種別・ホップ設定） |
-| セッション（その回の条件） | BB 重量 / ガス種別（区分がガスのときのみ）/ ホップ設定 / タグ / メモ / 名前 / 環境データ（自動＋手動上書き） |
+| Profile (the gun itself) | Name / manufacturer / model / power-source category (electric, gas, spring, HPA) / inner barrel length / regulation limit in J (default 0.98, editable) / notes / default session variables (BB weight, gas type, hop setting) |
+| Session (this round's conditions) | BB weight / gas type (only when the category is gas) / hop setting / tags / notes / name / environmental data (automatic + manual override) |
 
-- セッションは最初の 1 発でプロファイル既定値により自動開始（ブロッキング UI なし）。
-- Live のプロファイルピル直下に「0.25 g · HFC134a · ホップ 3」を表示し、タップでセッション変数を変更。変更はセッション全体に適用（ジュール再計算）。
-- 既存の GunProfile.powerSource（ガス種別込み）は「区分」と「ガス種別」に分割し、既存データを移行する。
+- A session auto-starts on the first shot, seeded from the profile's defaults (no
+  blocking UI).
+- Right under the profile pill on the Live screen, a line like "0.25 g · HFC134a ·
+  hop 3" is shown; tapping it changes the session variables. The change applies to the
+  whole session (joules are recalculated).
+- The existing `GunProfile.powerSource` (which bundled in gas type) is split into
+  "category" and "gas type," migrating existing data.
 
-実装メモ（該当コミットの ADR に詳細）:
+Implementation notes (see the ADR on the relevant commit for detail):
 
-- セッション変数は値型 `SessionVariables`（BB 重量・ガス種別・ホップ）。プロファイルは
-  その**既定値**だけを持ち、セッションが開始時にスナップショットする。
-- 待機中の「次に始まる条件」は `ChronoService.pendingVariables`（永続化しない）。
-- 移行は列の追加＋起動時の値の派生（`StoreMigration`）。`VersionedSchema` は使っていない。
-- `bbWeightGrams` / `hopNotes` は列名を据え置き、`defaultBBWeightGrams` /
-  `defaultHopSetting` という別名で呼ぶ。
-- CSV: `power_source` → `power_category`、`gas_type` / `hop_setting` / `energy_limit_j` を追加。
+- Session variables are the value type `SessionVariables` (BB weight, gas type, hop).
+  The profile holds only their **defaults**, and a session snapshots them at start.
+- The "conditions the next session will start with" while idle live in
+  `ChronoService.pendingVariables` (not persisted).
+- Migration is done by adding columns plus deriving values at launch
+  (`StoreMigration`). `VersionedSchema` isn't used.
+- `bbWeightGrams` / `hopNotes` keep their column names, referred to under the aliases
+  `defaultBBWeightGrams` / `defaultHopSetting`.
+- CSV: `power_source` -> `power_category`; `gas_type` / `hop_setting` /
+  `energy_limit_j` added.
 
-## Round B: Live 周り
-1. ✅ 規制値ライン（プロファイル上限に対し 余裕/注意/超過 の色分け、超過時ハプティクス＋音）
-2. ✅ 本体の Ammo 設定（0x47）とプロファイル BB 重量の不一致警告
-3. ✅ 弾速の読み上げ（ON/OFF）
-5. ✅ 目標発数で自動的にセッションを締める「N 発モード」
-11. ✅ スキャン中に見つかった本体名と RSSI を表示（複数台での取り違え防止）
+## Round B: around Live
+1. ✅ Regulation-limit line (color-coded margin/caution/exceeded against the profile
+   limit, with haptics + sound when exceeded)
+2. ✅ Warning when the device's own Ammo setting (0x47) mismatches the profile's BB
+   weight
+3. ✅ Read-aloud of each shot's velocity (on/off)
+5. ✅ "N-shot mode": automatically closes the session once the target shot count is
+   reached
+11. ✅ Shows the device names and RSSI found while scanning (to avoid mixing up multiple
+   units)
 
-実装メモ（詳細は該当コミットの ADR）:
+Implementation notes (see the ADR on the relevant commit for detail):
 
-- **1. 規制値ライン**: 判定は `MuzzlemeterKit.EnergyLimit`（`margin(joules:limitJoules:)`）に置いた。
-  上限の 90 % 以下 = 余裕 / 90 % 超〜上限未満 = 注意 / **上限ちょうど以上 = 超過**（安全側）。
-  色は `EnergyMargin.tint` の 1 箇所で決め、Live の巨大数字・直近リスト・履歴のリストと
-  チャートで同じ色を使う。音と振動は `FeedbackService`（`ChronoService` から分離。
-  音は `AVAudioSession` の `.ambient` = サイレントスイッチに従う）。
-  「余裕」は**そのセッションで最も高かった 1 発**を基準にする（平均だと外れ値を見落とす）。
-- **2. Ammo 不一致**: `AmmoRecord.weightGrams` を optional にし、raw が 100 以上なら ×1000、
-  未満なら ×100 と読む（`docs/PROTOCOL.md` §6.4 の 2 つのスケールを両方受け入れる）。
-  実在しない重量になる値は `nil`。`0x5A` は常に、`0x47` は自発通知（marker 0x40）だけを
-  「いま選ばれている弾」として採る。差が 0.005 g を超えたら接続ピルの下に帯を出し、
-  「セッションを 0.20 g にする」「無視」の 2 択。**本体には書き込まない。**
-- **3. 読み上げ**: `AVSpeechSynthesizer`。文言は画面と同じ整形を通す（表示 92.5 なら
-  「きゅうじゅうにてんご」）。オーディオセッションは通知音が `.ambient`（サイレント
-  スイッチに従う）、読み上げが `.playback` + `.duckOthers`（**従わない**）で、
-  意図的に扱いを変えている。理由は設定の説明文に書いてある。
-  フルオートでは前の発言を打ち切って最新だけを読む。
-- **5. N 発モード**: `ShotTarget`（キット。`nil`/0/負数は成立しない）で判定する。
-  **ちょうどでも超えても締める**（フルオートで行き過ぎるため）。目標発数は
-  `SessionVariables` に入れた（プロファイルが既定値、セッションで上書き）。
-  締めるのは**保存の後**。まとめは画面に重ねて出し、「もう一度」＝同じ条件で継続、
-  「閉じる」＝目標発数を解除。ボタンの違いは説明文で明示する。
-- **11. スキャン表示**: キットに `DiscoveryList`（前回接続 → 電波の強い順に並べる）と
-  `DiscoveredPeripheral.signalBars`（RSSI → 0〜4 本）を足し、`ChronoEvent.discovered` で
-  **変化したときだけ**配信する。RSSI を追うために CoreBluetooth のスキャンを
-  `allowDuplicates: true` にした。接続ピルをタップするとシートが開き、選んだ機器へ
-  繋ぎ直せる。自動接続は止めず、**上書きするための入口**として足している。
+- **1. Regulation-limit line**: the judgment lives in `MuzzlemeterKit.EnergyLimit`
+  (`margin(joules:limitJoules:)`). 90% or less of the limit = margin / over 90% up to
+  under the limit = caution / **exactly at the limit or over = exceeded** (erring on the
+  safe side). The color is decided in one place, `EnergyMargin.tint`, and the same color
+  is used by the Live screen's large number, the recent-shots list, and the history
+  list/chart. Sound and vibration live in `FeedbackService` (split out from
+  `ChronoService`; sound follows `AVAudioSession`'s `.ambient` category, i.e. respects
+  the silent switch). "Margin" is judged against **the single highest shot in that
+  session** (an average would hide an outlier).
+- **2. Ammo mismatch**: `AmmoRecord.weightGrams` was made optional, reading a raw value
+  of 100 or more as ×1000 and under 100 as ×100 (accepting both of the two scales
+  described in `docs/PROTOCOL.md` §6.4). A value that would be an unreal weight either
+  way becomes `nil`. `0x5A` is always taken as "the currently selected BB," while `0x47`
+  is only taken as such for a spontaneous notification (marker 0x40). If the difference
+  exceeds 0.005 g, a banner appears under the connection pill with two choices: "set
+  the session to 0.20 g" or "ignore." **Nothing is ever written back to the device.**
+- **3. Read-aloud**: `AVSpeechSynthesizer`. The spoken text goes through the same
+  formatting as the display (a displayed 92.5 is read the same way the digits would be
+  spoken in Japanese). The audio session deliberately treats notification sound and
+  speech differently: notification sound is `.ambient` (respects the silent switch),
+  while speech is `.playback` + `.duckOthers` (**does not** respect it) — the reasoning
+  is written in the setting's own description text. During full-auto, an in-progress
+  utterance is cut off so only the latest shot gets spoken.
+- **5. N-shot mode**: judged via `ShotTarget` (part of the kit; `nil`/0/negative doesn't
+  count as a target). **Closes on reaching the target exactly, or overshooting it**
+  (since full-auto can overshoot). The target shot count lives in `SessionVariables`
+  (the profile provides the default, a session can override it). Closing happens
+  **after saving**. The summary is shown as an overlay, with "again" continuing under
+  the same conditions and "close" clearing the target shot count — the difference
+  between the two buttons is spelled out in their description text.
+- **11. Scan display**: added `DiscoveryList` to the kit (sorts last-connected-first,
+  then by signal strength) and `DiscoveredPeripheral.signalBars` (RSSI -> 0-4 bars),
+  delivered via `ChronoEvent.discovered` **only when something changed**. CoreBluetooth
+  scanning was switched to `allowDuplicates: true` in order to track RSSI. Tapping the
+  connection pill opens a sheet to reconnect to a different chosen device.
+  Auto-connect wasn't removed — this was added as **an entry point for overriding it**.
 
-## Round C: 分析
-6. ✅ セッション比較（2〜3 件の統計並置＋重ね合わせグラフ）
-7. ✅ タグ付けと絞り込み
-9. ✅ プロファイル詳細に平均弾速の時系列と気温との散布図
+## Round C: analysis
+6. ✅ Session comparison (side-by-side stats for 2-3 sessions + an overlaid chart)
+7. ✅ Tagging and filtering
+9. ✅ A time series of mean velocity and a scatter plot against temperature, on the
+   profile detail screen
 
-実装メモ（詳細は該当コミットの ADR）:
+Implementation notes (see the ADR on the relevant commit for detail):
 
-- **6. セッション比較**: 比較の入口は履歴一覧の選択モードとセッション詳細の
-  「他のセッションと比較」の 2 つで、どちらも `SessionComparisonRequest`（2〜3 件）
-  という**値**に落として同じ遷移先へ入る。表の「どの値が良いか」は
-  `MuzzlemeterKit.ComparisonTable` に置き、**向きのある項目（SD・ES・超過発数）だけ**に
-  印を付ける（平均や最大に印を付けると「印のほうが良い」と誤読させる）。
-  印は色ではなく淡い地色＋太字。色は規制上限の橙 / 赤と衝突させない。
-  系列色も同じ理由で青・紫・ティール（橙と赤を避ける）。統計はビューを開いたときに
-  1 回だけ計算して `SessionComparisonEntry` に持つ。
-- **7. タグ**: 保存は既存の `Session.tagsRaw`（改行区切りの 1 列）のまま。整形・重複潰し・
-  同一判定・絞り込みは `MuzzlemeterKit.SessionTags` / `SessionFilter` に集めた
-  （保存側と絞り込み側で「同じタグ」の判定がずれないため）。同一判定は
-  **大文字小文字と全角半角は無視、濁点は無視しない**（日本語では意味が変わる）。
-  絞り込みは SwiftData の述語ではなく取得済み配列に当てる。タグは AND、
-  文字検索はタイトル・メモ・タグの OR。絞り込みの帯を上に貼り付けると大きい
-  タイトルと場所が食い違って「履歴」が消えるので、履歴だけタイトルを inline にした。
-  CSV には `tags` 列（セミコロン区切り）を追加。
-- **9. プロファイルの推移**: 設定のプロファイル行は編集シートではなく**詳細画面**へ
-  遷移する（編集は詳細の「編集」）。Live のプロファイルメニューからも
-  「プロファイルの詳細」でシートとして開ける（計測中に画面を押しのけないため）。
-  時系列・散布図・まとめの計算は `MuzzlemeterKit.ProfileTrend`。全体の SD は
-  **セッションごとの SD の平均ではなく**、全ショットを 1 つの標本として見た標本 SD
-  （分解式 `(N−1)s² = Σ(nᵢ−1)sᵢ² + Σnᵢ(mᵢ−M)²`）。散布図は気温のある回だけで、
-  3 件未満のときは「傾きを読み取るには足りない」と断る。セッションとの結び付けは
-  **セッションに記録された銃名**（プロファイルを参照させない設計を維持するため、
-  プロファイル名を変えると過去の回は出てこなくなる）。
+- **6. Session comparison**: there are two entry points — selection mode in the history
+  list, and "Compare with other sessions" from a session's detail — both of which
+  collapse into the same **value**, `SessionComparisonRequest` (2-3 sessions), and lead
+  to the same destination. Which value in the table is "better" is decided by
+  `MuzzlemeterKit.ComparisonTable`, which marks **only the metrics that have a
+  direction** (SD, ES, shots over the limit) — marking a mean or a max would mislead the
+  reader into thinking "the marked one is better." Marks use a pale background plus bold
+  text rather than color, so as not to collide with the regulation limit's orange/red.
+  Series colors are blue/purple/teal for the same reason (avoiding orange and red). The
+  stats are computed once, when the view opens, and held in `SessionComparisonEntry`.
+- **7. Tags**: still saved into the existing `Session.tagsRaw` (a single
+  newline-separated column). Normalization, dedup, equality, and filtering were all
+  collected into `MuzzlemeterKit.SessionTags` / `SessionFilter` (so the save path and
+  the filter path never disagree about "the same tag"). Equality **ignores case and
+  full-width/half-width forms, but not dakuten** (voicing marks) — dakuten changes the
+  meaning of a word in Japanese. Filtering is applied to an already-fetched array rather
+  than a SwiftData predicate. Tags are ANDed; text search is an OR across title, notes,
+  and tags. Pinning the filter banner to the top clashed visually with the large title
+  and made "History" disappear, so only the History screen was switched to an inline
+  title. A `tags` column (semicolon-separated) was added to the CSV export.
+- **9. Profile trends**: tapping a profile row in Settings now navigates to a **detail
+  screen** rather than the edit sheet (editing moved to "Edit" within the detail). It
+  can also be opened as a sheet from Live's profile menu via "Profile details" (so it
+  doesn't push the measurement screen aside mid-session). The time series, scatter plot,
+  and summary are computed by `MuzzlemeterKit.ProfileTrend`. The overall SD is **not**
+  the average of each session's own SD — it's the sample SD treating every shot as one
+  combined sample (via the decomposition
+  `(N-1)*s^2 = sum((n_i-1)*s_i^2) + sum(n_i*(m_i-M)^2)`). The scatter plot only includes
+  sessions with a recorded temperature, and shows a disclaimer below 3 points ("not
+  enough to read a trend from"). Sessions are matched to a profile by **the gun name
+  recorded on the session** (to preserve the design where a session never references a
+  profile directly — renaming a profile means past sessions under the old name stop
+  showing up).
 
-## Round D: 本体内ログの取り込み（0x62 件数 / 0x63 読み出し。0x61 消去は実装しない）
+## Round D (shipped): importing the device's internal log (0x62 record count / 0x63
+readout; 0x61 erase is not implemented)
 
-## Round E: 拡張ターゲット
-4. ✅ ライブアクティビティ（Dynamic Island / ロック画面）
-10. ✅ ホーム画面ウィジェット
-12. ✅ Apple Watch の弾速表示
+## Round E: extended targets
+4. ✅ Live Activity (Dynamic Island / lock screen)
+10. ✅ Home Screen widget
+12. ✅ Apple Watch velocity display
 
 Implementation notes (see the ADR in each commit for the full reasoning):
 
@@ -162,3 +193,20 @@ Implementation notes (see the ADR in each commit for the full reasoning):
   the watch app itself was the higher-value target given the time
   available, and a complication can be added later as its own small
   extension without touching this design.
+
+## Round D follow-up: device-log fixes (shipped)
+
+Two follow-up fixes landed after Round D shipped (see each commit's own ADR):
+
+- Fixed the device-log commands (`0x62` / `0x63`) to the format confirmed on real
+  hardware, correcting the earlier guessed layout now that on-device testing had
+  settled it (`docs/PROTOCOL.md` §6.5 / §6.6).
+- Made log import skip records already pulled in during the same power cycle, since
+  the device's internal log is volatile and resets to 0 records on every power-on —
+  only newly logged records are imported on a later connection.
+
+## Follow-up not yet done
+
+- Translating comments in `App/Muzzlemeter/**` to English was out of scope for the
+  documentation translation pass (2026-09) — the tree is too large for that pass. Left
+  as a follow-up.
