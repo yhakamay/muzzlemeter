@@ -10,6 +10,7 @@ struct SessionDetailView: View {
 
     @State private var renamingSession: Session?
     @State private var isEditingEnvironment = false
+    @State private var isComparing = false
 
     var body: some View {
         let shots = session.orderedShots
@@ -121,10 +122,23 @@ struct SessionDetailView: View {
         .sheet(isPresented: $isEditingEnvironment) {
             SessionEnvironmentEditor(session: session)
         }
+        .sheet(isPresented: $isComparing) {
+            SessionComparisonPicker(base: session)
+                .environment(service)
+        }
         .toolbar {
+            // 名前の変更と比較は「ときどき使う」操作なので、CSV（共有の標準アイコン）と
+            // 並べず 1 つのメニューに畳む。ツールバーに 3 つ並べると、押し間違いが増える。
             ToolbarItem(placement: .topBarTrailing) {
-                Button("名前を変更", systemImage: "pencil") {
-                    renamingSession = session
+                Menu {
+                    Button("名前を変更", systemImage: "pencil") {
+                        renamingSession = session
+                    }
+                    Button("他のセッションと比較", systemImage: "chart.line.uptrend.xyaxis") {
+                        isComparing = true
+                    }
+                } label: {
+                    Label("このセッションの操作", systemImage: "ellipsis.circle")
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {

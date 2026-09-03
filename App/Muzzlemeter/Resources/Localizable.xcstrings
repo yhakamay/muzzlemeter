@@ -18,6 +18,23 @@
         }
       }
     },
+    "%@（この中で最も良い）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (best of these)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（この中で最も良い）"
+          }
+        }
+      }
+    },
     "%@（デモ再生）": {
       "extractionState": "manual",
       "localizations": {
@@ -235,6 +252,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "CO2"
+          }
+        }
+      }
+    },
+    "CSV で共有": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share as CSV"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV で共有"
           }
         }
       }
@@ -613,6 +647,23 @@
         }
       }
     },
+    "このセッションの操作": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session actions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このセッションの操作"
+          }
+        }
+      }
+    },
     "この機器を忘れる": {
       "extractionState": "manual",
       "localizations": {
@@ -677,6 +728,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "その他"
+          }
+        }
+      }
+    },
+    "ばらつきの要約": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spread summary"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ばらつきの要約"
           }
         }
       }
@@ -1051,6 +1119,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッション条件"
+          }
+        }
+      }
+    },
+    "セッション比較": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session comparison"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション比較"
           }
         }
       }
@@ -1463,6 +1548,23 @@
         }
       }
     },
+    "他のセッションと比較": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare with other sessions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他のセッションと比較"
+          }
+        }
+      }
+    },
     "余裕": {
       "extractionState": "manual",
       "localizations": {
@@ -1769,6 +1871,23 @@
         }
       }
     },
+    "印は「小さいほうが良い」項目（SD・ES・超過発数）にだけ付きます。平均や最大は速ければ良いというものではないので、印を付けていません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marks are shown only for values where lower is better (SD, ES, over-limit shots). A higher mean or maximum is not necessarily better, so those rows are left unmarked."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "印は「小さいほうが良い」項目（SD・ES・超過発数）にだけ付きます。平均や最大は速ければ良いというものではないので、印を付けていません。"
+          }
+        }
+      }
+    },
     "名前": {
       "extractionState": "manual",
       "localizations": {
@@ -1990,6 +2109,40 @@
         }
       }
     },
+    "平均 J": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mean J"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均 J"
+          }
+        }
+      }
+    },
+    "平均線を出す": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show mean lines"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均線を出す"
+          }
+        }
+      }
+    },
     "弾速": {
       "extractionState": "manual",
       "localizations": {
@@ -2003,6 +2156,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "弾速"
+          }
+        }
+      }
+    },
+    "弾速の重ね合わせ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velocity overlay"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "弾速の重ね合わせ"
           }
         }
       }
@@ -2415,6 +2585,23 @@
         }
       }
     },
+    "横軸は各セッションの何発目か。発数が違っても、立ち上がりからの動きかたを重ねて見られます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The x axis is the shot number within each session, so sessions with different shot counts can still be overlaid from the first shot."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "横軸は各セッションの何発目か。発数が違っても、立ち上がりからの動きかたを重ねて見られます。"
+          }
+        }
+      }
+    },
     "機器の一覧を開きます": {
       "extractionState": "manual",
       "localizations": {
@@ -2496,6 +2683,142 @@
           "stringUnit": {
             "state": "translated",
             "value": "次のセッション（最初の 1 発）はこの条件で始まります。目標発数を入れると、その発数に届いた時点でセッションが自動的に締まります（空欄なら手動）。"
+          }
+        }
+      }
+    },
+    "比べたいセッションを 2〜3 件選んでください（%lld / %lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select 2 or 3 sessions to compare (%lld / %lld)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比べたいセッションを 2〜3 件選んでください（%lld / %lld）"
+          }
+        }
+      }
+    },
+    "比べているセッション": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions being compared"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比べているセッション"
+          }
+        }
+      }
+    },
+    "比べられるセッションが他にありません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "There are no other sessions to compare with."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比べられるセッションが他にありません。"
+          }
+        }
+      }
+    },
+    "比べる相手（最大 %lld 件）": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare with (up to %lld)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比べる相手（最大 %lld 件）"
+          }
+        }
+      }
+    },
+    "比較": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較"
+          }
+        }
+      }
+    },
+    "比較したセッションの CSV": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV of the compared sessions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較したセッションの CSV"
+          }
+        }
+      }
+    },
+    "比較する": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較する"
+          }
+        }
+      }
+    },
+    "比較のもと": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baseline session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較のもと"
           }
         }
       }
@@ -2670,6 +2993,23 @@
         }
       }
     },
+    "発数": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shots"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "発数"
+          }
+        }
+      }
+    },
     "発目": {
       "extractionState": "manual",
       "localizations": {
@@ -2806,6 +3146,23 @@
         }
       }
     },
+    "細い縦線が最小〜最大、太い帯が平均 ±SD、点が平均です。帯が細いほど安定しています。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The thin line spans min to max, the thick band is mean ±SD, and the dot is the mean. A narrower band means more consistent shots."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "細い縦線が最小〜最大、太い帯が平均 ±SD、点が平均です。帯が細いほど安定しています。"
+          }
+        }
+      }
+    },
     "終了して保存": {
       "extractionState": "manual",
       "localizations": {
@@ -2819,6 +3176,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "終了して保存"
+          }
+        }
+      }
+    },
+    "統計": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistics"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "統計"
           }
         }
       }
@@ -3244,6 +3618,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "超過時の音"
+          }
+        }
+      }
+    },
+    "超過発数": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過発数"
           }
         }
       }

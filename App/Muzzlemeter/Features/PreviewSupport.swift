@@ -76,4 +76,17 @@ enum PreviewSupport {
         return (try? container.mainContext.fetch(descriptor))?.first
             ?? Session(gunName: "サンプル")
     }
+
+    /// 比較画面の Preview 用。見本は 2 セッションしか無いのでそのまま返す。
+    static var comparableSessions: [Session] {
+        let descriptor = FetchDescriptor<Session>(sortBy: [SortDescriptor(\.startedAt)])
+        let sessions = (try? container.mainContext.fetch(descriptor)) ?? []
+        return Array(sessions.prefix(SessionComparisonRequest.range.upperBound))
+    }
+
+    static var sampleProfile: GunProfile {
+        let descriptor = FetchDescriptor<GunProfile>(sortBy: [SortDescriptor(\.createdAt)])
+        return (try? container.mainContext.fetch(descriptor))?.first
+            ?? GunProfile(name: "サンプル")
+    }
 }

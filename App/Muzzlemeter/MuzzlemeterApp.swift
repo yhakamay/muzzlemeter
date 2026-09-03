@@ -54,6 +54,10 @@ struct RootView: View {
                 .tag(RootTab.settings)
         }
         .task {
+            // 見本データは**サービスを起動する前**に入れる。あとから入れると、
+            // 既定プロファイルの自動作成（`restoreSelectedProfileIfNeeded`）と
+            // 見本のプロファイルが二重に並ぶ。
+            ScreenshotSupport.seedDemoSessionsIfNeeded(modelContext: modelContext)
             service.start(modelContext: modelContext)
         }
     }
