@@ -1,4 +1,5 @@
 import Foundation
+import MuzzlemeterKit
 import SwiftData
 
 /// 銃の駆動方式の**区分**。

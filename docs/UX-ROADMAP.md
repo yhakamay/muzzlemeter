@@ -93,6 +93,24 @@
 ## Round D: 本体内ログの取り込み（0x62 件数 / 0x63 読み出し。0x61 消去は実装しない）
 
 ## Round E: 拡張ターゲット
-4. ライブアクティビティ（Dynamic Island / ロック画面）
+4. ✅ ライブアクティビティ（Dynamic Island / ロック画面）
 10. ホーム画面ウィジェット
 12. Apple Watch の弾速表示
+
+Implementation notes (see the ADR in each commit for the full reasoning):
+
+- **4. Live Activity**: added a `MuzzlemeterWidgets` WidgetKit extension target
+  (`project.yml`). What to show and when to update is pure logic in
+  `MuzzlemeterKit.LiveActivityContent` (`derive(shots:massGrams:speedUnit:...)`)
+  and `LiveActivityUpdateThrottle` (throttles to at most 1 update/s so full-auto
+  bursts don't spam `ActivityKit`), both unit tested. `ActivityAttributes` itself
+  can't live in the kit (`ActivityKit` isn't available on macOS, which the kit
+  also targets for the sniffer CLI), so `MuzzlemeterLiveActivityAttributes` and
+  the actual lock-screen / Dynamic Island `View`s live in `App/Shared`, compiled
+  into both the app and the widget extension so they render identically.
+  `ChronoService` starts the activity on the first shot, updates it (through the
+  throttle) on every shot, and ends it with the final state on session end or
+  discard. Since the simulator has no way to lock the screen or open Dynamic
+  Island from a script, `LiveActivityPreviewHost` (behind `--demo-widgets`)
+  renders the exact same shared `View`s inside the running app for visual
+  verification instead of a separate reimplementation.

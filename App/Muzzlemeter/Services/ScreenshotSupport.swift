@@ -66,6 +66,14 @@ enum ScreenshotSupport {
     /// 「未対応の形式でした」の経路を目視確認するために要る。
     static var deviceLogBrokenIndex: Int? { int(for: "--demo-device-log-broken") }
 
+    /// ライブアクティビティ / Dynamic Island / ホーム画面ウィジェットの見本を
+    /// 画面に重ねて出す（`LiveActivityPreviewHost`）。
+    ///
+    /// シミュレータには「ロックする」「ウィジェットギャラリーを開く」を自動操作する
+    /// 手段が無いため、実物と同じ View をアプリの画面内に並べて目視確認する
+    /// （Round E、詳細は `LiveActivityPreviewHost` のコメント）。
+    static var opensWidgetPreview: Bool { flag("--demo-widgets") }
+
     /// 件数が分かった時点で、帯を押さずに取り込みを始める。
     ///
     /// 再生は本物のキャプチャ（103 秒 / 6 倍速）なので、**繋がっている時間が

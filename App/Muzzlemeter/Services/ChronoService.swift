@@ -29,6 +29,8 @@ final class ChronoService {
     let isReplaying: Bool
     /// 音・振動・読み上げ。設定画面はこの中のトグルを直接束縛する。
     let feedback: FeedbackService
+    /// ロック画面 / Dynamic Island のライブアクティビティ（Round E）。
+    private let liveActivity: LiveActivityService
 
     /// 進行中のセッション。1 発も撃っていなければ nil。
     private(set) var activeSession: Session?
@@ -410,11 +412,13 @@ final class ChronoService {
     init(
         defaults: UserDefaults = .standard,
         forceReplay: Bool? = nil,
-        feedback: FeedbackService? = nil
+        feedback: FeedbackService? = nil,
+        liveActivity: LiveActivityService? = nil
     ) {
         self.defaults = defaults
         self.isReplaying = forceReplay ?? ReplaySupport.isEnabled
         self.feedback = feedback ?? FeedbackService(defaults: defaults)
+        self.liveActivity = liveActivity ?? LiveActivityService()
 
         self.speedUnit = defaults.string(forKey: Keys.speedUnit)
             .flatMap(SpeedUnit.init(rawValue:)) ?? .metersPerSecond
@@ -576,8 +580,31 @@ final class ChronoService {
         recomputeStats()
         // 上限の判定はセッションが決まってから（セッションが持つ上限を使う）。
         report(shot)
+        // ライブアクティビティ・Watch への反映も統計・上限の判定が終わってから。
+        syncLiveState(isNewSession: isNewSession)
         // N 発モードの締めは**保存の後**。途中で締めると最後の 1 発が入らない。
         finishIfTargetReached()
+    }
+
+    /// ライブアクティビティへ、いまの計測状態を伝える。
+    ///
+    /// **セッション開始時（1 発目）は必ず起動する。** それ以外の発は間引きに任せる
+    /// （間引き自体は `LiveActivityService` の中）。
+    private func syncLiveState(isNewSession: Bool) {
+        guard let session = activeSession else { return }
+        let content = LiveActivityContent.derive(
+            shots: currentShots,
+            massGrams: massGrams,
+            speedUnit: speedUnit,
+            energyLimitJoules: energyLimitJoules,
+            target: shotTarget,
+            gunName: gunName
+        )
+        if isNewSession {
+            liveActivity.start(content: content, startedAt: session.startedAt)
+        } else {
+            liveActivity.report(content: content)
+        }
     }
 
     /// 1 発ぶんの音・振動・読み上げを `FeedbackService` へ渡す。
@@ -665,6 +692,10 @@ final class ChronoService {
         guard let session = activeSession else { return }
         session.endedAt = Date()
         try? modelContext?.save()
+        // ライブアクティビティは**終了前の状態**（＝最後のショットまで反映した状態）で
+        // 閉じる。session.endedAt を書いた後だが、統計は currentShots から計算するので
+        // どちらでも同じ値になる。
+        endLiveState()
         // 続けて撃つときは同じ条件のはず。締めた条件を次のセッションへ引き継ぐ
         // （プロファイルの既定値へ戻したいときは「既定値に戻す」で戻せる）。
         pendingVariables = session.variables
@@ -681,10 +712,25 @@ final class ChronoService {
             modelContext.delete(session)
             try? modelContext.save()
         }
+        // 破棄でもライブアクティビティは必ず閉じる（残ったままにしない）。
+        endLiveState()
         activeSession = nil
         currentShots = []
         lastShot = nil
         recomputeStats()
+    }
+
+    /// ライブアクティビティを終了する。終了・破棄の両方から呼ぶ共通処理。
+    private func endLiveState() {
+        let content = LiveActivityContent.derive(
+            shots: currentShots,
+            massGrams: massGrams,
+            speedUnit: speedUnit,
+            energyLimitJoules: energyLimitJoules,
+            target: shotTarget,
+            gunName: gunName
+        )
+        liveActivity.end(content: content)
     }
 
     private func recomputeStats() {

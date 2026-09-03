@@ -1,42 +1,10 @@
 import MuzzlemeterKit
 import SwiftUI
 
-/// 規制上限に対する段階の**見せかた**をここ 1 箇所に集める。
-///
-/// 色と語を画面ごとに書くと、Live では赤・履歴では橙、といった食い違いがすぐ起きる。
-/// 「超過は赤」「注意は橙」を守るのは安全に直結するので、定義を分散させない。
-extension EnergyMargin {
-    /// 色。`.safe` は `nil`（＝その場の既定色のまま。平常時に色を付けない）。
-    var tint: Color? {
-        switch self {
-        case .safe: nil
-        case .caution: .orange
-        case .over: .red
-        }
-    }
-
-    /// `.safe` でも必ず色が要る場所（チャートの点など）で使う。
-    var chartTint: Color {
-        tint ?? .blue
-    }
-
-    /// バッジやラベルに出す短い語。
-    var label: String {
-        switch self {
-        case .safe: String(localized: "余裕")
-        case .caution: String(localized: "注意")
-        case .over: String(localized: "超過")
-        }
-    }
-
-    var symbolName: String {
-        switch self {
-        case .safe: "checkmark.circle"
-        case .caution: "exclamationmark.triangle"
-        case .over: "exclamationmark.octagon.fill"
-        }
-    }
-}
+/// 規制上限に対する段階の**色と語**は `App/Shared/EnergyMarginTint.swift`
+/// （`EnergyMargin.tint` / `chartTint` / `label` / `symbolName`）に置いてある。
+/// アプリ本体だけでなくホーム画面ウィジェット・ライブアクティビティ（`MuzzlemeterWidgets`）
+/// でも同じ色と語を使うため（`App/Shared` は両ターゲットのソースに入っている）。
 
 /// 「上限 0.98 J · 余裕 0.12 J」の 1 行。
 ///

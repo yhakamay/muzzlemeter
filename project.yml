@@ -33,9 +33,13 @@ targets:
     platform: iOS
     sources:
       - path: App/Muzzlemeter
+      - path: App/Shared
     dependencies:
       - package: MuzzlemeterKit
         product: MuzzlemeterKit
+      # ホーム画面ウィジェット / ライブアクティビティ拡張。アプリの中に埋め込む。
+      - target: MuzzlemeterWidgets
+        embed: true
     settings:
       base:
         PRODUCT_NAME: Muzzlemeter
@@ -45,7 +49,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: AZHMSV7C5P
-        # WeatherKit を使うためのエンタイトルメント（App ID 側でも有効化済み）。
+        # WeatherKit・App Group を使うためのエンタイトルメント（App ID 側でも有効化済み）。
         CODE_SIGN_ENTITLEMENTS: App/Muzzlemeter.entitlements
         # Info.plist はビルド設定から合成する。`App/Info.plist` は「ビルド設定では
         # 配列を書けないキー」だけを持つ土台で、GENERATE_INFOPLIST_FILE と
@@ -61,12 +65,40 @@ targets:
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        # ロック画面 / Dynamic Island のライブアクティビティを許可する（Round E）。
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
+
+  MuzzlemeterWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: App/MuzzlemeterWidgets
+      - path: App/Shared
+    dependencies:
+      - package: MuzzlemeterKit
+        product: MuzzlemeterKit
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_NAME: MuzzlemeterWidgets
+        PRODUCT_BUNDLE_IDENTIFIER: com.yhakamay.muzzlemeter.widgets
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: AZHMSV7C5P
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_FILE: App/MuzzlemeterWidgets/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: Muzzlemeter
+        SKIP_INSTALL: YES
 
 schemes:
   Muzzlemeter:
     build:
       targets:
         Muzzlemeter: all
+        MuzzlemeterWidgets: all
     run:
       config: Debug
       # シミュレータでは自動的にリプレイモードになるが、実機で UI を確認したいときのために

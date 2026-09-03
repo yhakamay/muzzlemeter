@@ -40,6 +40,7 @@ struct RootView: View {
 
     @State private var selectedTab: RootTab =
         ScreenshotSupport.initialTab.flatMap(RootTab.init(rawValue:)) ?? .live
+    @State private var showsWidgetPreview = ScreenshotSupport.opensWidgetPreview
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -52,6 +53,9 @@ struct RootView: View {
             SettingsView()
                 .tabItem { Label("設定", systemImage: "gearshape") }
                 .tag(RootTab.settings)
+        }
+        .fullScreenCover(isPresented: $showsWidgetPreview) {
+            LiveActivityPreviewHost()
         }
         .task {
             // 見本データは**サービスを起動する前**に入れる。あとから入れると、
