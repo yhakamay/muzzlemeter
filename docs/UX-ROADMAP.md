@@ -94,7 +94,7 @@
 
 ## Round E: 拡張ターゲット
 4. ✅ ライブアクティビティ（Dynamic Island / ロック画面）
-10. ホーム画面ウィジェット
+10. ✅ ホーム画面ウィジェット
 12. Apple Watch の弾速表示
 
 Implementation notes (see the ADR in each commit for the full reasoning):
@@ -114,3 +114,22 @@ Implementation notes (see the ADR in each commit for the full reasoning):
   Island from a script, `LiveActivityPreviewHost` (behind `--demo-widgets`)
   renders the exact same shared `View`s inside the running app for visual
   verification instead of a separate reimplementation.
+- **10. Home Screen widget**: added `SessionSummaryWidget` (small + medium) to
+  the same `MuzzlemeterWidgets` extension. It does **not** open the app's
+  SwiftData store from the extension process — `MuzzlemeterKit.HomeWidgetSnapshot`
+  is a small, pure, `Codable` summary of the most recently *ended* session
+  (title, gun, shot count, mean velocity, mean joules, over-limit count),
+  written by `HomeWidgetSnapshotWriter` to an App Group–shared `UserDefaults`
+  suite (`HomeWidgetSnapshotStore`, unit tested) whenever `ChronoService.endSession()`
+  runs, then `WidgetCenter.reloadTimelines(ofKind:)` tells the widget to redraw.
+  A **discarded** session intentionally does not write a snapshot, so a batch
+  of misfires never becomes the "latest session" shown on the Home Screen.
+  Sharing the whole SwiftData container across the App Group was considered
+  and rejected: the extension would have to track every future `Session`
+  schema change even though it only ever shows a handful of numbers, and a
+  concurrent write from the app while the extension reads could corrupt the
+  store. `SessionSummaryWidgetView` and friends live in `App/Shared` next to
+  the Live Activity views, for the same reason (and so `LiveActivityPreviewHost`
+  can preview them too) — `WidgetFamilyKind` is a tiny extension-independent
+  stand-in for `WidgetKit.WidgetFamily` so that shared file doesn't need to
+  import `WidgetKit` from the app target.

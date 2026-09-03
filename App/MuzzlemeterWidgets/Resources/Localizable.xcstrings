@@ -35,6 +35,74 @@
         }
       }
     },
+    "%lld 発 · 平均": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld shots · mean"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 発 · 平均"
+          }
+        }
+      }
+    },
+    "—": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "まだ記録がありません": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sessions yet"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだ記録がありません"
+          }
+        }
+      }
+    },
+    "平均 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mean %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均 %@"
+          }
+        }
+      }
+    },
     "平均 %@ %@": {
       "extractionState": "manual",
       "localizations": {
@@ -48,6 +116,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均 %@ %@"
+          }
+        }
+      }
+    },
+    "平均弾速 · %lld 発": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mean velocity · %lld shots"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均弾速 · %lld 発"
+          }
+        }
+      }
+    },
+    "最新のセッション": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latest Session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新のセッション"
+          }
+        }
+      }
+    },
+    "直近に締めたセッションの発数と平均弾速を表示します。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shows the shot count and mean velocity of your most recently ended session."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直近に締めたセッションの発数と平均弾速を表示します。"
+          }
+        }
+      }
+    },
+    "超過 %lld 発": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld over limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過 %lld 発"
           }
         }
       }

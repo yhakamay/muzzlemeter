@@ -1,11 +1,12 @@
 import MuzzlemeterKit
 import SwiftUI
 
-/// ロック画面 / Dynamic Island の**目視確認用**画面。
+/// ロック画面 / Dynamic Island / ホーム画面ウィジェットの**目視確認用**画面。
 ///
-/// シミュレータには「ロックする」を自動操作する手段が無い（`xcrun simctl` にロック
-/// 相当の操作が無く、タップ操作はスクリーンショットの手順からは行えない）。実際に
-/// ロック画面・Dynamic Island で使う View は `App/Shared/LiveActivityViews.swift` に
+/// シミュレータには「ロックする」「ウィジェットギャラリーを開く」を自動操作する手段が
+/// 無い（`xcrun simctl` にロック相当の操作が無く、タップ操作はスクリーンショットの
+/// 手順からは行えない）。実際にロック画面・Dynamic Island・ウィジェットで使う View は
+/// `App/Shared/LiveActivityViews.swift` / `App/Shared/SessionSummaryViews.swift` に
 /// 置いてあり、ここは**同じ View をアプリの画面の中に並べて出すだけ**。別実装ではなく
 /// 本物と同じコードなので、レイアウト・配色・切り捨て（LCD 風の表示）はそのまま確認できる。
 /// システム標準の縁取り・角丸のクロームまでは再現しない（そこは OS が描く部分）。
@@ -66,10 +67,21 @@ struct LiveActivityPreviewHost: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+
+                    section(title: String(localized: "ホーム画面ウィジェット（見本）")) {
+                        VStack(spacing: 12) {
+                            SessionSummaryWidgetView(family: .small, snapshot: widgetSnapshot)
+                                .frame(width: 155, height: 155)
+                                .background(.fill.tertiary, in: .rect(cornerRadius: 24))
+                            SessionSummaryWidgetView(family: .medium, snapshot: widgetSnapshot)
+                                .frame(width: 329, height: 155)
+                                .background(.fill.tertiary, in: .rect(cornerRadius: 24))
+                        }
+                    }
                 }
                 .padding()
             }
-            .navigationTitle(Text(verbatim: "Live Activity"))
+            .navigationTitle(Text(verbatim: "Live Activity / Widgets"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -86,9 +98,21 @@ struct LiveActivityPreviewHost: View {
         }
     }
 
-    /// いま計測中ならその値、無ければ待機表示。
+    /// いま計測中ならその値、無ければウィジェットの見本値と同じ材料で作った値。
     private var activityContent: LiveActivityContent {
-        LiveActivityContent.derive(
+        if service.currentShots.isEmpty {
+            let sample = widgetSnapshot
+            return LiveActivityContent(
+                speedText: sample.speedUnit.format(metersPerSecond: sample.meanSpeedMetersPerSecond ?? 0),
+                speedUnitSymbol: sample.speedUnit.symbol,
+                joulesText: JouleFormat.value(sample.meanJoules ?? 0),
+                shotCountText: "\(sample.shotCount)",
+                meanSpeedText: sample.speedUnit.format(metersPerSecond: sample.meanSpeedMetersPerSecond ?? 0),
+                margin: .safe,
+                gunName: sample.gunName
+            )
+        }
+        return LiveActivityContent.derive(
             shots: service.currentShots,
             massGrams: service.massGrams,
             speedUnit: service.speedUnit,
@@ -96,6 +120,18 @@ struct LiveActivityPreviewHost: View {
             target: service.shotTarget,
             gunName: service.gunName
         )
+    }
+
+    /// **本物の App Group スナップショット**が既にあればそれを出す
+    /// （`HomeWidgetSnapshotWriter` が正しく書けているかも、この画面で一緒に確認できる）。
+    /// まだ 1 回もセッションを終えていなければ見本値。
+    private var widgetSnapshot: HomeWidgetSnapshot {
+        guard let defaults = UserDefaults(suiteName: HomeWidgetSnapshotStore.appGroupIdentifier),
+              let saved = HomeWidgetSnapshotStore.load(from: defaults)
+        else {
+            return .previewSample
+        }
+        return saved
     }
 }
 

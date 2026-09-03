@@ -7,5 +7,12 @@
 	     両方で WeatherKit を有効にしてある。 -->
 	<key>com.apple.developer.weatherkit</key>
 	<true/>
+	<!-- ホーム画面ウィジェット（MuzzlemeterWidgets）と最新セッションのまとめを
+	     共有するための App Group（Round E）。developer portal 側の App ID にも
+	     同じグループを追加済み。 -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.yhakamay.muzzlemeter</string>
+	</array>
 </dict>
 </plist>

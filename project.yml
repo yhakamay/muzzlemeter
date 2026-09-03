@@ -88,6 +88,8 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: AZHMSV7C5P
+        # ホーム画面ウィジェットが App Group 越しに HomeWidgetSnapshot を読むために必要。
+        CODE_SIGN_ENTITLEMENTS: App/MuzzlemeterWidgets/MuzzlemeterWidgets.entitlements
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: App/MuzzlemeterWidgets/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Muzzlemeter

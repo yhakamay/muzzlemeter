@@ -31,6 +31,8 @@ final class ChronoService {
     let feedback: FeedbackService
     /// ロック画面 / Dynamic Island のライブアクティビティ（Round E）。
     private let liveActivity: LiveActivityService
+    /// セッション終了時にホーム画面ウィジェット用のまとめを書く（Round E）。
+    private let homeWidgetWriter: HomeWidgetSnapshotWriter
 
     /// 進行中のセッション。1 発も撃っていなければ nil。
     private(set) var activeSession: Session?
@@ -413,12 +415,14 @@ final class ChronoService {
         defaults: UserDefaults = .standard,
         forceReplay: Bool? = nil,
         feedback: FeedbackService? = nil,
-        liveActivity: LiveActivityService? = nil
+        liveActivity: LiveActivityService? = nil,
+        homeWidgetWriter: HomeWidgetSnapshotWriter? = nil
     ) {
         self.defaults = defaults
         self.isReplaying = forceReplay ?? ReplaySupport.isEnabled
         self.feedback = feedback ?? FeedbackService(defaults: defaults)
         self.liveActivity = liveActivity ?? LiveActivityService()
+        self.homeWidgetWriter = homeWidgetWriter ?? HomeWidgetSnapshotWriter()
 
         self.speedUnit = defaults.string(forKey: Keys.speedUnit)
             .flatMap(SpeedUnit.init(rawValue:)) ?? .metersPerSecond
@@ -696,6 +700,8 @@ final class ChronoService {
         // 閉じる。session.endedAt を書いた後だが、統計は currentShots から計算するので
         // どちらでも同じ値になる。
         endLiveState()
+        // 確定したセッションだけホーム画面ウィジェットへ渡す（破棄したものは出さない）。
+        homeWidgetWriter.write(session: session, speedUnit: speedUnit)
         // 続けて撃つときは同じ条件のはず。締めた条件を次のセッションへ引き継ぐ
         // （プロファイルの既定値へ戻したいときは「既定値に戻す」で戻せる）。
         pendingVariables = session.variables
@@ -713,6 +719,7 @@ final class ChronoService {
             try? modelContext.save()
         }
         // 破棄でもライブアクティビティは必ず閉じる（残ったままにしない）。
+        // ホーム画面ウィジェットには**書かない**（捨てた回を「最新の記録」として出さない）。
         endLiveState()
         activeSession = nil
         currentShots = []

@@ -1,11 +1,11 @@
 import SwiftUI
 import WidgetKit
 
-/// ウィジェット拡張のエントリポイント。1 つの拡張ターゲットに複数の `Widget` を
-/// まとめられるので、ここへ順次登録していく（次はホーム画面ウィジェット）。
+/// ウィジェット拡張のエントリポイント（@main WidgetBundle）。
 @main
 struct MuzzlemeterWidgetsBundle: WidgetBundle {
     var body: some Widget {
+        SessionSummaryWidget()
         MuzzlemeterLiveActivityWidget()
     }
 }
