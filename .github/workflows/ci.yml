@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 同じブランチ / PR で走っている古いジョブは打ち切る。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      # ShotLogKit と shotlog-sniff は SwiftPM だけでビルド・テストできる。
+      - name: swift test
+        run: swift test
+
+      # .xcodeproj は生成物なのでリポジトリに無い。XcodeGen で作ってからビルドする。
+      # 署名は CI では不要（CODE_SIGNING_ALLOWED=NO）。
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: xcodegen generate
+        run: xcodegen generate
+
+      - name: Build iOS app
+        run: |
+          xcodebuild -project ShotLog.xcodeproj -scheme ShotLog \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build

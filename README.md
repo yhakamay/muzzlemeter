@@ -1,17 +1,38 @@
 # ShotLog
 
-Acetech **AC6000 MKIII BT**（エアソフト用弾速計）を、公式アプリ「AceSoft」より使いやすい
-自作 iOS アプリで扱うためのプロジェクト。
+> **English summary** — ShotLog is an **unofficial** iOS companion app for the
+> **Acetech AC6000 BT** airsoft chronograph. It connects over Bluetooth LE, shows each
+> shot's velocity and energy live, and keeps a searchable history per gun profile.
+> Built with SwiftUI, SwiftData and CoreBluetooth. The BLE protocol is not published by
+> the vendor, so it was worked out from packet captures of my own device and verified
+> against the unit's own LCD; the result is documented in [`docs/PROTOCOL.md`](docs/PROTOCOL.md).
+> Not affiliated with Acetech. MIT licensed.
 
-BLE プロトコルが非公開のため**プロトコル解析から始めた**が、**解析は完了して実機で検証済み**。
-現在は
+エアソフト用弾速計 Acetech **AC6000 BT** を iPhone から使うための**非公式**アプリ。
+撃つたびに初速とエネルギーを大きく表示し、銃のプロファイルごとにセッションを記録する。
 
-- Phase 0（土台）と解析用 macOS CLI `shotlog-sniff`
-- Phase 1（BLE プロトコル解析 → `docs/PROTOCOL.md`。実機で確定）
-- Phase 2（`ShotLogKit`: フレームコーデック・鍵ハンドシェイク・CoreBluetooth トランスポート）
-- Phase 3（iOS アプリ。実機接続とリプレイの両方で全画面が動く）
+> **本アプリは Acetech 社とは無関係の非公式アプリです。Acetech、AC6000 は各社の商標です。**
 
-まで完了。
+## 対応機種
+
+| 機種 | 状況 |
+|---|---|
+| **AC6000 MKIII BT** | **実機で確認済み**（本体 LCD と突き合わせて検証） |
+| AC6000 BT | 動くはず（広告名 `AC6000BT-` の前方一致で拾い、同じフレーム形式） |
+| その他の Acetech 製品（Bifrost など） | **未対応**（プロトコルが異なる可能性が高い） |
+
+## できること
+
+- BLE で本体に自動接続（前回つないだ個体を憶えて再接続する）
+- 1 発ごとの初速（m/s / fps）とエネルギー（J）をライブ表示
+- セッション統計: 平均 / 最大 / 最小 / SD / ES / 連射速度
+- 銃プロファイル（メーカー・モデル・パワーソース区分・インナーバレル長・規制上限 J・
+  BB 重量などの既定値）とセッション変数（BB 重量・ガス種別・ホップ設定）
+- 計測時の気温・湿度・気圧を WeatherKit から 1 回だけ取得して記録（手で上書きも可）
+- 履歴の閲覧・リネーム・CSV 書き出し
+- 日本語 / 英語（ベース言語は日本語）
+- 本体が無くても UI を確認できるリプレイモード（実キャプチャの再生）
+- 解析用の macOS CLI `shotlog-sniff`（BLE スキャン / GATT 列挙 / パケットダンプ）
 
 ## AC6000 と話すのに必要なこと（要点）
 
@@ -42,7 +63,7 @@ BLE プロトコルが非公開のため**プロトコル解析から始めた**
 | `Sources/ShotLogSniff/` | macOS CLI。BLE スキャン / GATT 列挙 / パケットダンプ |
 | `Tests/ShotLogKitTests/` | Swift Testing によるテスト |
 | `docs/PROTOCOL.md` | 解析結果（UUID・パケット形式・チェックサム） |
-| `tools/re/` | APK / jadx 出力 / キャプチャログ（gitignore） |
+| `tools/re/` | プロトコル調査の作業ディレクトリ。キャプチャログ置き場（gitignore） |
 | `App/ShotLog/` | iOS アプリ（SwiftUI + SwiftData） |
 | `App/ShotLog/Resources/Localizable.xcstrings` | UI 文言の String Catalog。**ベース言語は ja**、en は完全な翻訳 |
 | `App/Info.plist` | `CFBundleLocalizations` だけを持つ土台。他のキーはビルド設定から合成される |
@@ -127,7 +148,7 @@ swift run shotlog-sniff dump --name AC6000BT- --handshake --interactive
 
 ### 初期化コマンドを送る
 
-本体が「計測開始コマンド」を要求する場合に使う（APK 解析で判明したバイト列を送る）。
+本体が「計測開始コマンド」を要求する場合に使う（試したいバイト列を明示的に送る）。
 購読完了後に送信され、結果が表示される。`--write` は複数回指定できる。
 
 ```sh
@@ -292,6 +313,32 @@ sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
 CLI の `swift build` / `swift test` にはこれは**不要**。
 
+#### 署名（DEVELOPMENT_TEAM）
+
+`project.yml` の `DEVELOPMENT_TEAM` には作者の Team ID が直書きしてある
+（`xcodegen generate` のたびに Xcode で入れ直さなくて済むように）。
+**フォークして実機で動かす場合は自分の Team ID に書き換えること。**
+シミュレータ向けなら署名不要で、`CODE_SIGNING_ALLOWED=NO` を付ければそのまま通る。
+
+WeatherKit を使うので、実機ビルドには **WeatherKit を有効にした App ID** が要る。
+不要なら `App/ShotLog.entitlements` の `com.apple.developer.weatherkit` を外す
+（環境データが空になるだけで、計測そのものには影響しない）。
+
+#### iCloud Drive（デスクトップ）配下に置いている場合
+
+リポジトリが iCloud 同期対象のフォルダにあると、同期の競合コピー
+（`Foo 2.swift` のような重複ファイル）がビルドディレクトリに紛れ込み、
+`filename "..." used twice` で SwiftPM のビルドが落ちることがある。
+**中間生成物を同期対象の外に出す**と安定する:
+
+```sh
+swift build --scratch-path /tmp/shotlog-build
+swift test  --scratch-path /tmp/shotlog-build
+xcodebuild -project ShotLog.xcodeproj -scheme ShotLog \
+  -derivedDataPath /tmp/shotlog-dd \
+  -destination 'platform=iOS Simulator,name=iPhone 17' build
+```
+
 ### 実機モードとリプレイモード
 
 | 実行環境 | トランスポート |
@@ -346,8 +393,57 @@ UI を目視確認できるように、`--replay-capture` かつシミュレー�
 - アモ重量のワイヤスケール（×100 か ×1000 か）→ 本体で重量設定を変えながら `0x47` を見る
 - 鍵未知の初回ペアリング経路（実装はしてあるが実物を見ていない）
 
-## プロトコル解析
+## プロトコル
 
-手順は `tools/re/README.md`、結果は `docs/PROTOCOL.md` を参照。
-ユーザー作業として、AceSoft の Android APK (`com.acetk.acesoft` v1.2.28) を
-`tools/re/acesoft.apk` に配置してもらう必要がある。
+BLE の仕様はメーカーから公開されていないため、**自分の個体との通信を実測して**組み立てた。
+
+- 結果: [`docs/PROTOCOL.md`](docs/PROTOCOL.md)（UUID・フレーム形式・チェックサム・
+  鍵ハンドシェイク・opcode 表）
+- 出典は 2 つだけ:
+  1. 自分の iPhone で取った HCI ログ（Apple PacketLogger の `.pklg`）
+  2. 自作クライアント `shotlog-sniff` による実機での追試
+- 調査の進め方は [`tools/re/README.md`](tools/re/README.md)
+
+`docs/PROTOCOL.md` に書いてあるのは**観測できた事実**だけで、確度（確定 / 推定 / 未検証）を
+明記してある。まだ埋まっていない項目は §10 にまとめてある。
+
+## プライバシー
+
+- **Bluetooth** は弾速計との通信にのみ使う。他のデバイスへ接続することはない。
+- **位置情報**はセッションの 1 発目に一度だけ取得し、その地点の気温・湿度・気圧を
+  **WeatherKit** から引くためだけに使う。位置そのものは保存しない。
+- 計測データは**端末内の SwiftData ストアにのみ**保存される。CSV 書き出しは
+  ユーザーが明示的に操作したときだけ動く。
+- **解析・トラッキング SDK は一切入っていない。**
+- **WeatherKit 以外のネットワーク通信は行わない。**
+
+## 免責
+
+- 本アプリは **Acetech 社とは無関係**の非公式アプリであり、メーカーの承認・支援・
+  保証を受けていない。**Acetech**、**AC6000**、**AceSoft** は各社の商標。
+- 本アプリは**法令・レギュレーション適合を判定するツールではない**。表示される初速・
+  エネルギーは弾速計の出力をそのまま換算した参考値であり、測定誤差・弾の個体差・
+  設定ミスの影響を受ける。**銃口初速やエネルギーが法令やフィールド規則の上限を
+  超えていないことの確認は、使用者自身の責任**で、公的に認められた方法で行うこと。
+- 本ソフトウェアは MIT ライセンスの定めるとおり**無保証**で提供される。本体への
+  書き込みは読み取り系に限定してあるが、機器の故障・データ喪失を含むいかなる損害
+  についても作者は責任を負わない。
+
+## コントリビュート
+
+Issue / Pull Request は歓迎する。特に **AC6000 BT（MKIII でないもの）で動いたか**の
+報告と、`docs/PROTOCOL.md` §10 の未検証項目を潰すキャプチャがありがたい。
+
+- コミットメッセージには **ADR**（Context / Decision / Alternatives considered /
+  Consequences）を本文に書く。設計上の選択を後から追えるようにするため。
+  詳細は [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md)。
+- PR を出す前に `swift test` を通し、`xcodegen generate` が必要な変更なら
+  `project.yml` の側を直す（`.xcodeproj` はコミットしない）。
+- **他者のアプリを逆コンパイルして得た情報は受け付けない。** `docs/PROTOCOL.md` に
+  載せるのは、自分で取得した通信キャプチャと実機での追試から得た観測事実だけにする。
+- 危険な操作（OTA characteristic への書き込み、`0x61` CLEAR_LOG）を追加する PR は
+  受け付けない。`docs/PROTOCOL.md` §11 を参照。
+
+## ライセンス
+
+[MIT](LICENSE) © 2026 Yusuke Hakamaya

@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Package.swift の依存（現状は swift-argument-parser のみ）。
+  - package-ecosystem: swift
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # ワークフローで使っている action のバージョン。
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
