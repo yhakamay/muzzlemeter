@@ -46,6 +46,12 @@ enum ScreenshotSupport {
     /// シミュレータを手で操作せずにその画面へ行けるようにするための引数。
     static var opensComparison: Bool { flag("--demo-compare") }
 
+    /// 履歴タブで、見本のセッションの詳細を開いてタグ編集シートまで出す。
+    static var opensTagEditor: Bool { flag("--demo-tag-editor") }
+
+    /// 履歴タブで、このタグの絞り込みを掛けた状態にする。
+    static var filterTag: String? { value(for: "--demo-filter") }
+
     // MARK: - 引数の読み取り
 
     private static var isEnabled: Bool {

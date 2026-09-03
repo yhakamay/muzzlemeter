@@ -18,6 +18,13 @@ struct SessionsView: View {
     /// 選んだ順に持つ。**順番が色と表の並びになる**ので、`Set` ではなく配列。
     @State private var selected: [Session] = []
 
+    /// 絞り込み条件（文字検索・タグ・銃）。
+    ///
+    /// SwiftData の述語ではなく**取得済みの配列に当てる**。件数は高々数百で、
+    /// タグは 1 列の文字列なので `#Predicate` には落としづらく、
+    /// 判定を `MuzzlemeterKit.SessionFilter` に置いたほうがテストできる。
+    @State private var filter = SessionFilter()
+
     var body: some View {
         NavigationStack(path: $path) {
             Group {
@@ -27,9 +34,26 @@ struct SessionsView: View {
                         systemImage: "list.bullet.rectangle",
                         description: Text("Live 画面で 1 発撃つと自動的にセッションが始まります。")
                     )
+                } else if visibleSessions.isEmpty {
+                    // 「消えた」のではなく「絞られている」ことと、戻しかたを同じ場所に出す。
+                    ContentUnavailableView {
+                        Label("条件に合うセッションがありません", systemImage: "line.3.horizontal.decrease.circle")
+                    } description: {
+                        Text("タグ・銃・検索語のどれかを外すと戻ります。")
+                    } actions: {
+                        Button("絞り込みを解除") { withAnimation(.snappy) { filter.clear() } }
+                    }
                 } else {
                     list
                 }
+            }
+            .searchable(
+                text: $filter.searchText,
+                placement: .navigationBarDrawer(displayMode: .automatic),
+                prompt: Text("タイトル・メモ・タグを検索")
+            )
+            .safeAreaInset(edge: .top) {
+                if !sessions.isEmpty && !isSelecting { filterBar }
             }
             .navigationDestination(for: Session.self) { session in
                 SessionDetailView(session: session)
@@ -41,6 +65,13 @@ struct SessionsView: View {
                 // 目視確認用（Debug のシミュレータのみ）。いちばん新しいセッションを開く。
                 if ScreenshotSupport.opensLatestSession, let latest = sessions.first {
                     path.append(latest)
+                }
+                if let tag = ScreenshotSupport.filterTag {
+                    filter.tags = [tag]
+                }
+                if ScreenshotSupport.opensTagEditor,
+                   let seeded = sessions.first(where: { $0.startedAt < ScreenshotSupport.launchedAt }) {
+                    path.append(seeded)
                 }
                 if ScreenshotSupport.opensComparison,
                    let request = SessionComparisonRequest(
@@ -54,6 +85,10 @@ struct SessionsView: View {
             }
             .sessionRenameAlert(target: $renamingSession)
             .navigationTitle("履歴")
+            // 絞り込みの帯を上に貼り付けると、大きいタイトルの居場所と食い違って
+            // 「履歴」が消える。帯は常に見えていてほしい（いま何で絞っているかは、
+            // スクロールしても分からなくなってはいけない）ので、タイトルを畳む。
+            .navigationBarTitleDisplayMode(.inline)
             .safeAreaInset(edge: .bottom) {
                 if isSelecting { compareBar }
             }
@@ -63,7 +98,7 @@ struct SessionsView: View {
 
     private var list: some View {
         List {
-            ForEach(sessions) { session in
+            ForEach(visibleSessions) { session in
                 row(for: session)
                     // 比較モードの間は削除させない。選ぶつもりのスワイプで消えては困る。
                     .deleteDisabled(isSelecting)
@@ -110,7 +145,7 @@ struct SessionsView: View {
             ToolbarItem(placement: .topBarLeading) {
                 Button("キャンセル") { endSelecting() }
             }
-        } else if sessions.count >= SessionComparisonRequest.range.lowerBound {
+        } else if visibleSessions.count >= SessionComparisonRequest.range.lowerBound {
             ToolbarItem(placement: .topBarLeading) {
                 Button("比較", systemImage: "chart.line.uptrend.xyaxis") {
                     withAnimation(.snappy) { isSelecting = true }
@@ -119,14 +154,23 @@ struct SessionsView: View {
         }
         if !sessions.isEmpty && !isSelecting {
             ToolbarItem(placement: .topBarTrailing) {
+                // 絞り込んでいるときは**画面に出ているものだけ**を書き出す。
+                // 画面と書き出しの中身が違うと、CSV を開いてから気づくことになる。
                 ShareLink(
                     item: CSVFile(
                         name: CSVExporter.allSessionsFileName,
-                        text: CSVExporter.csv(for: sessions)
+                        text: CSVExporter.csv(for: visibleSessions)
                     ),
-                    preview: SharePreview("全セッションの CSV")
+                    preview: SharePreview(
+                        filter.isActive
+                            ? Text("絞り込んだセッションの CSV")
+                            : Text("全セッションの CSV")
+                    )
                 ) {
-                    Label("全件を CSV 書き出し", systemImage: "square.and.arrow.up")
+                    Label(
+                        filter.isActive ? "絞り込んだ結果を CSV 書き出し" : "全件を CSV 書き出し",
+                        systemImage: "square.and.arrow.up"
+                    )
                 }
             }
         }
@@ -175,10 +219,87 @@ struct SessionsView: View {
     }
 
     private func delete(at offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(sessions[index])
+        // 絞り込んでいる間は**画面に出ている並び**が対象。取得順で消すと、
+        // 見えていない行が消える。
+        let shown = visibleSessions
+        for index in offsets where shown.indices.contains(index) {
+            modelContext.delete(shown[index])
         }
         try? modelContext.save()
+    }
+
+    // MARK: - 絞り込み
+
+    /// 条件に合うセッション。**1 回のパス**で作って、行からは触らない。
+    private var visibleSessions: [Session] {
+        guard filter.isActive else { return sessions }
+        return sessions.filter {
+            filter.matches(
+                title: $0.displayTitle,
+                notes: $0.manualNotes,
+                tags: $0.tags,
+                gunName: $0.gunName
+            )
+        }
+    }
+
+    /// これまでに使われたタグ（よく使う順）。
+    private var allTags: [String] {
+        SessionTags.used(in: sessions.map(\.tags))
+    }
+
+    /// 記録に出てくる銃の名前。プロファイルではなく**セッションに残っている名前**で
+    /// 絞る（プロファイルを消した銃の記録も絞り込めるようにするため）。
+    private var gunNames: [String] {
+        Array(Set(sessions.map(\.gunName))).sorted()
+    }
+
+    /// タグ・銃・解除をまとめた 1 本の帯。検索欄は `.searchable` が出す。
+    private var filterBar: some View {
+        VStack(spacing: 0) {
+            ScrollView(.horizontal) {
+                HStack(spacing: 6) {
+                    if gunNames.count > 1 {
+                        Menu {
+                            Picker("銃", selection: $filter.gunName) {
+                                Text("すべての銃").tag(String?.none)
+                                ForEach(gunNames, id: \.self) { name in
+                                    Text(verbatim: name).tag(String?.some(name))
+                                }
+                            }
+                        } label: {
+                            TagChip(
+                                text: filter.gunName ?? String(localized: "すべての銃"),
+                                isSelected: filter.gunName != nil
+                            )
+                        }
+                    }
+                    ForEach(allTags, id: \.self) { tag in
+                        TagChip(
+                            text: tag,
+                            isSelected: SessionTags.contains(tag, in: filter.tags),
+                            action: { withAnimation(.snappy) { filter.toggle(tag: tag) } }
+                        )
+                    }
+                    if filter.isActive {
+                        Button("解除", systemImage: "xmark.circle") {
+                            withAnimation(.snappy) { filter.clear() }
+                        }
+                        .font(.caption)
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+            .scrollIndicators(.hidden)
+            Divider()
+        }
+        .background(.bar)
+        // タグも銃も 1 種類しか無いうちは、帯を出しても選ぶものが無い。
+        .opacity(allTags.isEmpty && gunNames.count <= 1 ? 0 : 1)
+        .frame(height: allTags.isEmpty && gunNames.count <= 1 ? 0 : nil)
     }
 }
 
@@ -206,10 +327,14 @@ struct SessionRow: View {
                     .font(.subheadline.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            HStack(spacing: 10) {
+            // 項目が多いので、行が足りなければ**項目ごと**次の行へ落とす。
+            // 素の HStack だと「グロック 18C」のような 1 項目の途中で折り返す。
+            FlowLayout(spacing: 10) {
                 // 自動タイトルには日時と銃名が入っているので、見出しに出ていない情報だけを添える。
                 if session.hasCustomTitle {
-                    Text(session.startedAt, format: .dateTime.month().day().hour().minute())
+                    // 行が狭いので日付だけ（時刻は詳細で見られる）。時刻まで出すと
+                    // 銃名・重量・平均が押し出されて折り返し、1 行で読めなくなる。
+                    Text(session.startedAt, format: .dateTime.month().day())
                     Text(session.gunName)
                 }
                 Text(GunProfile.weightLabel(session.bbWeightGrams))
@@ -225,6 +350,13 @@ struct SessionRow: View {
             }
             .font(.caption)
             .foregroundStyle(.secondary)
+
+            // タグは行の一番下。数字（発数・平均）より優先度が低く、
+            // かつ**折り返す可能性がある**ので、他の行を押し下げない位置に置く。
+            if !session.tags.isEmpty {
+                TagChipRow(tags: session.tags)
+                    .padding(.top, 2)
+            }
         }
         .padding(.vertical, 2)
     }

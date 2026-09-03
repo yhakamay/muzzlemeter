@@ -20,6 +20,7 @@ enum CSVExporter {
         "bb_weight_g",
         "gas_type",
         "hop_setting",
+        "tags",
         "energy_limit_j",
         "velocity_mps",
         "velocity_fps",
@@ -57,6 +58,9 @@ enum CSVExporter {
         // （電動の行に「hfc134a」が並ぶと、集計の邪魔にしかならない）。
         let gasType = session.gasType?.rawValue ?? ""
         let hopSetting = escape(session.hopSetting)
+        // タグはセミコロン区切りの 1 セル。カンマにすると CSV の区切りと衝突し、
+        // 引用符で囲む羽目になって表計算での分割が面倒になる。
+        let tags = escape(SessionTags.csvField(session.tags))
         let energyLimit = String(format: "%.2f", session.energyLimitJoules)
         let manufacturer = escape(session.gunManufacturer)
         let model = escape(session.gunModel)
@@ -86,6 +90,7 @@ enum CSVExporter {
                 String(format: "%.2f", session.bbWeightGrams),
                 gasType,
                 hopSetting,
+                tags,
                 energyLimit,
                 String(format: "%.2f", mps),
                 String(format: "%.1f", SpeedUnit.feetPerSecond.value(fromMetersPerSecond: mps)),

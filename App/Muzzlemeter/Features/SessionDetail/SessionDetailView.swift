@@ -11,6 +11,8 @@ struct SessionDetailView: View {
     @State private var renamingSession: Session?
     @State private var isEditingEnvironment = false
     @State private var isComparing = false
+    // 目視確認用（Debug のシミュレータのみ）。起動引数からタグ編集シートまで開く。
+    @State private var isEditingTags = ScreenshotSupport.opensTagEditor
 
     var body: some View {
         let shots = session.orderedShots
@@ -55,6 +57,24 @@ struct SessionDetailView: View {
                     Text(verbatim: session.variablesSummary)
                         .textCase(nil)
                 }
+            }
+
+            // タグは「条件」と「環境」の間。どちらでも表せない、その回の文脈
+            // （何を試したか・どこで撃ったか）を置く場所として並びを揃える。
+            Section {
+                if session.tags.isEmpty {
+                    Text("タグはまだありません。")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                } else {
+                    TagChipRow(tags: session.tags)
+                        .padding(.vertical, 2)
+                }
+                Button("タグを編集", systemImage: "tag") { isEditingTags = true }
+            } header: {
+                Text("タグ")
+            } footer: {
+                Text("「ホップ強め」「新品」のような短い言葉を付けておくと、履歴で絞り込めます。")
             }
 
             SessionEnvironmentSection(session: session, isEditing: $isEditingEnvironment)
@@ -122,6 +142,9 @@ struct SessionDetailView: View {
         .sheet(isPresented: $isEditingEnvironment) {
             SessionEnvironmentEditor(session: session)
         }
+        .sheet(isPresented: $isEditingTags) {
+            SessionTagEditor(session: session)
+        }
         .sheet(isPresented: $isComparing) {
             SessionComparisonPicker(base: session)
                 .environment(service)
@@ -133,6 +156,9 @@ struct SessionDetailView: View {
                 Menu {
                     Button("名前を変更", systemImage: "pencil") {
                         renamingSession = session
+                    }
+                    Button("タグを編集", systemImage: "tag") {
+                        isEditingTags = true
                     }
                     Button("他のセッションと比較", systemImage: "chart.line.uptrend.xyaxis") {
                         isComparing = true

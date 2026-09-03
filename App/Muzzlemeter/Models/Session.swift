@@ -32,7 +32,7 @@ final class Session {
     /// 目標発数（N 発モード）。`nil` は「手動で締める」。
     /// **どのセッションが N 発モードだったか**は後から見て意味があるので記録する。
     var targetShotCount: Int?
-    /// タグ。改行区切りの 1 列で持つ（絞り込み UI は Round C）。
+    /// タグ。改行区切りの 1 列で持つ。
     ///
     /// `[String]` を transformable にすると述語で扱えず、別モデルにするとテーブルが
     /// 増える。件数が高々数個なので、**文字列 1 列**で足りる。
@@ -153,18 +153,12 @@ final class Session {
     }
 
     /// タグ。改行区切りの 1 列を配列として読み書きする窓口。
+    ///
+    /// 整形・重複潰し・同一判定は `MuzzlemeterKit.SessionTags` に任せる。保存側と
+    /// 絞り込み側で「同じタグ」の判定がずれないよう、規則を 1 箇所に置くため。
     var tags: [String] {
-        get {
-            tagsRaw.split(separator: "\n")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-        }
-        set {
-            tagsRaw = newValue
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-                .joined(separator: "\n")
-        }
+        get { SessionTags.parse(tagsRaw) }
+        set { tagsRaw = SessionTags.joined(newValue) }
     }
 
     /// 「メーカー モデル」を 1 行にしたもの。どちらも空なら nil。

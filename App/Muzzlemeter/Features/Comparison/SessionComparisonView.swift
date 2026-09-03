@@ -112,6 +112,11 @@ struct SessionComparisonView: View {
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                // 「何を試した回か」はタグに書いてあることが多い。比較の見出しに
+                // 出しておかないと、番号と銃名だけでどれがどれか思い出せない。
+                if !entry.tags.isEmpty {
+                    TagChipRow(tags: entry.tags)
+                }
             }
             Spacer(minLength: 0)
             Text(verbatim: entry.shortLabel)

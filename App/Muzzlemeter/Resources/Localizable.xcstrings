@@ -1,6 +1,23 @@
 {
   "sourceLanguage": "ja",
   "strings": {
+    "%@ を外す": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ を外す"
+          }
+        }
+      }
+    },
     "%@、%@ ジュール": {
       "extractionState": "manual",
       "localizations": {
@@ -579,6 +596,23 @@
         }
       }
     },
+    "「ホップ強め」「新品」のような短い言葉を付けておくと、履歴で絞り込めます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Short labels like \"More hop\" or \"Brand new\" let you filter the history later."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ホップ強め」「新品」のような短い言葉を付けておくと、履歴で絞り込めます。"
+          }
+        }
+      }
+    },
     "このセッションで撃った弾の初速の平均です。": {
       "extractionState": "manual",
       "localizations": {
@@ -698,6 +732,23 @@
         }
       }
     },
+    "すべての銃": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All guns"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての銃"
+          }
+        }
+      }
+    },
     "すべて自動値に戻す": {
       "extractionState": "manual",
       "localizations": {
@@ -766,6 +817,23 @@
         }
       }
     },
+    "まだタグがありません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No tags yet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだタグがありません。"
+          }
+        }
+      }
+    },
     "もう一度": {
       "extractionState": "manual",
       "localizations": {
@@ -796,6 +864,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "もう一度探す"
+          }
+        }
+      }
+    },
+    "よく使っているタグから順に出ます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your most used tags come first."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "よく使っているタグから順に出ます。"
           }
         }
       }
@@ -1038,6 +1123,23 @@
         }
       }
     },
+    "スプリング交換": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spring swap"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スプリング交換"
+          }
+        }
+      }
+    },
     "セッション": {
       "extractionState": "manual",
       "localizations": {
@@ -1157,6 +1259,91 @@
         }
       }
     },
+    "タイトル・メモ・タグを検索": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search titles, notes and tags"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイトル・メモ・タグを検索"
+          }
+        }
+      }
+    },
+    "タグ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグ"
+          }
+        }
+      }
+    },
+    "タグはまだありません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No tags yet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグはまだありません。"
+          }
+        }
+      }
+    },
+    "タグを編集": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit tags"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグを編集"
+          }
+        }
+      }
+    },
+    "タグ・銃・検索語のどれかを外すと戻ります。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove a tag, the gun, or the search text to bring sessions back."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグ・銃・検索語のどれかを外すと戻ります。"
+          }
+        }
+      }
+    },
     "デモ再生では、記録済みの広告から作った擬似的な機器が 1 台だけ見えます。": {
       "extractionState": "manual",
       "localizations": {
@@ -1204,6 +1391,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "パワーソース"
+          }
+        }
+      }
+    },
+    "フィールド": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Field"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フィールド"
           }
         }
       }
@@ -1374,6 +1578,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "ホップ %@"
+          }
+        }
+      }
+    },
+    "ホップ弱め": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Less hop"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホップ弱め"
+          }
+        }
+      }
+    },
+    "ホップ強め": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More hop"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホップ強め"
           }
         }
       }
@@ -1565,6 +1803,23 @@
         }
       }
     },
+    "付いているタグ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags on this session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "付いているタグ"
+          }
+        }
+      }
+    },
     "余裕": {
       "extractionState": "manual",
       "localizations": {
@@ -1667,6 +1922,23 @@
         }
       }
     },
+    "例: ホップ強め": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "e.g. More hop"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例: ホップ強め"
+          }
+        }
+      }
+    },
     "例: 屋内レンジ、風なし": {
       "extractionState": "manual",
       "localizations": {
@@ -1731,6 +2003,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "保存"
+          }
+        }
+      }
+    },
+    "候補": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggestions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補"
           }
         }
       }
@@ -1888,6 +2177,23 @@
         }
       }
     },
+    "同じタグは 2 つ付きません。大文字小文字と全角半角の違いは同じタグとして扱います。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same tag can only be added once. Differences in letter case and character width count as the same tag."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同じタグは 2 つ付きません。大文字小文字と全角半角の違いは同じタグとして扱います。"
+          }
+        }
+      }
+    },
     "名前": {
       "extractionState": "manual",
       "localizations": {
@@ -2020,6 +2326,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "完了"
+          }
+        }
+      }
+    },
+    "屋内": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Indoors"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "屋内"
           }
         }
       }
@@ -2381,6 +2704,40 @@
         }
       }
     },
+    "新しいタグ": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New tag"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいタグ"
+          }
+        }
+      }
+    },
+    "新品": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brand new"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新品"
+          }
+        }
+      }
+    },
     "新規プロファイル": {
       "extractionState": "manual",
       "localizations": {
@@ -2581,6 +2938,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "本体の電源が切れました"
+          }
+        }
+      }
+    },
+    "条件に合うセッションがありません": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No sessions match"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "条件に合うセッションがありません"
           }
         }
       }
@@ -3180,6 +3554,57 @@
         }
       }
     },
+    "絞り込みを解除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear filters"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絞り込みを解除"
+          }
+        }
+      }
+    },
+    "絞り込んだセッションの CSV": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSV of the filtered sessions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絞り込んだセッションの CSV"
+          }
+        }
+      }
+    },
+    "絞り込んだ結果を CSV 書き出し": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export filtered sessions as CSV"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絞り込んだ結果を CSV 書き出し"
+          }
+        }
+      }
+    },
     "統計": {
       "extractionState": "manual",
       "localizations": {
@@ -3418,6 +3843,23 @@
         }
       }
     },
+    "解除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解除"
+          }
+        }
+      }
+    },
     "計測に使うプロファイル": {
       "extractionState": "manual",
       "localizations": {
@@ -3635,6 +4077,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "超過発数"
+          }
+        }
+      }
+    },
+    "追加": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
           }
         }
       }
