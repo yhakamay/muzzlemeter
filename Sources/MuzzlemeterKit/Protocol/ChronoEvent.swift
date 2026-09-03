@@ -99,29 +99,31 @@ public struct AmmoRecord: Sendable, Hashable, Codable {
 ///
 /// `ChronoPacketDecoder` が生バイト列をこれに変換し、`ChronoDevice` が
 /// `AsyncStream<ChronoEvent>` として配信する。
-public enum ChronoEvent: Sendable {
+public enum ChronoEvent: Sendable, Equatable {
     case shot(Shot)
     case battery(percent: Int)
     case deviceInfo(model: String, firmware: String?)
     /// `0x41` ACK。`command` は応答対象の cmd（ハンドシェイクでは `0x4B`）。
     case ack(command: UInt8)
+    /// `0x4E` NAK。未知コマンドへの拒否応答。**実機確定**（`docs/PROTOCOL.md` §6.7）。
+    case nak
     /// 弾の設定（`0x5A` / `0x47`）。**要求していなくても本体から自発的に飛んでくる**。
     case ammo(AmmoRecord)
-    /// 本体内のログ件数（`0x62`）。
+    /// 本体内のログ件数（`0x62`）。payload[0]（**実機確定**。`docs/PROTOCOL.md` §6.5）。
+    /// このログは volatile（本体の電源を切ると 0 件に戻る）。
     case logCount(Int)
-    /// 本体内ログ 1 件の**生ペイロード**（`0x63`）。
+    /// 本体内ログ 1 件の**生ペイロード**（`0x63`。`[index, rev0, rev1, speed0, speed1]`）。
     ///
-    /// **応答レイアウトは 1 度も観測できていない**（`docs/PROTOCOL.md` §6.6）。
-    /// 解釈できたかどうかに関わらず必ずこれを流す。ユーザーに生データを
-    /// 書き出してもらって初めて形式が分かる、という段階にあるため。
-    ///
-    /// `index` は**要求した側が知っている番号**。応答に index が載っているかは
-    /// 未確定なので、要求と応答を 1 件ずつ対にしている側（`ChronoDevice`）が
-    /// `MuzzlemeterDecoder.expectLogRecord(index:)` で教える。教えられていなければ `nil`。
-    case logRecordRaw(index: Int?, payload: [UInt8])
-    /// 上記のうち、payload が `FIRE_REPORT` と同じ並びに見えたものを 1 発として読んだもの。
-    /// **推定**（`FireReport.logRecord(payload:)` の判定条件を参照）。
-    case logRecord(index: Int?, shot: Shot)
+    /// 解釈できたかどうかに関わらず必ずこれを流す（未知ファームウェア差異への保険）。
+    /// `index` は応答に載っている番号（1 始まり。**実機確定**）。
+    case logRecordRaw(index: Int, payload: [UInt8])
+    /// 上記のうち、速度が乗っていた（＝実弾）ものを 1 発として読んだもの。
+    /// velocity = `speed` raw ÷ 100 m/s、`shot.rawRateOfFire` = `rev` raw（意味は未確定）。
+    /// **実機確定**（`docs/PROTOCOL.md` §6.6）。
+    case logRecord(index: Int, shot: Shot)
+    /// 全ゼロの `0x63` 応答。件数を超える index、または電源投入後まだ記録が無い index に
+    /// 返ってくる。**エラーではなく「ここでログが終わり」を意味する**（§6.6）。
+    case logRecordEmpty(index: Int)
     /// 1 バイト `00` の通知 = **本体の電源 OFF**（`docs/PROTOCOL.md` §5.1）。
     /// エラーではない。約 0.76 秒後にリンクが supervision timeout で落ちる。
     case powerOff

@@ -67,7 +67,10 @@ struct MuzzlemeterDecoderTests {
 
         #expect(acks == [ChronoCommand.readKey.rawValue])
         #expect(shots == 5)
-        #expect(logCounts == [1])
+        // `aa 06 62 00 01 6b` → payload[0] = 0 件（**実機確定**。§6.5）。
+        // 旧実装は payload[1] を件数と誤読しており、このキャプチャを count=1 と報告していた
+        // （`docs/PROTOCOL.md` §6.5 / 2026-09-04 実機追試で判明）。
+        #expect(logCounts == [0])
         #expect(powerOffs == 1)
         #expect(raws == 0)
 

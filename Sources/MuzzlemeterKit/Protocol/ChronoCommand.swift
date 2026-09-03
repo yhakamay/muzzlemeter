@@ -11,6 +11,9 @@ import Foundation
 public enum ChronoCommand: UInt8, Sendable, Hashable, CaseIterable {
     /// ACK。payload[0] = 応答対象の cmd。**実測**（`aa 05 41 4b 93`）。
     case ack = 0x41
+    /// NAK。未知コマンドへの応答。payload = `0xFF` 固定。ACK(`0x41`)の対になる
+    /// 拒否応答。**実機確定**（`aa 05 4e ff 54`。`docs/PROTOCOL.md` §6.7）。
+    case nak = 0x4E
     /// 鍵の照合 / 取得（READ_KEY / VERIFY_KEY）。TX payload = [key1, key2]。**実測**。
     case readKey = 0x4B
     /// 1 発の計測結果。**実測**（§7）。
@@ -19,10 +22,15 @@ public enum ChronoCommand: UInt8, Sendable, Hashable, CaseIterable {
     case currentAmmo = 0x5A
     /// アモプリセットの読み出し。TX payload = [0x01, idx]。**実測**（§6.3）。
     case ammoPreset = 0x47
-    /// 本体内ログ件数。TX payload = [0x00]。**実測**（§6.5）。
+    /// 本体内ログ件数。TX payload = [0x00]。**実機確定**（§6.5）:
+    /// RX payload = [count, 0x01]（`count` = 記録件数、0 件のときも含む。
+    /// 2 バイト目は常に `0x01` で意味は不明・生のまま扱う）。
+    /// このログは **volatile**（本体の電源を切ると 0 件に戻る）。
     case logCount = 0x62
-    /// ログレコード本体。TX payload = [index LE16] と**推定**（`docs/PROTOCOL.md` §6.6）。
-    /// **応答レイアウトは未検証。** 読めた payload は必ず生のまま上へ流すこと。
+    /// ログレコード本体。TX payload = [index]（1 byte・**1 始まり**）。**実機確定**（§6.6）。
+    /// RX payload = [index, rev0, rev1, speed0, speed1]（5 bytes）。
+    /// index 0 への要求には応答が来ない。件数を超える index には全ゼロのレコードが返る
+    /// （エラーではなく「そこで終わり」を意味する）。
     case logRecord = 0x63
     /// バッテリー問い合わせ。**未検証**（キャプチャ中 1 度も来なかった）。
     case batteryQuery = 0x2C
@@ -34,6 +42,7 @@ public enum ChronoCommand: UInt8, Sendable, Hashable, CaseIterable {
     public var name: String {
         switch self {
         case .ack: "ACK"
+        case .nak: "NAK"
         case .readKey: "READ_KEY"
         case .fireReport: "FIRE_REPORT"
         case .currentAmmo: "CURRENT_AMMO"
@@ -66,17 +75,11 @@ public enum ChronoRequest: Sendable, Hashable {
     case readCurrentAmmo
     /// 本体内ログ件数を読む。
     case readLogCount
-    /// 本体内ログを 1 件読む（`0x63`）。**要求の形も応答の形も未検証**。
+    /// 本体内ログを 1 件読む（`0x63`）。**実機確定**（`docs/PROTOCOL.md` §6.6）。
     ///
-    /// payload は `[index LE16]` と置いている。根拠は状況証拠だけ:
-    /// * 本プロトコルの多バイト値は全て LE（`docs/PROTOCOL.md` §3）。
-    /// * 件数（`0x62`）は 1 バイトに収まらない可能性があり、index も 16 bit と見るのが自然。
-    /// * `0x47` のように「サブコマンド + index」の形も考えられるが、`0x62` が
-    ///   `[0x00]` だけなのに対し `0x63` にサブコマンドが要る理由が見当たらない。
-    ///
-    /// **外れていても本体を壊さない**ことは確認しておくこと（読み取り系 opcode であり、
-    /// 消去（`0x61`）とは別 opcode。`0x61` はビルダ自体を用意していない）。
-    case readLogRecord(index: UInt16)
+    /// payload は 1 byte・**1 始まり**の index。index 0 には応答が来ない。
+    /// 件数を超える index には全ゼロのレコードが返る（エラーではない）。
+    case readLogRecord(index: UInt8)
     /// アモプリセット（1..5）を読む。
     case readAmmoPreset(slot: UInt8)
     /// バッテリーを問い合わせる（**未検証**。応答が無くても致命的でない前提で送る）。
@@ -91,7 +94,7 @@ public enum ChronoRequest: Sendable, Hashable {
         case .readLogCount:
             ChronoFrame(command: .logCount, payload: [0x00])
         case .readLogRecord(let index):
-            ChronoFrame(command: .logRecord, payload: [UInt8(index & 0xFF), UInt8(index >> 8)])
+            ChronoFrame(command: .logRecord, payload: [index])
         case .readAmmoPreset(let slot):
             ChronoFrame(command: .ammoPreset, payload: [0x01, slot])
         case .readBattery:
@@ -132,8 +135,8 @@ extension ChronoCommand {
         ChronoRequest.readLogCount.encoded(keys: keys)
     }
 
-    /// `aa 06 63 <lo> <hi> <cks>`（**推定**。§6.6）
-    public static func readLogRecord(_ index: UInt16, keys: DeviceKeys) -> Data {
+    /// `aa 05 63 <index> <cks>`（1 byte・1 始まり index。**実機確定**。§6.6）
+    public static func readLogRecord(_ index: UInt8, keys: DeviceKeys) -> Data {
         ChronoRequest.readLogRecord(index: index).encoded(keys: keys)
     }
 

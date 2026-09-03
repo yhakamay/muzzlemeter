@@ -529,10 +529,13 @@ public actor ChronoDevice {
     private var logRecordContinuation: CheckedContinuation<DeviceLogRecordResponse?, Never>?
     private var logRecordTimeoutTask: Task<Void, Never>?
 
-    /// `0x63` の応答 1 件（生 payload と、読めたときの 1 発）。
+    /// `0x63` の応答 1 件（応答に載っていた index・生 payload・読めたときの 1 発）。
     private struct DeviceLogRecordResponse: Sendable {
+        let index: Int
         let payload: [UInt8]
         let shot: Shot?
+        /// 全ゼロレコード（ログの終端。§6.6）。
+        let isEmpty: Bool
     }
 
     /// 本体内のログ件数を読む（`0x62`）。応答が無ければ `nil`。
@@ -550,12 +553,13 @@ public actor ChronoDevice {
 
     /// 件数を読んでから 1 件ずつレコードを読む。
     ///
-    /// 方針（`docs/PROTOCOL.md` §6.6 が未検証であることに由来する）:
-    /// * **1 件ずつ、応答を待ってから次を送る。** まとめて投げると、応答に index が
-    ///   載っているか分からない以上どれがどれか対応付けられない。
-    /// * **読めないレコードが 1 件でも出たらそこで止める。** 似ているだけの別形式を
-    ///   速度として保存すると、履歴に嘘の数字が混ざって後から見分けられなくなる。
-    ///   読めたぶんはそのまま返し、読めなかった生 payload も末尾に入れて返す。
+    /// 方針（**実機確定**の `docs/PROTOCOL.md` §6.6 に基づく）:
+    /// * **1 件ずつ、応答を待ってから次を送る。** 応答には index が載っているので
+    ///   本来は並列化できるが、実測の初期化シーケンスに合わせて 1 本ずつ ~300 ms 間隔を守る。
+    /// * `options.startIndex`（既定 1）から `count` まで読む。ログは volatile なので、
+    ///   前回の続きだけを読みたいときは呼び出し側が `startIndex` を進めて渡す。
+    /// * 応答が解釈できない（未知のファームウェア差異）レコードが出たらそこで止める。
+    ///   全ゼロのレコード（§6.6 の「ログの終端」シグネチャ）は**エラーではなく正常終了**。
     /// * 進捗は `progress` で逐次知らせる（UI を止めないため）。
     public func readDeviceLog(
         options: DeviceLogReadOptions = DeviceLogReadOptions(),
@@ -577,10 +581,7 @@ public actor ChronoDevice {
             )
         }
         isReadingLog = true
-        defer {
-            isReadingLog = false
-            (decoder as? MuzzlemeterDecoder)?.expectLogRecord(index: nil)
-        }
+        defer { isReadingLog = false }
 
         guard let count = await requestLogCount(
             timeout: options.responseTimeout,
@@ -588,19 +589,22 @@ public actor ChronoDevice {
         ) else {
             return DeviceLogReadResult(reportedCount: 0, records: [], outcome: .timedOut(index: nil))
         }
-        guard count > 0 else {
+        // index は 1 byte（1 始まり）なので 255 が上限。
+        let lastIndex = min(count, 255)
+        let firstIndex = min(options.startIndex, lastIndex + 1)
+        guard firstIndex <= lastIndex else {
+            // 追加分なし（既に読んだところまでしか無い）。
             return DeviceLogReadResult(reportedCount: count, records: [], outcome: .completed)
         }
+        let cappedLastIndex = min(lastIndex, firstIndex + max(0, options.maximumRecords) - 1)
+        let total = cappedLastIndex - firstIndex + 1
 
         var records = [DeviceLogRecord]()
-        let total = min(count, max(0, options.maximumRecords))
-        for index in 0..<total {
+        for index in firstIndex...cappedLastIndex {
             await sleep(options.commandGap)
-            // 応答に index が載っているか分からないので、要求した番号をデコーダへ預ける。
-            (decoder as? MuzzlemeterDecoder)?.expectLogRecord(index: index)
             do {
                 try await transport.write(
-                    ChronoRequest.readLogRecord(index: UInt16(index)).encoded(keys: keys),
+                    ChronoRequest.readLogRecord(index: UInt8(index)).encoded(keys: keys),
                     to: writeCharacteristic,
                     withResponse: true
                 )
@@ -614,15 +618,19 @@ public actor ChronoDevice {
                     reportedCount: count, records: records, outcome: .timedOut(index: index)
                 )
             }
-            records.append(
-                DeviceLogRecord(index: index, payload: response.payload, shot: response.shot)
-            )
-            progress?(DeviceLogProgress(done: records.count, total: total))
-            guard response.shot != nil else {
+            guard !response.isEmpty else {
+                // 全ゼロ = ログの終端。エラーではない（§6.6）。ここまでの分で正常終了とする。
+                return DeviceLogReadResult(reportedCount: count, records: records, outcome: .completed)
+            }
+            guard let shot = response.shot else {
+                // 実機では通常起きないはずの防御的フォールバック（未知のファームウェア差異）。
+                records.append(DeviceLogRecord(index: response.index, payload: response.payload, shot: nil))
                 return DeviceLogReadResult(
                     reportedCount: count, records: records, outcome: .unsupportedFormat(index: index)
                 )
             }
+            records.append(DeviceLogRecord(index: response.index, payload: response.payload, shot: shot))
+            progress?(DeviceLogProgress(done: records.count, total: total))
         }
         return DeviceLogReadResult(reportedCount: count, records: records, outcome: .completed)
     }
@@ -662,6 +670,12 @@ public actor ChronoDevice {
         }
     }
 
+    /// `.logRecordRaw` から `.logRecord` / `.logRecordEmpty` までの間だけ持つ一時置き場。
+    /// デコーダは同じ `0x63` 応答に対してこの 2 つを**同じ decode 呼び出しの中で**
+    /// 順番に返すので、ここでの一時保持に競合は起きない（`ChronoDevice` はアクターで、
+    /// `decoder.decode` の結果を 1 件ずつ同期的に処理してから次のイベントへ進む）。
+    private var pendingLogRecordPayload: [UInt8]?
+
     /// 受信イベントから読み出しの応答を拾う。
     ///
     /// ハンドシェイクと同じく**予期しないフレームで慌てない**。ログを読んでいる最中でも
@@ -671,10 +685,33 @@ public actor ChronoDevice {
         case .logCount(let count):
             completeLogCount(count)
         case .logRecordRaw(_, let payload):
-            // `.logRecordRaw` は解釈できたかに関わらず必ず来る。1 発として読めるかは
-            // ここでも同じ規則（`FireReport.logRecord`）で判断する。
-            let shot = FireReport.logRecord(payload: payload)?.makeShot()
-            completeLogRecord(DeviceLogRecordResponse(payload: payload, shot: shot))
+            pendingLogRecordPayload = payload
+        case .logRecord(let index, let shot):
+            let payload = pendingLogRecordPayload ?? []
+            pendingLogRecordPayload = nil
+            completeLogRecord(
+                DeviceLogRecordResponse(index: index, payload: payload, shot: shot, isEmpty: false)
+            )
+        case .logRecordEmpty(let index):
+            let payload = pendingLogRecordPayload ?? []
+            pendingLogRecordPayload = nil
+            completeLogRecord(
+                DeviceLogRecordResponse(index: index, payload: payload, shot: nil, isEmpty: true)
+            )
+        case .raw(_, let data):
+            // 待っている最中に来た `0x63` 応答が、デコーダの `DeviceLogWireRecord` として
+            // 読める最小長（5 バイト）に届かなかった場合（未知のファームウェア差異への保険）。
+            // フレーム自体（header/長さ/チェックサム）は正しいので `.raw` として届く。
+            guard logRecordContinuation != nil else { break }
+            let bytes = [UInt8](data)
+            guard bytes.count >= 4, bytes[0] == ChronoFrame.header,
+                  bytes[2] == ChronoCommand.logRecord.rawValue
+            else { break }
+            let payload = bytes.count > 4 ? Array(bytes[3..<(bytes.count - 1)]) : []
+            let index = payload.first.map(Int.init) ?? -1
+            completeLogRecord(
+                DeviceLogRecordResponse(index: index, payload: payload, shot: nil, isEmpty: false)
+            )
         case .powerOff:
             abortLogRead()
         default:

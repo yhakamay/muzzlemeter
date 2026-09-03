@@ -2,15 +2,15 @@ import Foundation
 
 /// 本体内ログ 1 件。
 ///
-/// **形式が未検証なので、生 payload を必ず持ち歩く。** `shot` が `nil` のレコードは
-/// 「読めなかった」を意味し、上位はそこで読み出しを止めて生データを保存する。
+/// **実機確定の形式**（`docs/PROTOCOL.md` §6.6）だが、生 payload も必ず持ち歩く。
+/// `shot` が `nil` のレコードは応答が解釈できなかったことを意味し、上位はそこで
+/// 読み出しを止めて生データを保存する（未知のファームウェア差異への保険）。
 public struct DeviceLogRecord: Sendable, Hashable {
-    /// 要求した番号（0 始まり）。応答に index が載っているかは未確定なので、
-    /// **要求した側が付けた番号**である（`ChronoEvent.logRecordRaw` の doc 参照）。
+    /// 応答が載せていた index（1 始まり）。
     public let index: Int
     /// `0x63` フレームの payload（cmd の次から checksum の手前まで）。
     public let payload: [UInt8]
-    /// `FIRE_REPORT` と同じ並びに見えたときだけ入る 1 発（**推定**）。
+    /// 読めた 1 発（速度が乗っていたレコード）。**実機確定**。
     public let shot: Shot?
 
     public init(index: Int, payload: [UInt8], shot: Shot?) {
@@ -33,10 +33,12 @@ public struct DeviceLogRecord: Sendable, Hashable {
 
 /// 読み出しがどこで終わったか。
 public enum DeviceLogOutcome: Sendable, Hashable {
-    /// 件数ぶん全部読めた（0 件だった場合も含む）。
+    /// 要求した範囲を最後まで読めた（0 件だった場合、および全ゼロレコードで
+    /// ログの終端に達した場合を含む。§6.6 の「全ゼロ＝終端」はエラーではない）。
     case completed
-    /// このレコードが `FIRE_REPORT` の並びとして読めなかったので**そこで止めた**。
-    /// 生データを保存してユーザーに送り返してもらう。
+    /// このレコードが `0x63` の応答として読めなかったので**そこで止めた**。
+    /// 生データを保存してユーザーに送り返してもらう。実機確定後は通常起きないはずだが、
+    /// 未知のファームウェア差異に対する保険として残してある。
     case unsupportedFormat(index: Int)
     /// 応答が来なかった。`index` が `nil` なら件数（`0x62`）の段階で来なかった。
     case timedOut(index: Int?)
@@ -65,6 +67,10 @@ public struct DeviceLogReadResult: Sendable, Hashable {
 
     /// 何も受け取れなかったか（保存するものが無い）。
     public var isEmpty: Bool { shots.isEmpty }
+
+    /// 実際に読めた末尾の index。ボラタイルなログを差分で読むとき、
+    /// 「どこまで取り込んだか」の印を進めるのに使う（`nil` なら 1 件も読めなかった）。
+    public var lastReadIndex: Int? { records.last?.index }
 }
 
 /// 本体内ログ読み出しの詰め方。
@@ -78,15 +84,23 @@ public struct DeviceLogReadOptions: Sendable, Hashable {
     public var commandGap: TimeInterval
     /// 安全弁。本体が壊れた件数を返しても、この数で打ち切る。
     public var maximumRecords: Int
+    /// 読み出しを始める 1 始まりの index。
+    ///
+    /// 本体内ログは **volatile**（電源を切ると 0 件に戻る）。同じ電源サイクルの間に
+    /// 既に取り込んだぶんを読み直さないよう、呼び出し側（`ChronoService`）が
+    /// 「前回どこまで読んだか」を覚えておいて、その続きから渡す。既定は 1（先頭から全部）。
+    public var startIndex: Int
 
     public init(
         responseTimeout: TimeInterval = 3.0,
         commandGap: TimeInterval = 0.3,
-        maximumRecords: Int = 200
+        maximumRecords: Int = 200,
+        startIndex: Int = 1
     ) {
         self.responseTimeout = responseTimeout
         self.commandGap = commandGap
         self.maximumRecords = maximumRecords
+        self.startIndex = max(1, startIndex)
     }
 }
 

@@ -73,6 +73,62 @@ public struct FireReport: Sendable, Hashable {
     }
 }
 
+/// `0x63` READ_LOG_RECORD の応答（**実機確定**。`docs/PROTOCOL.md` §6.6）。
+///
+/// ```
+/// aa 09 63 01 00 00 81 01 f1
+///          ^^ ^^^^^ ^^^^^
+///          |  |     speed  (u16 LE) ÷100 → m/s
+///          |  rev   (u16 LE, 意味未確定。FIRE_REPORT の rawRev と同様に生値のまま保持)
+///          index（1 始まり。要求した index がそのまま返る）
+/// ```
+///
+/// 実測 3 発（手投げ BB）: raw 385 / 359 / 407 → ÷100 = 3.85 / 3.59 / 4.07 m/s。
+/// 本体 LCD の履歴表示（3.8 / 3.5 / 4.0）と一致した（2026-09-03/04 実機追試）。
+///
+/// index 0 を要求すると応答が無い。件数（`0x62`）を超える index、あるいは電源投入後
+/// まだ記録が無い index には **rev・speed とも 0** の全ゼロレコードが返る。
+/// これはエラーではなく「ここでログが終わり」を意味する（`isEmpty`）。
+public struct DeviceLogWireRecord: Sendable, Hashable {
+    /// 応答が載せている index（1 始まり）。
+    public let index: Int
+    /// rev（意味未確定。FIRE_REPORT の rawRev と同じ位置づけで生値のまま公開する）。
+    public let rawRateOfFire: UInt16
+    /// speed の生値。÷100 が m/s。
+    public let rawSpeed: UInt16
+
+    public init(index: Int, rawRateOfFire: UInt16, rawSpeed: UInt16) {
+        self.index = index
+        self.rawRateOfFire = rawRateOfFire
+        self.rawSpeed = rawSpeed
+    }
+
+    /// `0x63` フレームの payload（5 バイト: `[index, rev0, rev1, speed0, speed1]`）から読む。
+    public init?(payload: [UInt8]) {
+        guard payload.count >= 5 else { return nil }
+        self.init(
+            index: Int(payload[0]),
+            rawRateOfFire: UInt16(payload[1]) | (UInt16(payload[2]) << 8),
+            rawSpeed: UInt16(payload[3]) | (UInt16(payload[4]) << 8)
+        )
+    }
+
+    public var metersPerSecond: Double { Double(rawSpeed) / FireReport.speedScale }
+
+    /// 件数を超える index / 未記録の index に返ってくる全ゼロレコード。
+    /// speed が 0 の実射は無いので、これだけで判定できる。
+    public var isEmpty: Bool { rawSpeed == 0 }
+
+    public func makeShot(timestamp: Date = Date()) -> Shot {
+        Shot(
+            timestamp: timestamp,
+            velocityMetersPerSecond: metersPerSecond,
+            rateOfFireRPS: nil,
+            rawRateOfFire: rawRateOfFire
+        )
+    }
+}
+
 /// AC6000 MKIII BT の実プロトコルデコーダ。
 ///
 /// `FrameAssembler` でフレームを切り出し、cmd ごとに `ChronoEvent` へ変換する。
@@ -101,12 +157,6 @@ public final class MuzzlemeterDecoder: ChronoKeyAwareDecoder, @unchecked Sendabl
 
     private let lock = NSLock()
     private var assembler = FrameAssembler()
-    /// 次に届く `0x63` 応答が何番目のレコードか。
-    ///
-    /// **応答に index が載っているかどうかが未確定**なので、要求と応答を 1 件ずつ
-    /// 対にしている側（`ChronoDevice` の読み出しループ）に教えてもらう。
-    /// 教えられていなければ `nil` のまま流す（嘘の番号を付けない）。
-    private var expectedLogRecordIndex: Int?
     private let policy: ChecksumPolicy
     /// 時刻の注入点（テストで決定的にするため）。
     private let now: @Sendable () -> Date
@@ -140,15 +190,6 @@ public final class MuzzlemeterDecoder: ChronoKeyAwareDecoder, @unchecked Sendabl
         lock.lock()
         defer { lock.unlock() }
         assembler.reset()
-        expectedLogRecordIndex = nil
-    }
-
-    /// 次に届く `0x63` 応答に付ける index を教える（`nil` で忘れる）。
-    /// 読み出しは 1 件ずつ・応答を待ってから次を送るので、対応付けは一意に決まる。
-    public func expectLogRecord(index: Int?) {
-        lock.lock()
-        defer { lock.unlock() }
-        expectedLogRecordIndex = index
     }
 
     public func decode(characteristic: UUID, data: Data) -> [ChronoEvent] {
@@ -216,6 +257,10 @@ public final class MuzzlemeterDecoder: ChronoKeyAwareDecoder, @unchecked Sendabl
             }
             return [.ack(command: target)]
 
+        case .nak:
+            // payload は 0xFF 固定（未知コマンドへの拒否）。**実機確定**（§6.7）。
+            return [.nak]
+
         case .currentAmmo:
             // aa 0a 5a 01 <slot> <ammo:4> cks
             guard frame.payload.count >= 6 else {
@@ -247,12 +292,13 @@ public final class MuzzlemeterDecoder: ChronoKeyAwareDecoder, @unchecked Sendabl
             return [.ammo(record)]
 
         case .logCount:
-            // aa 06 62 <status> <count> cks。他の多バイト値が全て LE なので
-            // payload[1] を件数と読む（BE16 説との区別は未検証・§6.5）。
-            guard frame.payload.count >= 2 else {
+            // aa 06 62 <count> <0x01 固定> cks。**実機確定**（§6.5）:
+            // payload[0] = 件数（0 件のときも含む）、payload[1] は常に 0x01 で意味不明
+            // （生のままにして解釈しない。以前の実装は payload[1] を件数と誤読していた）。
+            guard let count = frame.payload.first else {
                 return [.raw(characteristic: characteristic, data: raw)]
             }
-            return [.logCount(Int(frame.payload[1]))]
+            return [.logCount(Int(count))]
 
         case .batteryReport, .batteryQuery:
             // **未検証**: キャプチャに 1 度も現れなかった。他の応答に倣い
@@ -262,15 +308,17 @@ public final class MuzzlemeterDecoder: ChronoKeyAwareDecoder, @unchecked Sendabl
             return [.battery(percent: Int(min(percent, 100)))]
 
         case .logRecord:
-            // **未検証の形式。**生 payload は必ず流し、読めたときだけ 1 発として
-            // 追加で流す（`.logRecordRaw` → `.logRecord` の順）。
-            // 生を先に流すのは、解釈できなかったフレームでも同じ場所で拾えるようにするため。
-            lock.lock()
-            let index = expectedLogRecordIndex
-            lock.unlock()
-            var events: [ChronoEvent] = [.logRecordRaw(index: index, payload: frame.payload)]
-            if let report = FireReport.logRecord(payload: frame.payload) {
-                events.append(.logRecord(index: index, shot: report.makeShot(timestamp: now())))
+            // **実機確定**（§6.6）: payload = [index, rev0, rev1, speed0, speed1]。
+            // 生 payload を必ず先に流し、続けて「全ゼロ（ログの終端）」か「1 発読めた」かを流す。
+            // 生を先に流すのは、将来ファームウェア差異で解釈に失敗しても同じ場所で拾えるように。
+            guard let record = DeviceLogWireRecord(payload: frame.payload) else {
+                return [.raw(characteristic: characteristic, data: raw)]
+            }
+            var events: [ChronoEvent] = [.logRecordRaw(index: record.index, payload: frame.payload)]
+            if record.isEmpty {
+                events.append(.logRecordEmpty(index: record.index))
+            } else {
+                events.append(.logRecord(index: record.index, shot: record.makeShot(timestamp: now())))
             }
             return events
 

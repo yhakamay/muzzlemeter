@@ -24,6 +24,9 @@ public actor ReplayTransport: ChronoTransport {
     /// ログ読み出しなど）を通せない。要求 1 本に対して返すフレームを組み立てる
     /// 関数を差し込めるようにして、**アプリ側は実機と同じ経路**（write → notify）を
     /// 通れるようにする。応答が無い要求には空配列を返す。
+    ///
+    /// 現在の `deviceLogResponder`（下）は **実機確定の 0x62 / 0x63 応答形式**
+    /// （`docs/PROTOCOL.md` §6.5 / §6.6）で答える。
     public typealias Responder = @Sendable (Data) -> [Data]
 
     private let script: ReplayScript
@@ -209,16 +212,17 @@ public actor ReplayTransport: ChronoTransport {
 extension ReplayTransport {
     /// 本体内ログの読み出し（`0x62` / `0x63`）に応答する擬似ファームウェア。
     ///
-    /// **`0x63` の実物は 1 度も観測できていない**（`docs/PROTOCOL.md` §6.6）。
-    /// ここが返すのは「`FIRE_REPORT` と同じ並びだろう」という**推定に基づく作りもの**で、
-    /// 実機の形式が判明したら差し替える。にもかかわらずこれを用意するのは、
-    /// アプリ側の取り込み UI（進捗・保存・失敗時の生データ書き出し）を
-    /// 実機なしで通しで動かすため。
+    /// **実機確定の応答形式**（`docs/PROTOCOL.md` §6.5 / §6.6, 2026-09-03/04 実機追試）で答える:
+    /// * `0x62` → `[count, 0x01]`
+    /// * `0x63`（1 byte・1 始まり index）→ `[index, rev0, rev1, speed0, speed1]`。
+    ///   index 0 には応答しない。`count` を超える index には全ゼロレコードを返す
+    ///   （エラーではなく「ログの終端」）。
     ///
     /// - Parameters:
     ///   - count: `0x62` が答える件数。
-    ///   - brokenIndex: この番号のレコードだけ**読めない形**で返す。
-    ///     「未対応の形式でした」の経路を実機なしで確かめるために要る。
+    ///   - brokenIndex: この番号のレコードだけ**読めない形**（短すぎる payload）で返す。
+    ///     未知のファームウェア差異に対する防御的フォールバック経路を
+    ///     実機なしで確かめるために要る。実機では通常起きない。
     ///   - speeds: レコードの速度（m/s）。足りなければ巡回して使う。
     public static func deviceLogResponder(
         count: Int,
@@ -231,26 +235,34 @@ extension ReplayTransport {
             guard bytes.count >= 4, bytes[0] == ChronoFrame.header else { return [] }
             switch bytes[2] {
             case ChronoCommand.logCount.rawValue:
-                // aa 06 62 <status> <count> cks（§6.5 の読み方に合わせる）
+                // aa 06 62 <count> <0x01 固定> cks（§6.5・実機確定）
                 return [
-                    ChronoFrame(command: .logCount, payload: [0x00, UInt8(clamping: count)])
+                    ChronoFrame(command: .logCount, payload: [UInt8(clamping: count), 0x01])
                         .encode(keys: keys)
                 ]
 
             case ChronoCommand.logRecord.rawValue:
+                // 1 byte・1 始まりの index。index 0 には応答しない（実機確定）。
                 guard bytes.count >= 5 else { return [] }
-                let index = Int(bytes[3]) | (Int(bytes[4]) << 8)
-                guard index < count else { return [] }
+                let index = Int(bytes[3])
+                guard index > 0 else { return [] }
                 if index == brokenIndex {
-                    // 長さも並びも FIRE_REPORT に合わない = 「未対応の形式」。
-                    return [ChronoFrame(command: .logRecord, payload: [0x01, 0x02]).encode(keys: keys)]
+                    // 5 バイトに満たない = 応答レイアウトとして読めない（防御的フォールバック用）。
+                    return [ChronoFrame(command: .logRecord, payload: [UInt8(index), 0x00]).encode(keys: keys)]
                 }
-                let speed = speeds.isEmpty ? 90.0 : speeds[index % speeds.count]
+                guard index <= count else {
+                    // 件数を超える index には全ゼロレコード（ログの終端。エラーではない）。
+                    return [
+                        ChronoFrame(command: .logRecord, payload: [UInt8(index), 0x00, 0x00, 0x00, 0x00])
+                            .encode(keys: keys)
+                    ]
+                }
+                let speed = speeds.isEmpty ? 90.0 : speeds[(index - 1) % speeds.count]
                 let raw = UInt16(clamping: Int((speed * FireReport.speedScale).rounded()))
                 let payload: [UInt8] = [
+                    UInt8(index),
                     0x00, 0x00,
                     UInt8(raw & 0xFF), UInt8(raw >> 8),
-                    0x00, 0x00,
                 ]
                 return [ChronoFrame(command: .logRecord, payload: payload).encode(keys: keys)]
 

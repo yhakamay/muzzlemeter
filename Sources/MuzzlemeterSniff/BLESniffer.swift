@@ -946,14 +946,13 @@ extension BLESniffer: CBPeripheralDelegate {
 
 // MARK: - --read-log（本体内ログの吸い上げ）
 
-/// `0x62`（件数）→ `0x63`（1 件ずつ）を順に投げて、応答を生のまま書き出す。
+/// `0x62`（件数）→ `0x63`（1 件ずつ、1 始まり index）を順に投げて、応答を生のまま書き出す。
 ///
-/// **これが `0x63` の実物を手に入れる唯一の経路。** 応答レイアウトは 1 度も
-/// 観測できていない（`docs/PROTOCOL.md` §6.6）ので、要求の形も応答の読み方も推定でしかない。
+/// **実機確定の形式**（`docs/PROTOCOL.md` §6.5 / §6.6, 2026-09-03/04 実機追試）で読む。
 /// そのため:
 /// * 読めない応答が返っても**止めずに最後まで読む**。サニファの仕事は解釈ではなく採取で、
-///   1 件で止めると形式を推し量る材料が集まらない（アプリ側は逆に、嘘の数字を保存しないよう
-///   最初の 1 件で止める）。
+///   1 件で止めると未知のファームウェア差異を推し量る材料が集まらない（アプリ側は逆に、
+///   嘘の数字を保存しないよう最初の 1 件で止める）。
 /// * 応答が来なければ数秒で諦めて先へ進む。**本体を待ち続けて操作不能にしない。**
 /// * 🚫 `0x61`（CLEAR_LOG）は**絶対に送らない**。ビルダ自体が存在しない。
 extension BLESniffer {
@@ -994,35 +993,37 @@ extension BLESniffer {
             return
 
         case .awaitingCount:
-            guard bytes[2] == ChronoCommand.logCount.rawValue, payload.count >= 2 else { return }
-            // payload = [status, count]（§6.5。BE16 説との区別は未検証）。
-            let count = Int(payload[1])
+            guard bytes[2] == ChronoCommand.logCount.rawValue, payload.count >= 1 else { return }
+            // payload = [count, 0x01 固定]（§6.5・実機確定）。
+            let count = Int(payload[0])
             out("read-log: 本体内ログ \(count) 件")
             guard count > 0 else {
                 out("read-log: 読み出すものがありません")
                 endLogRead(on: peripheral)
                 return
             }
-            requestLogRecord(index: 0, total: count, on: peripheral)
+            // index は 1 始まり。0 には応答が来ない（実機確定）。
+            requestLogRecord(index: 1, total: count, on: peripheral)
 
         case .awaitingRecord(let index, let total):
             guard bytes[2] == ChronoCommand.logRecord.rawValue else { return }
             let hex = payload.map { String(format: "%02x", $0) }.joined(separator: " ")
             logRecordLines.append("\(index) \(hex)")
-            if let report = FireReport.logRecord(payload: payload) {
+            if let record = DeviceLogWireRecord(payload: payload), !record.isEmpty {
                 out(
                     String(
                         format: "read-log: record %d/%d rawSpeed=%d (%.2f m/s) rawRev=%d  payload: %@",
-                        index, total, Int(report.rawSpeed), report.metersPerSecond,
-                        Int(report.rawRev), hex
+                        index, total, Int(record.rawSpeed), record.metersPerSecond,
+                        Int(record.rawRateOfFire), hex
                     )
                 )
+            } else if let record = DeviceLogWireRecord(payload: payload), record.isEmpty {
+                out("read-log: record \(index)/\(total) 全ゼロ（ログの終端。エラーではありません）  payload: \(hex)")
             } else {
-                // **ここが本命。** FIRE_REPORT の並びで読めない = 推定が外れている。
                 out("read-log: record \(index)/\(total) 未知の形式  payload: \(hex)")
             }
             let next = index + 1
-            guard next < total else {
+            guard next <= total else {
                 endLogRead(on: peripheral)
                 return
             }
@@ -1042,7 +1043,7 @@ extension BLESniffer {
                   waiting == index
             else { return }
             _ = self.send(
-                ChronoCommand.readLogRecord(UInt16(clamping: index), keys: self.keys),
+                ChronoCommand.readLogRecord(UInt8(clamping: index), keys: self.keys),
                 to: characteristic,
                 on: peripheral,
                 preference: .with
@@ -1060,10 +1061,7 @@ extension BLESniffer {
             case .awaitingCount:
                 out("read-log: 0x62 に応答がありませんでした。")
             case .awaitingRecord(let index, _):
-                out(
-                    "read-log: 0x63 index=\(index) に応答がありませんでした。"
-                        + "要求の形（payload = index LE16）が違う可能性があります（docs/PROTOCOL.md §6.6）。"
-                )
+                out("read-log: 0x63 index=\(index) に応答がありませんでした。")
             case .idle:
                 break
             }
