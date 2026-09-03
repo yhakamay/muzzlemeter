@@ -217,6 +217,7 @@ public actor ChronoDevice {
     public func stop() async {
         stoppedIntentionally = true
         completeHandshake(false)
+        abortLogRead()
         setupTask?.cancel()
         setupTask = nil
         reconnectTask?.cancel()
@@ -230,6 +231,7 @@ public actor ChronoDevice {
     public func shutdown() async {
         stoppedIntentionally = true
         completeHandshake(false)
+        abortLogRead()
         setupTask?.cancel()
         setupTask = nil
         reconnectTask?.cancel()
@@ -314,6 +316,8 @@ public actor ChronoDevice {
             // 切断をまたいで半端なフレームが残らないようにする。
             (decoder as? MuzzlemeterDecoder)?.reset()
             completeHandshake(false)
+            // 応答を待っている読み出しがあれば起こす（待ちっぱなしにしない）。
+            abortLogRead()
             state = .disconnected(reason: reason)
             scheduleReconnectIfNeeded()
 
@@ -323,6 +327,7 @@ public actor ChronoDevice {
         case .value(let characteristic, let data):
             for decoded in decoder.decode(characteristic: characteristic, data: data) {
                 observeForHandshake(decoded)
+                observeForLogRead(decoded)
                 continuation.yield(decoded)
             }
 
@@ -510,6 +515,192 @@ public actor ChronoDevice {
     private func sleep(_ seconds: TimeInterval) async {
         guard seconds > 0 else { return }
         try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+    }
+
+    // MARK: - 本体内ログの読み出し（0x62 / 0x63）
+    //
+    // ⚠️ **`0x61`（CLEAR_LOG）は送らない。** ビルダも用意していない（`ChronoRequest`）。
+    //    読み出しが確定するまで消してはいけないし、確定しても消す機能は要らない。
+
+    /// ログ読み出し中に他の読み出しを走らせない（要求と応答の対応が崩れるため）。
+    private var isReadingLog = false
+    private var logCountContinuation: CheckedContinuation<Int?, Never>?
+    private var logCountTimeoutTask: Task<Void, Never>?
+    private var logRecordContinuation: CheckedContinuation<DeviceLogRecordResponse?, Never>?
+    private var logRecordTimeoutTask: Task<Void, Never>?
+
+    /// `0x63` の応答 1 件（生 payload と、読めたときの 1 発）。
+    private struct DeviceLogRecordResponse: Sendable {
+        let payload: [UInt8]
+        let shot: Shot?
+    }
+
+    /// 本体内のログ件数を読む（`0x62`）。応答が無ければ `nil`。
+    ///
+    /// **best-effort。** 失敗しても接続にも計測にも影響させない。
+    public func readLogCount(timeout: TimeInterval = 3.0) async -> Int? {
+        guard state.isReady, let writeCharacteristic = configuration.writeCharacteristic else {
+            return nil
+        }
+        guard !isReadingLog else { return nil }
+        isReadingLog = true
+        defer { isReadingLog = false }
+        return await requestLogCount(timeout: timeout, writeCharacteristic: writeCharacteristic)
+    }
+
+    /// 件数を読んでから 1 件ずつレコードを読む。
+    ///
+    /// 方針（`docs/PROTOCOL.md` §6.6 が未検証であることに由来する）:
+    /// * **1 件ずつ、応答を待ってから次を送る。** まとめて投げると、応答に index が
+    ///   載っているか分からない以上どれがどれか対応付けられない。
+    /// * **読めないレコードが 1 件でも出たらそこで止める。** 似ているだけの別形式を
+    ///   速度として保存すると、履歴に嘘の数字が混ざって後から見分けられなくなる。
+    ///   読めたぶんはそのまま返し、読めなかった生 payload も末尾に入れて返す。
+    /// * 進捗は `progress` で逐次知らせる（UI を止めないため）。
+    public func readDeviceLog(
+        options: DeviceLogReadOptions = DeviceLogReadOptions(),
+        progress: (@Sendable (DeviceLogProgress) -> Void)? = nil
+    ) async -> DeviceLogReadResult {
+        guard let writeCharacteristic = configuration.writeCharacteristic else {
+            return DeviceLogReadResult(
+                reportedCount: 0, records: [], outcome: .unavailable("書き込み先がありません")
+            )
+        }
+        guard state.isReady else {
+            return DeviceLogReadResult(
+                reportedCount: 0, records: [], outcome: .unavailable("接続されていません")
+            )
+        }
+        guard !isReadingLog else {
+            return DeviceLogReadResult(
+                reportedCount: 0, records: [], outcome: .unavailable("読み出し中です")
+            )
+        }
+        isReadingLog = true
+        defer {
+            isReadingLog = false
+            (decoder as? MuzzlemeterDecoder)?.expectLogRecord(index: nil)
+        }
+
+        guard let count = await requestLogCount(
+            timeout: options.responseTimeout,
+            writeCharacteristic: writeCharacteristic
+        ) else {
+            return DeviceLogReadResult(reportedCount: 0, records: [], outcome: .timedOut(index: nil))
+        }
+        guard count > 0 else {
+            return DeviceLogReadResult(reportedCount: count, records: [], outcome: .completed)
+        }
+
+        var records = [DeviceLogRecord]()
+        let total = min(count, max(0, options.maximumRecords))
+        for index in 0..<total {
+            await sleep(options.commandGap)
+            // 応答に index が載っているか分からないので、要求した番号をデコーダへ預ける。
+            (decoder as? MuzzlemeterDecoder)?.expectLogRecord(index: index)
+            do {
+                try await transport.write(
+                    ChronoRequest.readLogRecord(index: UInt16(index)).encoded(keys: keys),
+                    to: writeCharacteristic,
+                    withResponse: true
+                )
+            } catch {
+                return DeviceLogReadResult(
+                    reportedCount: count, records: records, outcome: .unavailable("\(error)")
+                )
+            }
+            guard let response = await waitForLogRecord(timeout: options.responseTimeout) else {
+                return DeviceLogReadResult(
+                    reportedCount: count, records: records, outcome: .timedOut(index: index)
+                )
+            }
+            records.append(
+                DeviceLogRecord(index: index, payload: response.payload, shot: response.shot)
+            )
+            progress?(DeviceLogProgress(done: records.count, total: total))
+            guard response.shot != nil else {
+                return DeviceLogReadResult(
+                    reportedCount: count, records: records, outcome: .unsupportedFormat(index: index)
+                )
+            }
+        }
+        return DeviceLogReadResult(reportedCount: count, records: records, outcome: .completed)
+    }
+
+    private func requestLogCount(
+        timeout: TimeInterval,
+        writeCharacteristic: UUID
+    ) async -> Int? {
+        do {
+            try await transport.write(
+                ChronoRequest.readLogCount.encoded(keys: keys),
+                to: writeCharacteristic,
+                withResponse: true
+            )
+        } catch {
+            return nil
+        }
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Int?, Never>) in
+            logCountContinuation = continuation
+            logCountTimeoutTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(max(0, timeout) * 1_000_000_000))
+                guard !Task.isCancelled else { return }
+                await self?.completeLogCount(nil)
+            }
+        }
+    }
+
+    private func waitForLogRecord(timeout: TimeInterval) async -> DeviceLogRecordResponse? {
+        await withCheckedContinuation {
+            (continuation: CheckedContinuation<DeviceLogRecordResponse?, Never>) in
+            logRecordContinuation = continuation
+            logRecordTimeoutTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(max(0, timeout) * 1_000_000_000))
+                guard !Task.isCancelled else { return }
+                await self?.completeLogRecord(nil)
+            }
+        }
+    }
+
+    /// 受信イベントから読み出しの応答を拾う。
+    ///
+    /// ハンドシェイクと同じく**予期しないフレームで慌てない**。ログを読んでいる最中でも
+    /// 射撃（`0x52`）や自発通知（`0x47` / `0x5A`）は普通に届くので、関係するものだけ拾う。
+    private func observeForLogRead(_ event: ChronoEvent) {
+        switch event {
+        case .logCount(let count):
+            completeLogCount(count)
+        case .logRecordRaw(_, let payload):
+            // `.logRecordRaw` は解釈できたかに関わらず必ず来る。1 発として読めるかは
+            // ここでも同じ規則（`FireReport.logRecord`）で判断する。
+            let shot = FireReport.logRecord(payload: payload)?.makeShot()
+            completeLogRecord(DeviceLogRecordResponse(payload: payload, shot: shot))
+        case .powerOff:
+            abortLogRead()
+        default:
+            break
+        }
+    }
+
+    private func completeLogCount(_ count: Int?) {
+        logCountTimeoutTask?.cancel()
+        logCountTimeoutTask = nil
+        guard let continuation = logCountContinuation else { return }
+        logCountContinuation = nil
+        continuation.resume(returning: count)
+    }
+
+    private func completeLogRecord(_ response: DeviceLogRecordResponse?) {
+        logRecordTimeoutTask?.cancel()
+        logRecordTimeoutTask = nil
+        guard let continuation = logRecordContinuation else { return }
+        logRecordContinuation = nil
+        continuation.resume(returning: response)
+    }
+
+    private func abortLogRead() {
+        completeLogCount(nil)
+        completeLogRecord(nil)
     }
 
     // MARK: - 自動再接続

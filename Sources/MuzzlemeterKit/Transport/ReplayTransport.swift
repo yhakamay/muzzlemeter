@@ -18,6 +18,14 @@ public actor ReplayTransport: ChronoTransport {
         public let withResponse: Bool
     }
 
+    /// 書き込まれたフレームに**その場で応答する**擬似ファームウェア。
+    ///
+    /// 記録済みパケットの再生だけでは「要求 → 応答」の往復（`0x62` / `0x63` の
+    /// ログ読み出しなど）を通せない。要求 1 本に対して返すフレームを組み立てる
+    /// 関数を差し込めるようにして、**アプリ側は実機と同じ経路**（write → notify）を
+    /// 通れるようにする。応答が無い要求には空配列を返す。
+    public typealias Responder = @Sendable (Data) -> [Data]
+
     private let script: ReplayScript
     /// 再生速度。1.0 で実時間、2.0 で 2 倍速。**0 なら一切待たない**。
     private let speed: Double
@@ -25,6 +33,11 @@ public actor ReplayTransport: ChronoTransport {
     /// 末尾まで再生したら先頭から繰り返すか（デモ用）。`speed == 0` のときは無視される。
     private let repeats: Bool
     private let loopGap: TimeInterval
+    private let responder: Responder?
+    /// 応答を返すまでの遅れ。実機の応答は 45–63 ms だった（`docs/PROTOCOL.md` §4.2）。
+    private let responseDelay: TimeInterval
+    /// 応答を流す characteristic（実機と同じ notify 側）。
+    private let responseCharacteristic: UUID
 
     public nonisolated let events: AsyncStream<TransportEvent>
     private nonisolated let continuation: AsyncStream<TransportEvent>.Continuation
@@ -39,13 +52,19 @@ public actor ReplayTransport: ChronoTransport {
         speed: Double = 1.0,
         peripheral: DiscoveredPeripheral = ReplayTransport.demoPeripheral,
         repeats: Bool = false,
-        loopGap: TimeInterval = 2.0
+        loopGap: TimeInterval = 2.0,
+        responder: Responder? = nil,
+        responseDelay: TimeInterval = 0.05,
+        responseCharacteristic: UUID = ChronoUUIDs.notifyCharacteristic
     ) {
         self.script = script
         self.speed = max(0, speed)
         self.peripheral = peripheral
         self.repeats = repeats
         self.loopGap = loopGap
+        self.responder = responder
+        self.responseDelay = max(0, responseDelay)
+        self.responseCharacteristic = responseCharacteristic
         let (stream, continuation) = AsyncStream<TransportEvent>.makeStream(
             bufferingPolicy: .unbounded
         )
@@ -110,6 +129,34 @@ public actor ReplayTransport: ChronoTransport {
     public func write(_ data: Data, to characteristic: UUID, withResponse: Bool) async throws {
         guard connected else { throw ChronoTransportError.notConnected }
         writes.append(RecordedWrite(characteristic: characteristic, data: data, withResponse: withResponse))
+        respond(to: data)
+    }
+
+    /// 擬似ファームウェアの応答を流す。
+    ///
+    /// **別タスクで流す**のが要点。`write` の呼び出し元は応答を待っているので、
+    /// ここで直接 yield しても構わないが、実機の「少し遅れて notify が来る」順序に
+    /// 合わせておくと、待ち始める前に応答が来る取りこぼしを実装側で踏める。
+    private func respond(to request: Data) {
+        guard let responder else { return }
+        let responses = responder(request)
+        guard !responses.isEmpty else { return }
+        guard subscribedCharacteristics.contains(responseCharacteristic) else { return }
+        let characteristic = responseCharacteristic
+        let delay = responseDelay
+        Task { [weak self] in
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+            await self?.emit(responses, on: characteristic)
+        }
+    }
+
+    private func emit(_ responses: [Data], on characteristic: UUID) {
+        guard connected else { return }
+        for response in responses {
+            continuation.yield(.value(characteristic: characteristic, data: response))
+        }
     }
 
     public func shutdown() async {
@@ -154,5 +201,62 @@ public actor ReplayTransport: ChronoTransport {
                 try? await Task.sleep(nanoseconds: UInt64(max(0, loopGap / speed) * 1_000_000_000))
             }
         } while shouldRepeat && !Task.isCancelled
+    }
+}
+
+// MARK: - 擬似ファームウェア
+
+extension ReplayTransport {
+    /// 本体内ログの読み出し（`0x62` / `0x63`）に応答する擬似ファームウェア。
+    ///
+    /// **`0x63` の実物は 1 度も観測できていない**（`docs/PROTOCOL.md` §6.6）。
+    /// ここが返すのは「`FIRE_REPORT` と同じ並びだろう」という**推定に基づく作りもの**で、
+    /// 実機の形式が判明したら差し替える。にもかかわらずこれを用意するのは、
+    /// アプリ側の取り込み UI（進捗・保存・失敗時の生データ書き出し）を
+    /// 実機なしで通しで動かすため。
+    ///
+    /// - Parameters:
+    ///   - count: `0x62` が答える件数。
+    ///   - brokenIndex: この番号のレコードだけ**読めない形**で返す。
+    ///     「未対応の形式でした」の経路を実機なしで確かめるために要る。
+    ///   - speeds: レコードの速度（m/s）。足りなければ巡回して使う。
+    public static func deviceLogResponder(
+        count: Int,
+        keys: DeviceKeys = DeviceKeys(key1: 0xC4, key2: 0x94),
+        brokenIndex: Int? = nil,
+        speeds: [Double] = [88.4, 89.1, 90.6, 91.3, 87.9, 92.2, 90.0, 88.8]
+    ) -> Responder {
+        { request in
+            let bytes = [UInt8](request)
+            guard bytes.count >= 4, bytes[0] == ChronoFrame.header else { return [] }
+            switch bytes[2] {
+            case ChronoCommand.logCount.rawValue:
+                // aa 06 62 <status> <count> cks（§6.5 の読み方に合わせる）
+                return [
+                    ChronoFrame(command: .logCount, payload: [0x00, UInt8(clamping: count)])
+                        .encode(keys: keys)
+                ]
+
+            case ChronoCommand.logRecord.rawValue:
+                guard bytes.count >= 5 else { return [] }
+                let index = Int(bytes[3]) | (Int(bytes[4]) << 8)
+                guard index < count else { return [] }
+                if index == brokenIndex {
+                    // 長さも並びも FIRE_REPORT に合わない = 「未対応の形式」。
+                    return [ChronoFrame(command: .logRecord, payload: [0x01, 0x02]).encode(keys: keys)]
+                }
+                let speed = speeds.isEmpty ? 90.0 : speeds[index % speeds.count]
+                let raw = UInt16(clamping: Int((speed * FireReport.speedScale).rounded()))
+                let payload: [UInt8] = [
+                    0x00, 0x00,
+                    UInt8(raw & 0xFF), UInt8(raw >> 8),
+                    0x00, 0x00,
+                ]
+                return [ChronoFrame(command: .logRecord, payload: payload).encode(keys: keys)]
+
+            default:
+                return []
+            }
+        }
     }
 }

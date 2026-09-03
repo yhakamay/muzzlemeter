@@ -59,6 +59,17 @@ enum FrameDescription {
         case .logCount where frame.payload.count >= 2:
             return "\(name) count=\(frame.payload[1])（status=\(frame.payload[0])）"
 
+        case .logRecord:
+            // **形式は未検証**（`docs/PROTOCOL.md` §6.6）。FIRE_REPORT と同じ並びに
+            // 見えたときだけ数字を添えるが、生 payload は必ず併記する。
+            if let report = FireReport.logRecord(payload: frame.payload) {
+                return String(
+                    format: "%@ (推定) rawSpeed=%d (%.2f m/s) rawRev=%d  payload: %@",
+                    name, Int(report.rawSpeed), report.metersPerSecond, Int(report.rawRev), payload
+                )
+            }
+            return "\(name) 未検証の形式  payload: \(payload)"
+
         case .readKey where frame.payload.count >= 2:
             return String(
                 format: "%@ key1=0x%02x key2=0x%02x", name, Int(frame.payload[0]), Int(frame.payload[1])

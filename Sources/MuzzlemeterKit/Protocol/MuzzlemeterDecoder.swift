@@ -38,6 +38,30 @@ public struct FireReport: Sendable, Hashable {
         )
     }
 
+    /// `0x63`（ログレコード）の payload を **`FIRE_REPORT` と同じ並び**とみなして読む。
+    ///
+    /// **これは推定である。**`0x63` の応答は 1 度も観測できていない
+    /// （`docs/PROTOCOL.md` §6.6）。本体が「1 発の記録」を返すなら、同じ
+    /// ファームウェアが `0x52` で使っている並び
+    /// （`00 00 <speed LE16> <rev LE16>`）を再利用している可能性が最も高い、
+    /// というだけの根拠しかない。
+    ///
+    /// そのため判定は**厳しめ**にする:
+    /// * 6 バイト以上（`0x52` の payload 長）
+    /// * flags（先頭 2 バイト）が 0 — `0x52` は実測 5 発とも 0 だった
+    /// * rawSpeed > 0 — 0 m/s の記録はあり得ない
+    ///
+    /// 少しでも外れたら `nil` を返し、呼び出し側は**そこで読み出しを止めて
+    /// 生データを保存する**。似ているだけの別形式を「速度」として保存してしまうと、
+    /// 履歴に嘘の数字が混ざって後から見分けられなくなる。
+    public static func logRecord(payload: [UInt8]) -> FireReport? {
+        guard let report = FireReport(payload: payload),
+              report.flags == 0,
+              report.rawSpeed > 0
+        else { return nil }
+        return report
+    }
+
     public func makeShot(timestamp: Date = Date()) -> Shot {
         Shot(
             timestamp: timestamp,
@@ -77,6 +101,12 @@ public final class MuzzlemeterDecoder: ChronoKeyAwareDecoder, @unchecked Sendabl
 
     private let lock = NSLock()
     private var assembler = FrameAssembler()
+    /// 次に届く `0x63` 応答が何番目のレコードか。
+    ///
+    /// **応答に index が載っているかどうかが未確定**なので、要求と応答を 1 件ずつ
+    /// 対にしている側（`ChronoDevice` の読み出しループ）に教えてもらう。
+    /// 教えられていなければ `nil` のまま流す（嘘の番号を付けない）。
+    private var expectedLogRecordIndex: Int?
     private let policy: ChecksumPolicy
     /// 時刻の注入点（テストで決定的にするため）。
     private let now: @Sendable () -> Date
@@ -110,6 +140,15 @@ public final class MuzzlemeterDecoder: ChronoKeyAwareDecoder, @unchecked Sendabl
         lock.lock()
         defer { lock.unlock() }
         assembler.reset()
+        expectedLogRecordIndex = nil
+    }
+
+    /// 次に届く `0x63` 応答に付ける index を教える（`nil` で忘れる）。
+    /// 読み出しは 1 件ずつ・応答を待ってから次を送るので、対応付けは一意に決まる。
+    public func expectLogRecord(index: Int?) {
+        lock.lock()
+        defer { lock.unlock() }
+        expectedLogRecordIndex = index
     }
 
     public func decode(characteristic: UUID, data: Data) -> [ChronoEvent] {
@@ -222,7 +261,20 @@ public final class MuzzlemeterDecoder: ChronoKeyAwareDecoder, @unchecked Sendabl
             else { return [.raw(characteristic: characteristic, data: raw)] }
             return [.battery(percent: Int(min(percent, 100)))]
 
-        case .readKey, .logRecord, .readDeviceSettings:
+        case .logRecord:
+            // **未検証の形式。**生 payload は必ず流し、読めたときだけ 1 発として
+            // 追加で流す（`.logRecordRaw` → `.logRecord` の順）。
+            // 生を先に流すのは、解釈できなかったフレームでも同じ場所で拾えるようにするため。
+            lock.lock()
+            let index = expectedLogRecordIndex
+            lock.unlock()
+            var events: [ChronoEvent] = [.logRecordRaw(index: index, payload: frame.payload)]
+            if let report = FireReport.logRecord(payload: frame.payload) {
+                events.append(.logRecord(index: index, shot: report.makeShot(timestamp: now())))
+            }
+            return events
+
+        case .readKey, .readDeviceSettings:
             // 0x4B 応答（鍵の受け渡し）は ChronoDevice がハンドシェイク中に
             // 生バイト列から読む。ここでは解釈せずそのまま流す。
             return [.raw(characteristic: characteristic, data: raw)]

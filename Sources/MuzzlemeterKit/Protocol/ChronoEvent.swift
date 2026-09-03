@@ -109,6 +109,19 @@ public enum ChronoEvent: Sendable {
     case ammo(AmmoRecord)
     /// 本体内のログ件数（`0x62`）。
     case logCount(Int)
+    /// 本体内ログ 1 件の**生ペイロード**（`0x63`）。
+    ///
+    /// **応答レイアウトは 1 度も観測できていない**（`docs/PROTOCOL.md` §6.6）。
+    /// 解釈できたかどうかに関わらず必ずこれを流す。ユーザーに生データを
+    /// 書き出してもらって初めて形式が分かる、という段階にあるため。
+    ///
+    /// `index` は**要求した側が知っている番号**。応答に index が載っているかは
+    /// 未確定なので、要求と応答を 1 件ずつ対にしている側（`ChronoDevice`）が
+    /// `MuzzlemeterDecoder.expectLogRecord(index:)` で教える。教えられていなければ `nil`。
+    case logRecordRaw(index: Int?, payload: [UInt8])
+    /// 上記のうち、payload が `FIRE_REPORT` と同じ並びに見えたものを 1 発として読んだもの。
+    /// **推定**（`FireReport.logRecord(payload:)` の判定条件を参照）。
+    case logRecord(index: Int?, shot: Shot)
     /// 1 バイト `00` の通知 = **本体の電源 OFF**（`docs/PROTOCOL.md` §5.1）。
     /// エラーではない。約 0.76 秒後にリンクが supervision timeout で落ちる。
     case powerOff

@@ -21,7 +21,8 @@ public enum ChronoCommand: UInt8, Sendable, Hashable, CaseIterable {
     case ammoPreset = 0x47
     /// 本体内ログ件数。TX payload = [0x00]。**実測**（§6.5）。
     case logCount = 0x62
-    /// ログレコード本体。**未検証**（読み出し方法が未確定なのでビルダは用意しない）。
+    /// ログレコード本体。TX payload = [index LE16] と**推定**（`docs/PROTOCOL.md` §6.6）。
+    /// **応答レイアウトは未検証。** 読めた payload は必ず生のまま上へ流すこと。
     case logRecord = 0x63
     /// バッテリー問い合わせ。**未検証**（キャプチャ中 1 度も来なかった）。
     case batteryQuery = 0x2C
@@ -65,6 +66,17 @@ public enum ChronoRequest: Sendable, Hashable {
     case readCurrentAmmo
     /// 本体内ログ件数を読む。
     case readLogCount
+    /// 本体内ログを 1 件読む（`0x63`）。**要求の形も応答の形も未検証**。
+    ///
+    /// payload は `[index LE16]` と置いている。根拠は状況証拠だけ:
+    /// * 本プロトコルの多バイト値は全て LE（`docs/PROTOCOL.md` §3）。
+    /// * 件数（`0x62`）は 1 バイトに収まらない可能性があり、index も 16 bit と見るのが自然。
+    /// * `0x47` のように「サブコマンド + index」の形も考えられるが、`0x62` が
+    ///   `[0x00]` だけなのに対し `0x63` にサブコマンドが要る理由が見当たらない。
+    ///
+    /// **外れていても本体を壊さない**ことは確認しておくこと（読み取り系 opcode であり、
+    /// 消去（`0x61`）とは別 opcode。`0x61` はビルダ自体を用意していない）。
+    case readLogRecord(index: UInt16)
     /// アモプリセット（1..5）を読む。
     case readAmmoPreset(slot: UInt8)
     /// バッテリーを問い合わせる（**未検証**。応答が無くても致命的でない前提で送る）。
@@ -78,6 +90,8 @@ public enum ChronoRequest: Sendable, Hashable {
             ChronoFrame(command: .currentAmmo, payload: [0x00])
         case .readLogCount:
             ChronoFrame(command: .logCount, payload: [0x00])
+        case .readLogRecord(let index):
+            ChronoFrame(command: .logRecord, payload: [UInt8(index & 0xFF), UInt8(index >> 8)])
         case .readAmmoPreset(let slot):
             ChronoFrame(command: .ammoPreset, payload: [0x01, slot])
         case .readBattery:
@@ -116,6 +130,11 @@ extension ChronoCommand {
     /// `aa 05 62 00 <cks>`
     public static func readLogCount(keys: DeviceKeys) -> Data {
         ChronoRequest.readLogCount.encoded(keys: keys)
+    }
+
+    /// `aa 06 63 <lo> <hi> <cks>`（**推定**。§6.6）
+    public static func readLogRecord(_ index: UInt16, keys: DeviceKeys) -> Data {
+        ChronoRequest.readLogRecord(index: index).encoded(keys: keys)
     }
 
     /// `aa 06 47 01 <n> <cks>`

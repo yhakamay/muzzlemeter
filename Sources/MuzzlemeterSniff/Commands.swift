@@ -63,6 +63,7 @@ extension SniffCommand {
             discussion: """
                 例:
                   muzzlemeter-sniff dump --name AC6000BT- --handshake
+                  muzzlemeter-sniff dump --name AC6000BT- --read-log
                   muzzlemeter-sniff dump --name AC6000
                   muzzlemeter-sniff dump --id 1234ABCD-... --log tools/re/captures/shot1.log
                   muzzlemeter-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
@@ -142,6 +143,17 @@ extension SniffCommand {
         )
         var handshake: Bool = false
 
+        @Flag(
+            name: .customLong("read-log"),
+            help: ArgumentHelp(
+                "ハンドシェイクの後に本体内ログを読み出す（0x62 で件数 → 0x63 を index 順に）。"
+                    + " 応答は生 payload のまま出力する。0x63 の形式は未検証なので、"
+                    + " 出力をそのまま共有してほしい。CLEAR_LOG (0x61) は送らない。"
+                    + " 鍵が要るため --handshake を自動的に有効にする。"
+            )
+        )
+        var readLog: Bool = false
+
         func validate() throws {
             guard (name == nil) != (id == nil) else {
                 throw ValidationError("--name か --id のどちらか一方を指定してください。")
@@ -172,12 +184,17 @@ extension SniffCommand {
 
             let sniffer = BLESniffer(
                 mode: .dump(
-                    matcher: matcher,
-                    writes: writes,
-                    writeDelay: Double(writeDelay) / 1000,
-                    writeType: writeType,
-                    interactive: interactive,
-                    handshake: handshake
+                    DumpOptions(
+                        matcher: matcher,
+                        writes: writes,
+                        writeDelay: Double(writeDelay) / 1000,
+                        writeType: writeType,
+                        interactive: interactive,
+                        // ログ読み出しは鍵付きフレームを送るので、鍵の確立が前提。
+                        // 付け忘れて「無反応」で悩まないよう、ここで有効にしてしまう。
+                        handshake: handshake || readLog,
+                        readLog: readLog
+                    )
                 ),
                 serviceFilter: filter,
                 logger: LogWriter(path: logPath)

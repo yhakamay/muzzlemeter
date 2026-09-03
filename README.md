@@ -35,6 +35,7 @@
 - プロファイルごとの推移（平均弾速の時系列 ±SD、気温との散布図）
 - 日本語 / 英語（ベース言語は日本語）
 - 本体が無くても UI を確認できるリプレイモード（実キャプチャの再生）
+- 本体内に溜まったログの取り込み（`0x62` / `0x63`。**`0x63` の形式は未検証**）
 - 解析用の macOS CLI `muzzlemeter-sniff`（BLE スキャン / GATT 列挙 / パケットダンプ）
 
 ## AC6000 と話すのに必要なこと（要点）
@@ -148,6 +149,48 @@ swift run muzzlemeter-sniff dump --name AC6000BT- --handshake --interactive
 
 フレームの組み立て・検証は **`MuzzlemeterKit` の `ChronoFrame` をそのまま使っている**ので、
 サニファで通ったバイト列はアプリでもそのまま通る。
+
+### 本体内ログの吸い上げ（`--read-log`）— **0x63 の形式は未検証**
+
+本体は計測結果を内部に溜めている。件数（`0x62`）は実測で確認できているが、
+**1 件ずつ取り出す `0x63` は要求の形も応答の形も 1 度も観測できていない**
+（`docs/PROTOCOL.md` §6.6）。`--read-log` は推定した要求
+（payload = `index` の LE16）を index 順に投げ、**応答を生のまま**書き出す。
+
+```sh
+swift run muzzlemeter-sniff dump --name AC6000BT- --read-log
+```
+
+`--read-log` は鍵付きフレームを送るので、**`--handshake` を自動的に有効にする**
+（付け忘れて「無反応」で悩まないため）。
+
+期待される出力:
+
+```
+=== --read-log: 本体内ログを読み出します（0x62 → 0x63。0x61 は送りません） ===
+[...] write -> 9C6AA1EE-... (withResponse) len=5 hex: aa 05 62 00 69
+[...] 3337E46E-... len=6 hex: aa 06 62 00 01 6b
+  -> LOG_COUNT count=1（status=0）
+read-log: 本体内ログ 1 件
+[...] write -> 9C6AA1EE-... (withResponse) len=6 hex: aa 06 63 00 00 6a
+[...] 3337E46E-... len=10 hex: aa 0a 63 00 00 1a 01 00 00 8a
+read-log: record 0/1 rawSpeed=282 (2.82 m/s) rawRev=0  payload: 00 00 1a 01 00 00
+
+=== read-log: 採取した 0x63 の payload（1 行 = 1 レコード: <index> <hex>） ===
+0 00 00 1a 01 00 00
+=== ここまで。この部分をそのまま共有してください ===
+```
+
+**この出力（またはログファイル）がそのまま `0x63` の正体を決める材料になる。**
+次のどれになっても意味がある:
+
+- `record N/M rawSpeed=…` と読めた → 推定どおり `FIRE_REPORT` と同じ並び
+- `未知の形式  payload: …` → 別レイアウト。生 payload から読み解く
+- `0x63 index=0 に応答がありませんでした` → **要求の形が違う**
+  （`[0x01, index]` など別の形を `--interactive` で試す）
+
+> 🚫 **`0x61`（CLEAR_LOG）は送らない。** ビルダ自体を用意していないので、
+> 手で hex を組まない限り送りようがない（`docs/PROTOCOL.md` §11）。
 
 ### 初期化コマンドを送る
 
@@ -423,6 +466,8 @@ UI を目視確認できるように、`--replay-capture` かつシミュレー�
 - `rawRev`（連射速度）の単位 → フルオートで数発撃って連射間隔と突き合わせる
 - アモ重量のワイヤスケール（×100 か ×1000 か）→ 本体で重量設定を変えながら `0x47` を見る
 - 鍵未知の初回ペアリング経路（実装はしてあるが実物を見ていない）
+- **`0x63`（本体内ログ 1 件）の要求・応答の形** →
+  `swift run muzzlemeter-sniff dump --name AC6000BT- --read-log` の出力を見る
 
 ## プロトコル
 

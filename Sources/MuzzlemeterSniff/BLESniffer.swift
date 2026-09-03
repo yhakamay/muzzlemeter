@@ -28,24 +28,32 @@ struct PendingWrite: Sendable {
     let writeType: WriteTypePreference
 }
 
+/// `dump` サブコマンドの設定。
+///
+/// タプルの連想値だと、項目が増えるたびに `case .dump(_, _, _, _, let x, _)` の
+/// アンダースコアの数を数えることになる。**構造体にして名前で読む。**
+struct DumpOptions: Sendable {
+    let matcher: PeripheralMatcher
+    let writes: [PendingWrite]
+    /// `--write` を連続で送るときの間隔（秒）。応答をどの write に対するものか
+    /// 対応付けられるように、既定でも 0 にはしない。
+    let writeDelay: Double
+    /// `--write-type`。対話モードで種別を明示しなかった write の既定値。
+    let writeType: WriteTypePreference
+    /// 購読・初期 write 完了後に stdin から追加コマンドを受け付けるか。
+    let interactive: Bool
+    /// 広告の manufacturer data から鍵を取り出し、購読後に `0x4B` READ_KEY を
+    /// 自動で送るか（`--handshake`）。
+    let handshake: Bool
+    /// ハンドシェイクの後に本体内ログ（`0x62` → `0x63`）を読み出すか（`--read-log`）。
+    /// **`0x61`（消去）は決して送らない。**
+    let readLog: Bool
+}
+
 /// 動作モード。
 enum SniffMode: Sendable {
     case scan(seconds: Double)
-    /// - Parameters:
-    ///   - writeDelay: `--write` を連続で送るときの間隔（秒）。応答をどの write に対する
-    ///     ものか対応付けられるように、既定でも 0 にはしない。
-    ///   - writeType: `--write-type`。対話モードで種別を明示しなかった write の既定値。
-    ///   - interactive: 購読・初期 write 完了後に stdin から追加コマンドを受け付けるか。
-    ///   - handshake: 広告の manufacturer data から鍵を取り出し、購読後に
-    ///     `0x4B` READ_KEY を自動で送るか（`--handshake`）。
-    case dump(
-        matcher: PeripheralMatcher,
-        writes: [PendingWrite],
-        writeDelay: Double,
-        writeType: WriteTypePreference,
-        interactive: Bool,
-        handshake: Bool
-    )
+    case dump(DumpOptions)
 }
 
 /// CoreBluetooth のデリゲートは専用の DispatchQueue 上で動く。
@@ -82,23 +90,38 @@ final class BLESniffer: NSObject, @unchecked Sendable {
     /// `q` / EOF による終了処理中。再接続を抑止する。
     private var isQuitting = false
 
-    /// `--write-delay`（秒）。dump 以外では使わない。
-    private var writeDelay: Double {
-        if case .dump(_, _, let delay, _, _, _) = mode { return delay }
-        return 0
+    // MARK: `--read-log` の状態（すべて `queue` 上でのみ触る）
+
+    /// いま何の応答を待っているか。
+    enum LogReadStep: Sendable, Equatable {
+        case idle
+        case awaitingCount
+        case awaitingRecord(index: Int, total: Int)
     }
+    /// 読み出しの進行状態。
+    var logReadStep: LogReadStep = .idle
+    /// 応答が来なかったときの打ち切りタイマーを、最新の要求だけに効かせる世代番号。
+    var logReadToken = 0
+    /// 受け取った `0x63` の生 payload（最後にまとめて出す）。
+    var logRecordLines = [String]()
+
+    /// dump の設定。scan モードでは nil。
+    private var dumpOptions: DumpOptions? {
+        if case .dump(let options) = mode { return options }
+        return nil
+    }
+
+    /// `--write-delay`（秒）。dump 以外では使わない。
+    private var writeDelay: Double { dumpOptions?.writeDelay ?? 0 }
 
     /// `--write-type`。対話モードで種別を明示しなかった write に使う。
-    private var defaultWriteType: WriteTypePreference {
-        if case .dump(_, _, _, let type, _, _) = mode { return type }
-        return .auto
-    }
+    private var defaultWriteType: WriteTypePreference { dumpOptions?.writeType ?? .auto }
 
     /// `--handshake`。購読後に鍵付き `0x4B` を自動送信するか。
-    private var wantsHandshake: Bool {
-        if case .dump(_, _, _, _, _, let handshake) = mode { return handshake }
-        return false
-    }
+    private var wantsHandshake: Bool { dumpOptions?.handshake ?? false }
+
+    /// `--read-log`。ハンドシェイク後に本体内ログを読み出すか。
+    private var wantsLogRead: Bool { dumpOptions?.readLog ?? false }
 
     init(mode: SniffMode, serviceFilter: [CBUUID]?, logger: LogWriter) {
         self.mode = mode
@@ -223,8 +246,8 @@ final class BLESniffer: NSObject, @unchecked Sendable {
                 exit(0)
             }
 
-        case .dump(let matcher, _, _, _, _, _):
-            switch matcher {
+        case .dump(let options):
+            switch options.matcher {
             case .name(let n): print("\"\(n)\" を含む名前のデバイスを探しています…")
             case .identifier(let id): print("identifier \(id) のデバイスを探しています…")
             }
@@ -318,16 +341,29 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 
     /// `--write` を `writeDelay` 間隔で 1 件ずつ送り、終わったら対話モードへ入る。
     private func performWrites(_ peripheral: CBPeripheral) {
-        guard case .dump(_, let writes, let delay, _, _, _) = mode else { return }
+        guard let options = dumpOptions else { return }
+        let delay = options.writeDelay
         // 購読が確定してから送るため少し待つ（AceSoft は CCCD 応答の 564 ms 後に送っていた）。
         queue.asyncAfter(deadline: .now() + 0.7) { [weak self] in
             guard let self else { return }
             self.sendHandshakeIfNeeded(peripheral)
             let extra = self.wantsHandshake ? max(delay, 0.3) : 0
             self.queue.asyncAfter(deadline: .now() + extra) { [weak self] in
-                self?.runWrite(at: 0, of: writes, delay: delay, on: peripheral)
+                guard let self else { return }
+                // ログ読み出しは応答を待ちながら進むので、終わってから --write に移る。
+                if self.wantsLogRead {
+                    self.beginLogRead(on: peripheral)
+                } else {
+                    self.runWrite(at: 0, of: options.writes, delay: delay, on: peripheral)
+                }
             }
         }
+    }
+
+    /// ログ読み出しが終わった（または諦めた）ら、残りの `--write` と対話モードへ進む。
+    private func finishLogRead(on peripheral: CBPeripheral) {
+        guard let options = dumpOptions else { return }
+        runWrite(at: 0, of: options.writes, delay: options.writeDelay, on: peripheral)
     }
 
     /// `--handshake`: 広告から取った鍵を載せた `0x4B` を write characteristic へ送る。
@@ -522,7 +558,7 @@ final class BLESniffer: NSObject, @unchecked Sendable {
 extension BLESniffer {
     /// 購読と `--write` が済んだ後に呼ばれる。stdin リーダーは 1 回だけ起動する。
     private func startInteractiveIfNeeded(_ peripheral: CBPeripheral) {
-        guard case .dump(_, _, _, _, let interactive, _) = mode, interactive else { return }
+        guard dumpOptions?.interactive == true else { return }
         guard !interactiveStarted else {
             // 再接続後。既定の write 先を出し直してプロンプトに戻る。
             announceDefaultWriteCharacteristic(peripheral)
@@ -757,9 +793,10 @@ extension BLESniffer: CBCentralManagerDelegate {
             seenPeripherals[peripheral.identifier] = Date()
             print(describeAdvertisement(advertisementData, rssi: RSSI, peripheral: peripheral))
 
-        case .dump(let matcher, _, _, _, _, _):
+        case .dump(let options):
             guard target == nil else { return }
-            guard matcher.matches(peripheral: peripheral, advertisementData: advertisementData) else { return }
+            guard options.matcher.matches(peripheral: peripheral, advertisementData: advertisementData)
+            else { return }
             central.stopScan()
             // 鍵は広告にしか載っていない。接続してからでは取れないのでここで拾う。
             if let mfg = advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data,
@@ -867,6 +904,7 @@ extension BLESniffer: CBPeripheralDelegate {
         if let decoded = FrameDescription.describe(data, keys: keys) {
             out("  -> \(decoded)")
         }
+        handleLogRead(data, on: peripheral)
     }
 
     func peripheral(
@@ -902,5 +940,158 @@ extension BLESniffer: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
         out("service が変更されました。再探索します。")
         startDiscovery(peripheral)
+    }
+}
+
+
+// MARK: - --read-log（本体内ログの吸い上げ）
+
+/// `0x62`（件数）→ `0x63`（1 件ずつ）を順に投げて、応答を生のまま書き出す。
+///
+/// **これが `0x63` の実物を手に入れる唯一の経路。** 応答レイアウトは 1 度も
+/// 観測できていない（`docs/PROTOCOL.md` §6.6）ので、要求の形も応答の読み方も推定でしかない。
+/// そのため:
+/// * 読めない応答が返っても**止めずに最後まで読む**。サニファの仕事は解釈ではなく採取で、
+///   1 件で止めると形式を推し量る材料が集まらない（アプリ側は逆に、嘘の数字を保存しないよう
+///   最初の 1 件で止める）。
+/// * 応答が来なければ数秒で諦めて先へ進む。**本体を待ち続けて操作不能にしない。**
+/// * 🚫 `0x61`（CLEAR_LOG）は**絶対に送らない**。ビルダ自体が存在しない。
+extension BLESniffer {
+    /// 応答待ちの上限（秒）。実測の応答は 45–63 ms なので、これで足りなければ形式違い。
+    private static let logReadTimeout: Double = 3.0
+
+    func beginLogRead(on peripheral: CBPeripheral) {
+        guard let characteristic = logWriteTarget(in: peripheral) else {
+            out("read-log: 書き込める characteristic がありません（スキップ）")
+            finishLogRead(on: peripheral)
+            return
+        }
+        out("")
+        out("=== --read-log: 本体内ログを読み出します（0x62 → 0x63。0x61 は送りません） ===")
+        if keys.isZero {
+            out("read-log: 注意 — 鍵が 0/0 です。--handshake を付けて鍵を確立してから読んでください。")
+        }
+        logRecordLines.removeAll()
+        logReadStep = .awaitingCount
+        _ = send(
+            ChronoCommand.readLogCount(keys: keys),
+            to: characteristic,
+            on: peripheral,
+            preference: .with
+        )
+        scheduleLogReadTimeout(on: peripheral)
+    }
+
+    /// 通知から読み出しの応答を拾う。関係の無いフレーム（射撃・自発通知）は素通りさせる。
+    func handleLogRead(_ data: Data, on peripheral: CBPeripheral) {
+        guard logReadStep != .idle else { return }
+        let bytes = [UInt8](data)
+        guard bytes.count >= ChronoFrame.minimumLength, bytes[0] == ChronoFrame.header else { return }
+        let payload = Array(bytes[3..<(bytes.count - 1)])
+
+        switch logReadStep {
+        case .idle:
+            return
+
+        case .awaitingCount:
+            guard bytes[2] == ChronoCommand.logCount.rawValue, payload.count >= 2 else { return }
+            // payload = [status, count]（§6.5。BE16 説との区別は未検証）。
+            let count = Int(payload[1])
+            out("read-log: 本体内ログ \(count) 件")
+            guard count > 0 else {
+                out("read-log: 読み出すものがありません")
+                endLogRead(on: peripheral)
+                return
+            }
+            requestLogRecord(index: 0, total: count, on: peripheral)
+
+        case .awaitingRecord(let index, let total):
+            guard bytes[2] == ChronoCommand.logRecord.rawValue else { return }
+            let hex = payload.map { String(format: "%02x", $0) }.joined(separator: " ")
+            logRecordLines.append("\(index) \(hex)")
+            if let report = FireReport.logRecord(payload: payload) {
+                out(
+                    String(
+                        format: "read-log: record %d/%d rawSpeed=%d (%.2f m/s) rawRev=%d  payload: %@",
+                        index, total, Int(report.rawSpeed), report.metersPerSecond,
+                        Int(report.rawRev), hex
+                    )
+                )
+            } else {
+                // **ここが本命。** FIRE_REPORT の並びで読めない = 推定が外れている。
+                out("read-log: record \(index)/\(total) 未知の形式  payload: \(hex)")
+            }
+            let next = index + 1
+            guard next < total else {
+                endLogRead(on: peripheral)
+                return
+            }
+            requestLogRecord(index: next, total: total, on: peripheral)
+        }
+    }
+
+    private func requestLogRecord(index: Int, total: Int, on peripheral: CBPeripheral) {
+        guard let characteristic = logWriteTarget(in: peripheral) else {
+            endLogRead(on: peripheral)
+            return
+        }
+        logReadStep = .awaitingRecord(index: index, total: total)
+        // 実測の初期化シーケンスに合わせて 1 本ずつ ~300 ms 間隔で送る（§4.2）。
+        queue.asyncAfter(deadline: .now() + max(writeDelay, 0.3)) { [weak self] in
+            guard let self, case .awaitingRecord(let waiting, _) = self.logReadStep,
+                  waiting == index
+            else { return }
+            _ = self.send(
+                ChronoCommand.readLogRecord(UInt16(clamping: index), keys: self.keys),
+                to: characteristic,
+                on: peripheral,
+                preference: .with
+            )
+            self.scheduleLogReadTimeout(on: peripheral)
+        }
+    }
+
+    private func scheduleLogReadTimeout(on peripheral: CBPeripheral) {
+        logReadToken += 1
+        let token = logReadToken
+        queue.asyncAfter(deadline: .now() + Self.logReadTimeout) { [weak self] in
+            guard let self, self.logReadToken == token, self.logReadStep != .idle else { return }
+            switch self.logReadStep {
+            case .awaitingCount:
+                out("read-log: 0x62 に応答がありませんでした。")
+            case .awaitingRecord(let index, _):
+                out(
+                    "read-log: 0x63 index=\(index) に応答がありませんでした。"
+                        + "要求の形（payload = index LE16）が違う可能性があります（docs/PROTOCOL.md §6.6）。"
+                )
+            case .idle:
+                break
+            }
+            self.endLogRead(on: peripheral)
+        }
+    }
+
+    /// 採取したものをまとめて出してから、残りの `--write` と対話モードへ進む。
+    private func endLogRead(on peripheral: CBPeripheral) {
+        logReadStep = .idle
+        logReadToken += 1
+        if logRecordLines.isEmpty {
+            out("read-log: 採取できたレコードはありません。")
+        } else {
+            out("")
+            out("=== read-log: 採取した 0x63 の payload（1 行 = 1 レコード: <index> <hex>） ===")
+            for line in logRecordLines { out(line) }
+            out("=== ここまで。この部分をそのまま共有してください ===")
+        }
+        out("")
+        finishLogRead(on: peripheral)
+    }
+
+    /// 書き込み先。実機の write characteristic を優先し、無ければ書ける最初のもの。
+    private func logWriteTarget(in peripheral: CBPeripheral) -> CBCharacteristic? {
+        findCharacteristic(
+            UUIDText.canonical(ChronoUUIDs.writeCharacteristic.uuidString),
+            in: peripheral
+        ) ?? defaultWriteCharacteristic(in: peripheral)
     }
 }
