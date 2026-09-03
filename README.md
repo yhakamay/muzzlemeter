@@ -1,6 +1,6 @@
-# ShotLog
+# Muzzlemeter
 
-> **English summary** — ShotLog is an **unofficial** iOS companion app for the
+> **English summary** — Muzzlemeter is an **unofficial** iOS companion app for the
 > **Acetech AC6000 BT** airsoft chronograph. It connects over Bluetooth LE, shows each
 > shot's velocity and energy live, and keeps a searchable history per gun profile.
 > Built with SwiftUI, SwiftData and CoreBluetooth. The BLE protocol is not published by
@@ -32,7 +32,7 @@
 - 履歴の閲覧・リネーム・CSV 書き出し
 - 日本語 / 英語（ベース言語は日本語）
 - 本体が無くても UI を確認できるリプレイモード（実キャプチャの再生）
-- 解析用の macOS CLI `shotlog-sniff`（BLE スキャン / GATT 列挙 / パケットダンプ）
+- 解析用の macOS CLI `muzzlemeter-sniff`（BLE スキャン / GATT 列挙 / パケットダンプ）
 
 ## AC6000 と話すのに必要なこと（要点）
 
@@ -59,28 +59,28 @@
 
 | パス | 内容 |
 |---|---|
-| `Sources/ShotLogKit/` | ドメイン・プロトコル・BLE 抽象（iOS / macOS 共通ライブラリ） |
-| `Sources/ShotLogSniff/` | macOS CLI。BLE スキャン / GATT 列挙 / パケットダンプ |
-| `Tests/ShotLogKitTests/` | Swift Testing によるテスト |
+| `Sources/MuzzlemeterKit/` | ドメイン・プロトコル・BLE 抽象（iOS / macOS 共通ライブラリ） |
+| `Sources/MuzzlemeterSniff/` | macOS CLI。BLE スキャン / GATT 列挙 / パケットダンプ |
+| `Tests/MuzzlemeterKitTests/` | Swift Testing によるテスト |
 | `docs/PROTOCOL.md` | 解析結果（UUID・パケット形式・チェックサム） |
 | `tools/re/` | プロトコル調査の作業ディレクトリ。キャプチャログ置き場（gitignore） |
-| `App/ShotLog/` | iOS アプリ（SwiftUI + SwiftData） |
-| `App/ShotLog/Resources/Localizable.xcstrings` | UI 文言の String Catalog。**ベース言語は ja**、en は完全な翻訳 |
+| `App/Muzzlemeter/` | iOS アプリ（SwiftUI + SwiftData） |
+| `App/Muzzlemeter/Resources/Localizable.xcstrings` | UI 文言の String Catalog。**ベース言語は ja**、en は完全な翻訳 |
 | `App/Info.plist` | `CFBundleLocalizations` だけを持つ土台。他のキーはビルド設定から合成される |
-| `App/ShotLog/Resources/<lang>.lproj/InfoPlist.strings` | 権限の用途説明の ja / en。ビルド設定の値を実行時に差し替える |
-| `App/ShotLog.entitlements` | WeatherKit のエンタイトルメント（`CODE_SIGN_ENTITLEMENTS`） |
+| `App/Muzzlemeter/Resources/<lang>.lproj/InfoPlist.strings` | 権限の用途説明の ja / en。ビルド設定の値を実行時に差し替える |
+| `App/Muzzlemeter.entitlements` | WeatherKit のエンタイトルメント（`CODE_SIGN_ENTITLEMENTS`） |
 | `project.yml` | XcodeGen 定義。`.xcodeproj` はここから生成する |
 
-## shotlog-sniff の使い方
+## muzzlemeter-sniff の使い方
 
 ### スキャン
 
 周囲の BLE アドバタイズを一覧表示する。本体の電源を入れて実行し、機器名を確認する。
 
 ```sh
-swift run shotlog-sniff scan
-swift run shotlog-sniff scan --seconds 30
-swift run shotlog-sniff scan --filter-service ffe0
+swift run muzzlemeter-sniff scan
+swift run muzzlemeter-sniff scan --seconds 30
+swift run muzzlemeter-sniff scan --filter-service ffe0
 ```
 
 出力例（1 行 1 デバイス、identifier で重複排除）:
@@ -96,9 +96,9 @@ notify / indicate を全部購読 → 受信パケットをタイムスタンプ
 Ctrl-C で終了。切断されたら自動で再接続を試みる。
 
 ```sh
-swift run shotlog-sniff dump --name AC6000
-swift run shotlog-sniff dump --id 1A2B3C4D-5E6F-...   # scan で出た identifier
-swift run shotlog-sniff dump --name AC6000 --log tools/re/captures/single-shot.log
+swift run muzzlemeter-sniff dump --name AC6000
+swift run muzzlemeter-sniff dump --id 1A2B3C4D-5E6F-...   # scan で出た identifier
+swift run muzzlemeter-sniff dump --name AC6000 --log tools/re/captures/single-shot.log
 ```
 
 パケット行の形式:
@@ -115,7 +115,7 @@ swift run shotlog-sniff dump --name AC6000 --log tools/re/captures/single-shot.l
 受信フレームは hex の次の行にデコード結果も表示される。
 
 ```sh
-swift run shotlog-sniff dump --name AC6000BT- --handshake
+swift run muzzlemeter-sniff dump --name AC6000BT- --handshake
 ```
 
 期待される出力:
@@ -140,10 +140,10 @@ write 成功 9C6AA1EE-...
 `--handshake` と `--interactive` は併用できる（ハンドシェイク後に手で追試したいとき）:
 
 ```sh
-swift run shotlog-sniff dump --name AC6000BT- --handshake --interactive
+swift run muzzlemeter-sniff dump --name AC6000BT- --handshake --interactive
 ```
 
-フレームの組み立て・検証は **`ShotLogKit` の `ChronoFrame` をそのまま使っている**ので、
+フレームの組み立て・検証は **`MuzzlemeterKit` の `ChronoFrame` をそのまま使っている**ので、
 サニファで通ったバイト列はアプリでもそのまま通る。
 
 ### 初期化コマンドを送る
@@ -152,8 +152,8 @@ swift run shotlog-sniff dump --name AC6000BT- --handshake --interactive
 購読完了後に送信され、結果が表示される。`--write` は複数回指定できる。
 
 ```sh
-swift run shotlog-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
-swift run shotlog-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切りでも可
+swift run muzzlemeter-sniff dump --name AC6000 --write ffe1 01a50000 --write ffe1 02
+swift run muzzlemeter-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切りでも可
 ```
 
 `--write` を複数指定した場合、既定では **200 ms 間隔**で 1 件ずつ送る。どの write に対する
@@ -161,7 +161,7 @@ swift run shotlog-sniff dump --name AC6000 --write ffe1=01a50000   # = 区切り
 （`0` で連続送信）。
 
 ```sh
-swift run shotlog-sniff dump --name AC6000 --write ffe1 01 --write ffe1 02 --write-delay 500
+swift run muzzlemeter-sniff dump --name AC6000 --write ffe1 01 --write ffe1 02 --write-delay 500
 ```
 
 #### write の種別（`--write-type`）
@@ -180,7 +180,7 @@ BLE の write には **withResponse**（相手が ATT の応答を返す）と *
 申告が当てにならない相手を試せることがこのオプションの目的だから。
 
 ```sh
-swift run shotlog-sniff dump --name AC6000 --write-type without --write ffe1 850600
+swift run muzzlemeter-sniff dump --name AC6000 --write-type without --write ffe1 850600
 ```
 
 `--write-type` は `--write` と、対話モードの `<hex>` / `w` の**既定値**になる。
@@ -193,9 +193,9 @@ swift run shotlog-sniff dump --name AC6000 --write-type without --write ffe1 850
 なくなるので、未知のハンドシェイクを総当たりで探るときはこれを使う。
 
 ```sh
-swift run shotlog-sniff dump --name AC6000 --interactive
-swift run shotlog-sniff dump --name AC6000 -i --write ffe1 01a50000   # 初期化してから対話
-swift run shotlog-sniff dump --name AC6000 -i --write-type without    # 既定を without に
+swift run muzzlemeter-sniff dump --name AC6000 --interactive
+swift run muzzlemeter-sniff dump --name AC6000 -i --write ffe1 01a50000   # 初期化してから対話
+swift run muzzlemeter-sniff dump --name AC6000 -i --write-type without    # 既定を without に
 ```
 
 受け付けるコマンド:
@@ -249,8 +249,8 @@ notify は入力中でも非同期に流れてくるため、プロンプト `> 
 `--write-delay` の間隔で 1 行ずつ処理する**ので、どの応答がどの行のものか分かる:
 
 ```sh
-printf '5a4b004b\n5a4b014c\n' | swift run shotlog-sniff dump --name AC6000 -i
-swift run shotlog-sniff dump --name AC6000 -i --write-delay 500 < candidates.txt
+printf '5a4b004b\n5a4b014c\n' | swift run muzzlemeter-sniff dump --name AC6000 -i
+swift run muzzlemeter-sniff dump --name AC6000 -i --write-delay 500 < candidates.txt
 ```
 
 ### macOS の Bluetooth 権限
@@ -266,18 +266,18 @@ CLI から CoreBluetooth を使うと、**ターミナルアプリ自体**に Bl
 重要な注意:
 
 - 権限の判定対象は **プロセスを起動した親アプリ（responsible process）** であって
-  `shotlog-sniff` 自身ではない。エディタや他のツールの統合ターミナルから起動すると
+  `muzzlemeter-sniff` 自身ではない。エディタや他のツールの統合ターミナルから起動すると
   そのアプリに権限が無く、macOS が問答無用でプロセスを **SIGABRT で強制終了** する
   （その場合は原因を説明するメッセージを stderr に出して終了する）。
   **Terminal.app / iTerm.app から直接実行すること。**
 - CLI 実行ファイルには `NSBluetoothAlwaysUsageDescription` を含む Info.plist を
   `__TEXT,__info_plist` セクションに埋め込んでいる（`Package.swift` のリンカ設定と
-  `Sources/ShotLogSniff/Info.plist`）。これが無いと CoreBluetooth 初期化時に必ず落ちる。
+  `Sources/MuzzlemeterSniff/Info.plist`）。これが無いと CoreBluetooth 初期化時に必ず落ちる。
 - Bluetooth がオフ、または権限が拒否されている場合は、その旨を表示して終了コード 1 で終わる。
 
 ## ビルド
 
-### ShotLogKit と CLI
+### MuzzlemeterKit と CLI
 
 **Command Line Tools のツールチェーン（Swift 6.4）だけで動く**。
 
@@ -293,19 +293,19 @@ swift test
 **必ず最初に実行する**:
 
 ```sh
-xcodegen generate          # → ShotLog.xcodeproj
+xcodegen generate          # → Muzzlemeter.xcodeproj
 ```
 
 **iOS アプリのビルドには Xcode 26 以降が必要**（Xcode 16 系だと `@Observable` の
 マクロ展開が `!=` を要求し、SwiftData の `@Model` 型で落ちる）。
-`ShotLogKit` / `shotlog-sniff` だけなら Command Line Tools のツールチェーンで足りる。
+`MuzzlemeterKit` / `muzzlemeter-sniff` だけなら Command Line Tools のツールチェーンで足りる。
 
 その後:
 
 ```sh
-open ShotLog.xcodeproj
+open Muzzlemeter.xcodeproj
 # または
-xcodebuild -project ShotLog.xcodeproj -scheme ShotLog \
+xcodebuild -project Muzzlemeter.xcodeproj -scheme Muzzlemeter \
   -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
@@ -325,7 +325,7 @@ CLI の `swift build` / `swift test` にはこれは**不要**。
 シミュレータ向けなら署名不要で、`CODE_SIGNING_ALLOWED=NO` を付ければそのまま通る。
 
 WeatherKit を使うので、実機ビルドには **WeatherKit を有効にした App ID** が要る。
-不要なら `App/ShotLog.entitlements` の `com.apple.developer.weatherkit` を外す
+不要なら `App/Muzzlemeter.entitlements` の `com.apple.developer.weatherkit` を外す
 （環境データが空になるだけで、計測そのものには影響しない）。
 
 #### iCloud Drive（デスクトップ）配下に置いている場合
@@ -336,10 +336,10 @@ WeatherKit を使うので、実機ビルドには **WeatherKit を有効にし�
 **中間生成物を同期対象の外に出す**と安定する:
 
 ```sh
-swift build --scratch-path /tmp/shotlog-build
-swift test  --scratch-path /tmp/shotlog-build
-xcodebuild -project ShotLog.xcodeproj -scheme ShotLog \
-  -derivedDataPath /tmp/shotlog-dd \
+swift build --scratch-path /tmp/muzzlemeter-build
+swift test  --scratch-path /tmp/muzzlemeter-build
+xcodebuild -project Muzzlemeter.xcodeproj -scheme Muzzlemeter \
+  -derivedDataPath /tmp/muzzlemeter-dd \
   -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
@@ -351,18 +351,18 @@ xcodebuild -project ShotLog.xcodeproj -scheme ShotLog \
 | シミュレータ | `ReplayTransport`（CoreBluetooth のハードウェアが無いため自動） |
 | 実機 + `--replay` | `ReplayTransport` |
 
-**デコーダと設定は両方で同じ**（`ShotLogDecoder` + `ChronoDevice.Configuration.ac6000()`）。
+**デコーダと設定は両方で同じ**（`MuzzlemeterDecoder` + `ChronoDevice.Configuration.ac6000()`）。
 再生でも鍵ハンドシェイクまで実機と同じ経路を通るので、UI から見て挙動が変わらない
 （`ReplayTransport.demoPeripheral` が実機の広告 `00 05 08 c4 94 52 04` を持っている）。
 
 再生ソースは 2 つ:
 
-- 既定（`--replay`）: `App/ShotLog/Services/ReplaySupport.swift` の合成スクリプト。
+- 既定（`--replay`）: `App/Muzzlemeter/Services/ReplaySupport.swift` の合成スクリプト。
   発数が多く UI を作り込みやすい。**バイト列は実プロトコルで組んでいる。**
-- `--replay-capture`: `App/ShotLog/Resources/acesoft-iphone-rx.txt`
+- `--replay-capture`: `App/Muzzlemeter/Resources/acesoft-iphone-rx.txt`
   （公式アプリの実キャプチャそのもの。5 発 + 電源 OFF まで含む）を早送り再生
 
-`ReplayScript` は **`shotlog-sniff dump` のログ形式もそのまま読める**ので、
+`ReplayScript` は **`muzzlemeter-sniff dump` のログ形式もそのまま読める**ので、
 新しくキャプチャを取ったらそのファイルを置くだけで再生できる。
 
 #### 目視確認用の起動引数（Debug かつシミュレータのみ）
@@ -373,7 +373,7 @@ xcodebuild -project ShotLog.xcodeproj -scheme ShotLog \
 引数の解釈自体を行わないので、製品の挙動には関わらない）。
 
 ```sh
-xcrun simctl launch <udid> com.yhakamay.shotlog --replay-capture \
+xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
   --demo-energy-limit 0.001 \   # 選択中プロファイルの規制上限を上書き（J）
   --demo-target-shots 5 \       # 目標発数を上書き（0 で手動に戻す）
   --demo-tab settings \         # 起動時のタブ（live / sessions / settings）
@@ -399,13 +399,13 @@ UI を目視確認できるように、`--replay-capture` かつシミュレー�
 2. **Terminal.app / iTerm.app から**（他アプリの統合ターミナルは不可）:
 
    ```sh
-   swift run shotlog-sniff dump --name AC6000BT- --handshake
+   swift run muzzlemeter-sniff dump --name AC6000BT- --handshake
    ```
 
 3. `-> ACK for READ_KEY` が出ればハンドシェイク成功。そのまま BB を撃って
    `FIRE_REPORT rawSpeed=…` の行と**本体 LCD の表示**を突き合わせる
 4. ログは `tools/re/captures/<日時>.log` に残るので、そのまま
-   `Tests/ShotLogKitTests/Fixtures/` や再生スクリプトに使える
+   `Tests/MuzzlemeterKitTests/Fixtures/` や再生スクリプトに使える
 
 まだ確かめられていないこと（`docs/PROTOCOL.md` §10）:
 
@@ -421,7 +421,7 @@ BLE の仕様はメーカーから公開されていないため、**自分の�
   鍵ハンドシェイク・opcode 表）
 - 出典は 2 つだけ:
   1. 自分の iPhone で取った HCI ログ（Apple PacketLogger の `.pklg`）
-  2. 自作クライアント `shotlog-sniff` による実機での追試
+  2. 自作クライアント `muzzlemeter-sniff` による実機での追試
 - 調査の進め方は [`tools/re/README.md`](tools/re/README.md)
 
 `docs/PROTOCOL.md` に書いてあるのは**観測できた事実**だけで、確度（確定 / 推定 / 未検証）を

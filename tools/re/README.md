@@ -15,14 +15,14 @@
 ### 自作サニファでのキャプチャ
 
 ```sh
-swift run shotlog-sniff scan --seconds 10
-swift run shotlog-sniff dump --name AC6000BT- --handshake
+swift run muzzlemeter-sniff scan --seconds 10
+swift run muzzlemeter-sniff dump --name AC6000BT- --handshake
 ```
 
 ログは `tools/re/captures/<yyyyMMdd-HHmmss>.log` に自動保存される（gitignore 済み）。
 `ReplayScript` がこの形式をそのまま読めるので、取ったログはアプリの再生にも使える。
 
-解析が済んだ代表パケットは `Tests/ShotLogKitTests/Fixtures/` に手で書き出して
+解析が済んだ代表パケットは `Tests/MuzzlemeterKitTests/Fixtures/` に手で書き出して
 回帰テストにする。
 
 ### 注意

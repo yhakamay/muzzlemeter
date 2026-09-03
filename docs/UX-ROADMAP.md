@@ -30,7 +30,7 @@
 
 実装メモ（詳細は該当コミットの ADR）:
 
-- **1. 規制値ライン**: 判定は `ShotLogKit.EnergyLimit`（`margin(joules:limitJoules:)`）に置いた。
+- **1. 規制値ライン**: 判定は `MuzzlemeterKit.EnergyLimit`（`margin(joules:limitJoules:)`）に置いた。
   上限の 90 % 以下 = 余裕 / 90 % 超〜上限未満 = 注意 / **上限ちょうど以上 = 超過**（安全側）。
   色は `EnergyMargin.tint` の 1 箇所で決め、Live の巨大数字・直近リスト・履歴のリストと
   チャートで同じ色を使う。音と振動は `FeedbackService`（`ChronoService` から分離。

@@ -14,7 +14,7 @@ Acetech AC6000 MKIII BT の BLE 通信仕様。
 |---|---|
 | キャプチャ | `tools/re/captures/acesoft-iphone.pklg`（Apple PacketLogger, iPhone の HCI ログ） |
 | 抽出物 | `tools/re/notes/pklg-att.tsv`（生）/ `tools/re/notes/pklg-timeline.txt`（可読タイムライン） |
-| フィクスチャ | `Tests/ShotLogKitTests/Fixtures/acesoft-iphone-{rx,tx}.txt` |
+| フィクスチャ | `Tests/MuzzlemeterKitTests/Fixtures/acesoft-iphone-{rx,tx}.txt` |
 | 相手 | AceSoft (iOS) ⇄ `AC6000BT-009809`（`54:dc:e9:db:f6:0c`, public address） |
 | 収録内容 | 接続 → GATT 探索 → 鍵ハンドシェイク → 初期化 → 手投げ BB 5 発 → 単位切替 → 電源 OFF |
 | 全長 | 約 104 秒 / ATT フレーム 66 本（うちアプリ層フレーム TX 8 / RX 16） |
@@ -262,7 +262,7 @@ t=+5.627  TX  (ATT Read By Type 0x2A00) → "ACETECH-12345678"
 
 **鍵の入手方法: 広告の manufacturer data offset 3/4（§1.1）で確定（2026-09-03）。**
 
-自作クライアント（`shotlog-sniff dump --handshake`）で実機に対して検証した:
+自作クライアント（`muzzlemeter-sniff dump --handshake`）で実機に対して検証した:
 
 ```
 TX  aa 06 4b c4 94 53      ← 広告 00 05 08 c4 94 52 04 から取った鍵をそのまま載せる

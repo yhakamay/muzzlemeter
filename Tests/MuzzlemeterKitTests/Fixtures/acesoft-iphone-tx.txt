@@ -1,0 +1,16 @@
+# AC6000 MKIII BT -- every application frame the AceSoft app wrote (TX)
+# source: tools/re/captures/acesoft-iphone.pklg (Apple PacketLogger, AceSoft iOS <-> AC6000BT-009809)
+# format: +<ms since LE connection complete> <characteristic UUID> <hex>
+#         see Sources/MuzzlemeterKit/Transport/ReplayScript.swift
+# All writes were ATT Write Requests (0x12) to the write characteristic.
+# The CCCD write (handle 0x0011 = 0100) is a GATT operation, not an app frame,
+# and is therefore not part of this script.
+#
++1827 9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C aa 06 4b c4 94 53
++2205 9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C aa 05 5a 00 61
++2554 9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C aa 05 62 00 69
++2915 9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C aa 06 47 01 01 51
++3276 9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C aa 06 47 01 02 52
++3635 9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C aa 06 47 01 03 53
++3995 9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C aa 06 47 01 04 54
++4355 9C6AA1EE-B4B9-44A1-BA45-1558C9109B4C aa 06 47 01 05 55
