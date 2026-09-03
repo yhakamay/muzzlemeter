@@ -26,6 +26,8 @@ final class ChronoService {
     private(set) var deviceAmmo: AmmoRecord?
     /// リプレイ（デモ）モードで動いているか。
     let isReplaying: Bool
+    /// 音・振動・読み上げ。設定画面はこの中のトグルを直接束縛する。
+    let feedback: FeedbackService
 
     /// 進行中のセッション。1 発も撃っていなければ nil。
     private(set) var activeSession: Session?
@@ -96,6 +98,43 @@ final class ChronoService {
 
     /// 統計・ジュール計算に使う BB 重量。
     var massGrams: Double { variables.bbWeightGrams }
+
+    // MARK: - 規制上限
+
+    /// 1 発を規制上限と比べた段階。色分け・音・振動はすべてこれで決まる。
+    func margin(forSpeed metersPerSecond: Double) -> EnergyMargin {
+        EnergyLimit.margin(
+            massGrams: massGrams,
+            velocityMetersPerSecond: metersPerSecond,
+            limitJoules: energyLimitJoules
+        )
+    }
+
+    /// 直近 1 発の段階。まだ 1 発も撃っていなければ `.safe`（＝平常の色）。
+    var lastShotMargin: EnergyMargin {
+        lastShot.map { margin(forSpeed: $0.velocityMetersPerSecond) } ?? .safe
+    }
+
+    /// セッション中で最も高かった 1 発の段階。カードの見出しに出す。
+    var sessionMargin: EnergyMargin {
+        guard let maxJoules = stats.maxJoules else { return .safe }
+        return EnergyLimit.margin(joules: maxJoules, limitJoules: energyLimitJoules)
+    }
+
+    /// 上限までの余裕（J）。**最も高かった 1 発**を基準にする。
+    /// 平均で見ると「平均は余裕があるのに何発か越えている」状態を見落とす。
+    var headroomJoules: Double? {
+        stats.maxJoules.map { EnergyLimit.headroomJoules(joules: $0, limitJoules: energyLimitJoules) }
+    }
+
+    /// このセッションで上限を越えた発数。
+    var overLimitCount: Int {
+        EnergyLimit.overLimitCount(
+            shots: currentShots,
+            massGrams: massGrams,
+            limitJoules: energyLimitJoules
+        )
+    }
     var gunName: String { selectedProfile?.name ?? String(localized: "未設定") }
 
     /// いまの条件をプロファイルの既定値として書き戻す。
@@ -134,9 +173,14 @@ final class ChronoService {
 
     // MARK: - 生成
 
-    init(defaults: UserDefaults = .standard, forceReplay: Bool? = nil) {
+    init(
+        defaults: UserDefaults = .standard,
+        forceReplay: Bool? = nil,
+        feedback: FeedbackService? = nil
+    ) {
         self.defaults = defaults
         self.isReplaying = forceReplay ?? ReplaySupport.isEnabled
+        self.feedback = feedback ?? FeedbackService(defaults: defaults)
 
         self.speedUnit = defaults.string(forKey: Keys.speedUnit)
             .flatMap(SpeedUnit.init(rawValue:)) ?? .metersPerSecond
@@ -231,6 +275,8 @@ final class ChronoService {
 
         guard let modelContext else {
             recomputeStats()
+            // 保存先が無くても（Preview など）表示と通知は同じように動かす。
+            feedback.report(margin: margin(forSpeed: shot.velocityMetersPerSecond))
             return
         }
         let isNewSession = activeSession == nil
@@ -243,6 +289,8 @@ final class ChronoService {
         // 後から引き直しても実体に当たらない（SwiftData がアサートで落ちる）。
         if isNewSession { captureEnvironment(for: session) }
         recomputeStats()
+        // 上限の判定はセッションが決まってから（セッションが持つ上限を使う）。
+        feedback.report(margin: margin(forSpeed: shot.velocityMetersPerSecond))
     }
 
     /// 前回の起動で「終了して保存」を押さずに終わったセッションを閉じる。
@@ -385,5 +433,18 @@ final class ChronoService {
         let remembered = defaults.string(forKey: Keys.selectedProfileName)
         selectedProfile = profiles.first { $0.name == remembered }
             ?? profiles.sorted { $0.createdAt < $1.createdAt }.first
+        applyScreenshotOverrides()
+    }
+
+    /// 目視確認用の起動引数を選択中プロファイルへ反映する（Debug のシミュレータのみ）。
+    private func applyScreenshotOverrides() {
+        guard let profile = selectedProfile else { return }
+        var changed = false
+        if let limit = ScreenshotSupport.energyLimitOverride, limit > 0 {
+            profile.energyLimitJoules = limit
+            changed = true
+        }
+        guard changed else { return }
+        try? modelContext?.save()
     }
 }

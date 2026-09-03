@@ -1157,6 +1157,74 @@
         }
       }
     },
+    "上限 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limit %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限 %@"
+          }
+        }
+      }
+    },
+    "上限 / 余裕": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limit / headroom"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限 / 余裕"
+          }
+        }
+      }
+    },
+    "上限に近づいた 1 発（上限の 10 % 以内）と、上限を越えた 1 発を知らせます。音は本体のサイレントスイッチに従います。上限はプロファイルごとに設定できます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerts you when a shot comes within 10 % of the limit, and when a shot goes over it. The sound follows the device's silent switch. The limit is set per profile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限に近づいた 1 発（上限の 10 % 以内）と、上限を越えた 1 発を知らせます。音は本体のサイレントスイッチに従います。上限はプロファイルごとに設定できます。"
+          }
+        }
+      }
+    },
+    "上限はプロファイルごとに決める規制値（日本の法令上限は 0.98 J）です。余裕は「上限 − そのセッションで最も高かった 1 発」で、残りどれだけ出せるかを表します。上限の 10 % 以内に入ると橙色の「注意」、上限に達すると赤色の「超過」になり、音とハプティクスで知らせます（設定で切り替え）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The limit is the energy cap you set per profile (the legal cap in Japan is 0.98 J). Headroom is the limit minus the highest single shot of the session — how much is left. Within 10 % of the limit a shot turns orange (“Close”); at or above it, red (“Over”), with a sound and haptics you can switch off in Settings."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限はプロファイルごとに決める規制値（日本の法令上限は 0.98 J）です。余裕は「上限 − そのセッションで最も高かった 1 発」で、残りどれだけ出せるかを表します。上限の 10 % 以内に入ると橙色の「注意」、上限に達すると赤色の「超過」になり、音とハプティクスで知らせます（設定で切り替え）。"
+          }
+        }
+      }
+    },
     "仕様": {
       "extractionState": "manual",
       "localizations": {
@@ -1170,6 +1238,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "仕様"
+          }
+        }
+      }
+    },
+    "余裕": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Headroom"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "余裕"
+          }
+        }
+      }
+    },
+    "余裕 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Headroom %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "余裕 %@"
           }
         }
       }
@@ -2041,6 +2143,23 @@
         }
       }
     },
+    "注意": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意"
+          }
+        }
+      }
+    },
     "湿度": {
       "extractionState": "manual",
       "localizations": {
@@ -2381,6 +2500,40 @@
         }
       }
     },
+    "規制上限と余裕": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energy limit and headroom"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "規制上限と余裕"
+          }
+        }
+      }
+    },
+    "規制上限の通知": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Energy limit alerts"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "規制上限の通知"
+          }
+        }
+      }
+    },
     "規制上限は日本の法令上限 0.98 J が既定です。フィールド独自の上限があるときは、その値に変えられます。": {
       "extractionState": "manual",
       "localizations": {
@@ -2479,6 +2632,91 @@
           "stringUnit": {
             "state": "translated",
             "value": "購読に失敗しました: %@"
+          }
+        }
+      }
+    },
+    "超過": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過"
+          }
+        }
+      }
+    },
+    "超過 %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over by %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過 %@"
+          }
+        }
+      }
+    },
+    "超過 %lld 発": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld over limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過 %lld 発"
+          }
+        }
+      }
+    },
+    "超過時のハプティクス": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haptics when over the limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過時のハプティクス"
+          }
+        }
+      }
+    },
+    "超過時の音": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sound when over the limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超過時の音"
           }
         }
       }

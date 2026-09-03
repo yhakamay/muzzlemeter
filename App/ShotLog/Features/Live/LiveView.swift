@@ -42,7 +42,9 @@ struct LiveView: View {
                                 stats: service.stats,
                                 speedUnit: service.speedUnit,
                                 rateOfFireUnit: service.rateOfFireUnit,
-                                fallbackRateOfFireRPS: service.displayRateOfFireRPS
+                                fallbackRateOfFireRPS: service.displayRateOfFireRPS,
+                                energyLimitJoules: service.energyLimitJoules,
+                                overLimitCount: service.overLimitCount
                             )
 
                             recentShots
@@ -155,19 +157,34 @@ struct LiveView: View {
     private func lastVelocity(selection: Binding<GunProfile?>) -> some View {
         VStack(spacing: 8) {
             if let shot = service.lastShot {
+                // 規制上限に対する段階で色を変える。**数字そのものに色を乗せる**のは、
+                // 射撃中に見るのが弾速の巨大な数字だけだから。バッジを添えるだけでは
+                // 一瞥で気づけない。
+                let margin = service.margin(forSpeed: shot.velocityMetersPerSecond)
                 Text(service.formattedSpeed(shot.velocityMetersPerSecond))
                     .font(.system(size: 88, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .minimumScaleFactor(0.4)
                     .lineLimit(1)
                     .contentTransition(.numericText())
+                    .foregroundStyle(margin.tint ?? .primary)
                     .animation(.snappy, value: shot.velocityMetersPerSecond)
-                Text(service.speedUnit.symbol)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(service.speedUnit.symbol)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    if margin.needsAttention {
+                        Text(margin.label)
+                            .font(.caption.weight(.bold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background((margin.tint ?? .secondary).opacity(0.16), in: .capsule)
+                            .foregroundStyle(margin.tint ?? .secondary)
+                    }
+                }
                 Text(JouleFormat.labeled(service.joules(shot.velocityMetersPerSecond)))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .font(.callout.weight(margin.needsAttention ? .semibold : .regular))
+                    .foregroundStyle(margin.tint ?? .secondary)
             }
             // 計測中もプロファイルは見えているべき（ジュールの根拠だから）で、
             // かつその場で切り替えられるべきなので、待機中と同じ操作にする。
@@ -196,6 +213,9 @@ struct LiveView: View {
                     .padding(.bottom, 8)
 
                 ForEach(Array(shots.enumerated()), id: \.element.id) { index, shot in
+                    // 上限を越えた 1 発は、リストの中でも赤で見分けられるようにする。
+                    // 「さっき鳴ったのは何発目だったか」を後から追えないと調整に使えない。
+                    let margin = service.margin(forSpeed: shot.velocityMetersPerSecond)
                     HStack {
                         Text(verbatim: "\(service.currentShots.count - index)")
                             .font(.caption.monospacedDigit())
@@ -203,10 +223,17 @@ struct LiveView: View {
                             .frame(width: 32, alignment: .leading)
                         Text(service.formattedSpeedWithUnit(shot.velocityMetersPerSecond))
                             .font(.body.monospacedDigit())
+                            .foregroundStyle(margin.tint ?? .primary)
+                        if margin.isOver {
+                            Image(systemName: margin.symbolName)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .accessibilityLabel(Text("超過"))
+                        }
                         Spacer()
                         Text(JouleFormat.labeled(service.joules(shot.velocityMetersPerSecond)))
                             .font(.callout.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(margin.tint ?? .secondary)
                     }
                     .padding(.vertical, 6)
                     if index < shots.count - 1 { Divider() }
@@ -334,6 +361,10 @@ struct StatsCard: View {
     let rateOfFireUnit: RateOfFireUnit
     /// 本体が ROF を報告しない場合に使うタイムスタンプ推定値。
     var fallbackRateOfFireRPS: Double?
+    /// このセッションに効いている規制上限（J）。
+    var energyLimitJoules: Double = 0.98
+    /// 上限を越えた発数。`SessionStats` は 1 発ごとの値を持たないので、外から渡す。
+    var overLimitCount: Int = 0
 
     /// 「項目名をタップすると説明が出る」ことに一度でも気づいたか。
     /// 気づいたあとも案内を出し続けるのは邪魔なので、1 回で消す。
@@ -393,6 +424,22 @@ struct StatsCard: View {
                         .foregroundStyle(.secondary)
                 }
                 .foregroundStyle(.secondary)
+
+                // 「上限 0.98 J · 余裕 0.12 J」。基準は**最も高かった 1 発**。
+                // 平均で見ると、平均は余裕なのに何発か越えている状態を見落とす。
+                HStack {
+                    EnergyLimitLine(
+                        limitJoules: energyLimitJoules,
+                        headroomJoules: headroom,
+                        margin: sessionMargin
+                    )
+                    Spacer()
+                    if overLimitCount > 0 {
+                        Text("超過 \(overLimitCount) 発")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.red)
+                    }
+                }
             }
 
             if isEstimatedRateOfFire {
@@ -418,6 +465,17 @@ struct StatsCard: View {
             value: speed.map { speedUnit.format(metersPerSecond: $0) } ?? "—",
             onOpen: { hintSeen = true }
         )
+    }
+
+    /// 上限までの余裕（J）。最も高かった 1 発を基準にする。
+    private var headroom: Double? {
+        stats.maxJoules.map { EnergyLimit.headroomJoules(joules: $0, limitJoules: energyLimitJoules) }
+    }
+
+    /// セッション全体の段階（最も高かった 1 発で決まる）。
+    private var sessionMargin: EnergyMargin {
+        guard let maxJoules = stats.maxJoules else { return .safe }
+        return EnergyLimit.margin(joules: maxJoules, limitJoules: energyLimitJoules)
     }
 
     /// 本体が報告した ROF を優先し、無ければタイムスタンプ推定にフォールバックする。

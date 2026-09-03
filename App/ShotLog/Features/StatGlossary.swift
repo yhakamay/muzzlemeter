@@ -13,6 +13,7 @@ enum StatTerm: String, Identifiable, CaseIterable {
     case extremeSpread
     case rateOfFire
     case joules
+    case energyLimit
 
     var id: String { rawValue }
 
@@ -28,6 +29,7 @@ enum StatTerm: String, Identifiable, CaseIterable {
         // ここは説明シートの見出しとしてだけ使う。
         case .rateOfFire: "RPS / RPM"
         case .joules: "J"
+        case .energyLimit: String(localized: "上限 / 余裕")
         }
     }
 
@@ -41,6 +43,7 @@ enum StatTerm: String, Identifiable, CaseIterable {
         case .extremeSpread: String(localized: "ES（Extreme Spread）")
         case .rateOfFire: String(localized: "RPS / RPM（連射速度）")
         case .joules: String(localized: "J（ジュール）")
+        case .energyLimit: String(localized: "規制上限と余裕")
         }
     }
 
@@ -60,6 +63,8 @@ enum StatTerm: String, Identifiable, CaseIterable {
             String(localized: "Rounds Per Second / Rounds Per Minute = 連射速度。1 秒あたり／1 分あたりの発射数です。単位は設定画面で切り替えられます。「*」が付いているときは、本体から連射速度の報告が無かったため、端末が受け取った時刻の間隔から推定した値です。")
         case .joules:
             String(localized: "初速と BB 重量から計算した運動エネルギー（E = ½mv²）です。重量は選択中のプロファイルの値を使います。")
+        case .energyLimit:
+            String(localized: "上限はプロファイルごとに決める規制値（日本の法令上限は 0.98 J）です。余裕は「上限 − そのセッションで最も高かった 1 発」で、残りどれだけ出せるかを表します。上限の 10 % 以内に入ると橙色の「注意」、上限に達すると赤色の「超過」になり、音とハプティクスで知らせます（設定で切り替え）。")
         }
     }
 }

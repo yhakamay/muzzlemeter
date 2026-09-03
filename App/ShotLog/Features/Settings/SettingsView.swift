@@ -13,6 +13,7 @@ struct SettingsView: View {
 
     var body: some View {
         @Bindable var service = service
+        @Bindable var feedback = service.feedback
 
         NavigationStack {
             Form {
@@ -32,6 +33,17 @@ struct SettingsView: View {
                             Text(verbatim: "RPM").tag(RateOfFireUnit.rpm)
                         }
                     }
+                }
+
+                Section {
+                    Toggle("超過時の音", isOn: $feedback.isLimitSoundEnabled)
+                    Toggle("超過時のハプティクス", isOn: $feedback.isLimitHapticsEnabled)
+                } header: {
+                    Text("規制上限の通知")
+                } footer: {
+                    // サイレントスイッチの扱いを明記する。射撃場で音が出るかどうかは
+                    // 事前に知っておきたい情報で、鳴ってから驚くのでは遅い。
+                    Text("上限に近づいた 1 発（上限の 10 % 以内）と、上限を越えた 1 発を知らせます。音は本体のサイレントスイッチに従います。上限はプロファイルごとに設定できます。")
                 }
 
                 Section {
