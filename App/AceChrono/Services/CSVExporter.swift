@@ -8,7 +8,18 @@ import UniformTypeIdentifiers
 /// 列は表計算にそのまま貼れる並びにしてある。速度は m/s と fps の**両方**を出す
 /// （表示単位の設定に関係なく、後から見て困らないようにするため）。
 enum CSVExporter {
-    static let header = "timestamp,session_id,gun,bb_weight_g,velocity_mps,velocity_fps,joules,interval_ms"
+    static let header = [
+        "timestamp",
+        "session_id",
+        "session_title",
+        "gun",
+        "bb_weight_g",
+        "velocity_mps",
+        "velocity_fps",
+        "joules",
+        "interval_ms",
+    ]
+    .joined(separator: ",")
 
     static func csv(for sessions: [Session]) -> String {
         var lines = [header]
@@ -25,6 +36,7 @@ enum CSVExporter {
     private static func rows(for session: Session) -> [String] {
         let sessionID = Self.identifier(for: session)
         let gun = escape(session.gunName)
+        let title = escape(session.displayTitle)
         var previous: Date?
         return session.orderedShots.map { shot in
             let interval = previous.map { (shot.timestamp.timeIntervalSince($0) * 1000).rounded() }
@@ -33,6 +45,7 @@ enum CSVExporter {
             return [
                 timestampStyle.format(shot.timestamp),
                 sessionID,
+                title,
                 gun,
                 String(format: "%.2f", session.bbWeightGrams),
                 String(format: "%.2f", mps),

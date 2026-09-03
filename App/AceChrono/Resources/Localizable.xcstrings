@@ -562,6 +562,23 @@
         }
       }
     },
+    "セッション名": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session name"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション名"
+          }
+        }
+      }
+    },
     "セッション統計": {
       "extractionState": "manual",
       "localizations": {
@@ -881,6 +898,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "名前"
+          }
+        }
+      }
+    },
+    "名前を変更": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前を変更"
           }
         }
       }
@@ -1306,6 +1340,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "破棄する"
+          }
+        }
+      }
+    },
+    "空にすると、日時と銃名の自動タイトルに戻ります。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave it empty to go back to the automatic title (date and gun)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空にすると、日時と銃名の自動タイトルに戻ります。"
           }
         }
       }

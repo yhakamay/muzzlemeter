@@ -8,6 +8,8 @@ struct SessionsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Session.startedAt, order: .reverse) private var sessions: [Session]
 
+    @State private var renamingSession: Session?
+
     var body: some View {
         NavigationStack {
             Group {
@@ -25,11 +27,25 @@ struct SessionsView: View {
                             } label: {
                                 SessionRow(session: session, speedUnit: service.speedUnit)
                             }
+                            // 名前の変更は破壊的ではないので leading（右スワイプ）に置く。
+                            // 削除は onDelete（左スワイプ）のまま。
+                            .swipeActions(edge: .leading) {
+                                Button("名前を変更", systemImage: "pencil") {
+                                    renamingSession = session
+                                }
+                                .tint(.blue)
+                            }
+                            .contextMenu {
+                                Button("名前を変更", systemImage: "pencil") {
+                                    renamingSession = session
+                                }
+                            }
                         }
                         .onDelete(perform: delete)
                     }
                 }
             }
+            .sessionRenameAlert(target: $renamingSession)
             .navigationTitle("履歴")
             .toolbar {
                 if !sessions.isEmpty {
@@ -65,8 +81,9 @@ struct SessionRow: View {
         let stats = session.stats
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(session.startedAt, format: .dateTime.month().day().hour().minute())
+                Text(session.displayTitle)
                     .font(.headline)
+                    .lineLimit(1)
                 if session.isActive {
                     Text("進行中")
                         .font(.caption2.weight(.bold))
@@ -81,7 +98,11 @@ struct SessionRow: View {
                     .foregroundStyle(.secondary)
             }
             HStack(spacing: 10) {
-                Text(session.gunName)
+                // 自動タイトルには日時と銃名が入っているので、見出しに出ていない情報だけを添える。
+                if session.hasCustomTitle {
+                    Text(session.startedAt, format: .dateTime.month().day().hour().minute())
+                    Text(session.gunName)
+                }
                 Text(GunProfile.weightLabel(session.bbWeightGrams))
                 if let mean = stats.meanMetersPerSecond {
                     Text("平均 \(speedUnit.formatted(metersPerSecond: mean))")

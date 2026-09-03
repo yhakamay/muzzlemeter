@@ -8,6 +8,8 @@ struct SessionDetailView: View {
     let session: Session
     @Environment(ChronoService.self) private var service
 
+    @State private var renamingSession: Session?
+
     var body: some View {
         let shots = session.orderedShots
         let stats = session.stats
@@ -53,9 +55,15 @@ struct SessionDetailView: View {
                 }
             }
         }
-        .navigationTitle(Text(session.startedAt, format: .dateTime.month().day().hour().minute()))
+        .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .sessionRenameAlert(target: $renamingSession)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("名前を変更", systemImage: "pencil") {
+                    renamingSession = session
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 ShareLink(
                     item: CSVFile(
