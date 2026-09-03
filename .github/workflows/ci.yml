@@ -17,7 +17,10 @@ permissions:
 jobs:
   build:
     name: build
-    runs-on: macos-15
+    # Xcode 26 が要る。Xcode 16.4 では @Observable マクロの展開が
+    # `!=` を要求し、SwiftData の @Model 型（GunProfile）が Equatable でないため
+    # アプリのビルドが落ちる（Observation の実装が Xcode 26 で変わっている）。
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 

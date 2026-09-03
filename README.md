@@ -296,6 +296,10 @@ swift test
 xcodegen generate          # → ShotLog.xcodeproj
 ```
 
+**iOS アプリのビルドには Xcode 26 以降が必要**（Xcode 16 系だと `@Observable` の
+マクロ展開が `!=` を要求し、SwiftData の `@Model` 型で落ちる）。
+`ShotLogKit` / `shotlog-sniff` だけなら Command Line Tools のツールチェーンで足りる。
+
 その後:
 
 ```sh
