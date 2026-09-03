@@ -29,6 +29,9 @@ final class Session {
     var gasTypeRaw: String = GasType.hfc134a.rawValue
     /// 計測時のホップ設定（自由記述）。空文字は「記録なし」。
     var hopSetting: String = ""
+    /// 目標発数（N 発モード）。`nil` は「手動で締める」。
+    /// **どのセッションが N 発モードだったか**は後から見て意味があるので記録する。
+    var targetShotCount: Int?
     /// タグ。改行区切りの 1 列で持つ（絞り込み UI は Round C）。
     ///
     /// `[String]` を transformable にすると述語で扱えず、別モデルにするとテーブルが
@@ -104,6 +107,7 @@ final class Session {
         self.bbWeightGrams = variables.bbWeightGrams
         self.gasTypeRaw = variables.gasType.rawValue
         self.hopSetting = variables.hopSetting
+        self.targetShotCount = variables.targetShotCount
         self.gunPowerCategoryRaw = gunPowerCategory?.rawValue ?? ""
         self.energyLimitJoules = energyLimitJoules
         self.gunManufacturer = gunManufacturer
@@ -130,7 +134,8 @@ final class Session {
             SessionVariables(
                 bbWeightGrams: bbWeightGrams,
                 gasType: GasType(rawValue: gasTypeRaw) ?? .hfc134a,
-                hopSetting: hopSetting
+                hopSetting: hopSetting,
+                targetShotCount: targetShotCount
             )
         }
         set {
@@ -138,6 +143,7 @@ final class Session {
             bbWeightGrams = normalized.bbWeightGrams
             gasTypeRaw = normalized.gasType.rawValue
             hopSetting = normalized.hopSetting
+            targetShotCount = normalized.targetShotCount
         }
     }
 

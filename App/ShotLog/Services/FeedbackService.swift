@@ -71,6 +71,16 @@ final class FeedbackService {
     /// 音の再生とカテゴリの切り替えが噛み合わないよう、読み上げを遅らせるタスク。
     @ObservationIgnored private var speechTask: Task<Void, Never>?
     @ObservationIgnored private lazy var cautionTone = ToneGenerator.wav(tones: [.init(frequency: 880, seconds: 0.10)])
+    /// N 発モードの完了音。**上がっていく 3 音**にして、警告（同じ高さの連打）と
+    /// 取り違えないようにする。音だけで「越えた」のか「終わった」のか分かる必要がある。
+    @ObservationIgnored private lazy var completedTone = ToneGenerator.wav(
+        tones: [
+            .init(frequency: 660, seconds: 0.09),
+            .init(frequency: 880, seconds: 0.09),
+            .init(frequency: 1_320, seconds: 0.20),
+        ],
+        gapSeconds: 0.02
+    )
     @ObservationIgnored private lazy var overTone = ToneGenerator.wav(
         tones: [
             .init(frequency: 1_320, seconds: 0.10),
@@ -123,6 +133,22 @@ final class FeedbackService {
     private func playSound(for margin: EnergyMargin) -> Bool {
         guard isLimitSoundEnabled else { return false }
         return play(margin.isOver ? overTone : cautionTone)
+    }
+
+    /// N 発モードで目標に届き、セッションが自動的に締まったときの合図。
+    ///
+    /// 上限の警告とは**音も振動も別物**にする。撃ち終わったのか、越えたのかを
+    /// 音だけで取り違えると、確認のために画面を見ることになって意味が無い。
+    func reportSessionCompleted() {
+        guard !isSilent else { return }
+        if isLimitHapticsEnabled {
+            let generator = UINotificationFeedbackGenerator()
+            generator.prepare()
+            generator.notificationOccurred(.success)
+        }
+        if isLimitSoundEnabled {
+            play(completedTone)
+        }
     }
 
     // MARK: - 読み上げ

@@ -195,6 +195,8 @@ struct GunProfileDraft {
     var defaultBBWeightGrams: Double = 0.25
     var defaultGasType: GasType = .hfc134a
     var defaultHopSetting: String = ""
+    /// 目標発数の既定値。`nil` は「手動で締める」。
+    var targetShotCount: Int?
     var notes: String = ""
 
     init() {}
@@ -209,6 +211,7 @@ struct GunProfileDraft {
         defaultBBWeightGrams = profile.defaultBBWeightGrams
         defaultGasType = profile.defaultGasType
         defaultHopSetting = profile.defaultHopSetting
+        targetShotCount = profile.targetShotCount
         notes = profile.notes
     }
 
@@ -222,6 +225,7 @@ struct GunProfileDraft {
         profile.defaultBBWeightGrams = defaultBBWeightGrams
         profile.defaultGasType = defaultGasType
         profile.defaultHopSetting = defaultHopSetting.trimmingCharacters(in: .whitespacesAndNewlines)
+        profile.targetShotCount = targetShotCount
         profile.notes = notes
     }
 
@@ -241,6 +245,7 @@ struct GunProfileEditor: View {
     @State private var draft: GunProfileDraft
     @State private var barrelText: String
     @State private var limitText: String
+    @State private var targetShotsText: String
 
     init(profile: GunProfile?, onSave: @escaping (GunProfileDraft) -> Void) {
         self.profile = profile
@@ -249,6 +254,7 @@ struct GunProfileEditor: View {
         _draft = State(initialValue: draft)
         _barrelText = State(initialValue: draft.innerBarrelLengthMm.map(String.init) ?? "")
         _limitText = State(initialValue: String(format: "%.2f", draft.energyLimitJoules))
+        _targetShotsText = State(initialValue: draft.targetShotCount.map(String.init) ?? "")
     }
 
     var body: some View {
@@ -319,10 +325,20 @@ struct GunProfileEditor: View {
                         TextField("例: 3 / 少し強め", text: $draft.defaultHopSetting)
                             .multilineTextAlignment(.trailing)
                     }
+                    HStack {
+                        Text("目標発数")
+                        Spacer()
+                        TextField("手動", text: $targetShotsText)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: 90)
+                        Text("発")
+                            .foregroundStyle(.secondary)
+                    }
                 } header: {
                     Text("計測の既定値")
                 } footer: {
-                    Text("新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。")
+                    Text("新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。目標発数を入れると、その発数に届いた時点でセッションが自動的に締まります（空欄なら手動）。")
                 }
 
                 Section("メモ") {
@@ -370,6 +386,7 @@ struct GunProfileEditor: View {
         resolved.model = draft.model.trimmingCharacters(in: .whitespacesAndNewlines)
         resolved.innerBarrelLengthMm = effectiveBarrelLength
         resolved.energyLimitJoules = effectiveEnergyLimit
+        resolved.targetShotCount = effectiveTargetShotCount
         return resolved
     }
 
@@ -384,6 +401,11 @@ struct GunProfileEditor: View {
             .replacingOccurrences(of: ",", with: ".")
         guard let value = Double(normalized), value > 0 else { return 0.98 }
         return value
+    }
+
+    /// 空欄・0 以下は「手動」にする（`ShotTarget` が成立しない値は持たない）。
+    private var effectiveTargetShotCount: Int? {
+        ShotTarget(Int(targetShotsText.trimmingCharacters(in: .whitespacesAndNewlines)))?.count
     }
 
     /// 空欄・0 以下は「未設定」にする（0 mm のバレルは存在しない）。

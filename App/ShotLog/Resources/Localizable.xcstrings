@@ -52,6 +52,40 @@
         }
       }
     },
+    "%lld 発が上限 %@ を越えました": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld shots went over the %@ limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 発が上限 %@ を越えました"
+          }
+        }
+      }
+    },
+    "%lld 発を撃ち終わりました": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld shots done"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 発を撃ち終わりました"
+          }
+        }
+      }
+    },
     "* 連射速度は本体からの報告が無いため、ショット間隔から推定した値です。": {
       "extractionState": "manual",
       "localizations": {
@@ -477,6 +511,23 @@
         }
       }
     },
+    "「もう一度」は同じ条件でもう %lld 発。「閉じる」は目標発数を解除します。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Go again” keeps the same setup for another %lld shots. “Close” clears the shot target."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「もう一度」は同じ条件でもう %lld 発。「閉じる」は目標発数を解除します。"
+          }
+        }
+      }
+    },
     "このセッションで撃った弾の初速の平均です。": {
       "extractionState": "manual",
       "localizations": {
@@ -626,6 +677,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "まだセッションがありません"
+          }
+        }
+      }
+    },
+    "もう一度": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go again"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度"
           }
         }
       }
@@ -881,6 +949,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッション"
+          }
+        }
+      }
+    },
+    "セッションは保存されました。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The session has been saved."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションは保存されました。"
           }
         }
       }
@@ -1701,6 +1786,23 @@
         }
       }
     },
+    "変更はこのセッション全体に適用され、ジュールが計算し直されます。目標発数に届くと、その時点でセッションが自動的に締まります。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changes apply to the whole session and the joules are recalculated. Once the shot target is reached, the session ends automatically."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更はこのセッション全体に適用され、ジュールが計算し直されます。目標発数に届くと、その時点でセッションが自動的に締まります。"
+          }
+        }
+      }
+    },
     "天気": {
       "extractionState": "manual",
       "localizations": {
@@ -2007,6 +2109,23 @@
         }
       }
     },
+    "新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。目標発数を入れると、その発数に届いた時点でセッションが自動的に締まります（空欄なら手動）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New sessions start with these settings; you can change them for a single session from the Live screen. With a shot target set, the session ends automatically once that many shots are recorded (leave it blank to end sessions manually)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。目標発数を入れると、その発数に届いた時点でセッションが自動的に締まります（空欄なら手動）。"
+          }
+        }
+      }
+    },
     "新規プロファイル": {
       "extractionState": "manual",
       "localizations": {
@@ -2105,6 +2224,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "最大"
+          }
+        }
+      }
+    },
+    "最大 J": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Max J"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最大 J"
           }
         }
       }
@@ -2224,6 +2360,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "次のセッション（最初の 1 発）はこの条件で始まります。"
+          }
+        }
+      }
+    },
+    "次のセッション（最初の 1 発）はこの条件で始まります。目標発数を入れると、その発数に届いた時点でセッションが自動的に締まります（空欄なら手動）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The next session (its first shot) starts with these settings. With a shot target set, the session ends automatically once that many shots are recorded (leave it blank to end sessions manually)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のセッション（最初の 1 発）はこの条件で始まります。目標発数を入れると、その発数に届いた時点でセッションが自動的に締まります（空欄なら手動）。"
           }
         }
       }
@@ -2411,6 +2564,57 @@
           "stringUnit": {
             "state": "translated",
             "value": "発目"
+          }
+        }
+      }
+    },
+    "目標 %lld 発": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld-shot target"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標 %lld 発"
+          }
+        }
+      }
+    },
+    "目標発数": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shot target"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標発数"
+          }
+        }
+      }
+    },
+    "目標発数の進捗": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shot target progress"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標発数の進捗"
           }
         }
       }
@@ -3006,6 +3210,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "鍵ハンドシェイク（0x4B）に応答がありません。本体の電源を入れ直すか、本体の電源ボタンを押してペアリングを許可してください。"
+          }
+        }
+      }
+    },
+    "閉じる": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
           }
         }
       }

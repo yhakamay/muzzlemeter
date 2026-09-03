@@ -55,6 +55,25 @@ struct LiveView: View {
                     }
                 }
             }
+            // N 発モードのまとめ。画面に重ねて出し、遷移はしない。
+            .overlay {
+                if let summary = service.completedSummary {
+                    SessionSummaryOverlay(
+                        summary: summary,
+                        onRepeat: {
+                            withAnimation(.snappy) {
+                                service.dismissCompletedSummary(clearsTarget: false)
+                            }
+                        },
+                        onClose: {
+                            withAnimation(.snappy) {
+                                service.dismissCompletedSummary(clearsTarget: true)
+                            }
+                        }
+                    )
+                }
+            }
+            .animation(.snappy, value: service.completedSummary)
             .navigationTitle("Live")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -91,6 +110,31 @@ struct LiveView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
+        }
+    }
+
+    /// N 発モードの進捗「7 / 10」。目標が無いセッションでは何も出さない。
+    ///
+    /// 数字だけでなくバーも出すのは、射撃中に読むのが一瞥だからで、
+    /// 「あと少し」を形で掴めるようにするため。
+    @ViewBuilder
+    private var targetProgress: some View {
+        if let target = service.shotTarget, let text = service.targetProgressText {
+            VStack(spacing: 4) {
+                HStack(spacing: 4) {
+                    Image(systemName: "target")
+                        .font(.caption2)
+                    Text(verbatim: text)
+                        .font(.callout.weight(.semibold).monospacedDigit())
+                        .contentTransition(.numericText())
+                }
+                ProgressView(value: target.progress(shotCount: service.currentShots.count))
+                    .frame(width: 140)
+            }
+            .foregroundStyle(.secondary)
+            .animation(.snappy, value: service.currentShots.count)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(Text("目標発数の進捗"))
         }
     }
 
@@ -209,6 +253,7 @@ struct LiveView: View {
                 onCreate: { isAddingProfile = true }
             )
             variablesLine(isCompact: true)
+            targetProgress
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)

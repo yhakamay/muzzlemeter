@@ -97,6 +97,11 @@ final class GunProfile {
     /// ホップ設定の既定値。**列名は旧スキーマのまま**（`defaultHopSetting` を参照）。
     /// 自由記述にしてあるのは、目盛りの単位が銃ごとに違うから（「3」「少し強め」など）。
     var hopNotes: String = ""
+    /// 目標発数の既定値（N 発モード）。`nil` は「手動で締める」。
+    ///
+    /// 「この銃はいつも 10 発で見る」のような癖は銃ごとに決まっているので、
+    /// 既定値はプロファイルが持ち、その回だけ変えたいときはセッション条件で上書きする。
+    var targetShotCount: Int?
     /// 自由記述のメモ。
     var notes: String = ""
 
@@ -111,6 +116,7 @@ final class GunProfile {
         manufacturer: String = "",
         model: String = "",
         innerBarrelLengthMm: Int? = nil,
+        targetShotCount: Int? = nil,
         notes: String = ""
     ) {
         self.name = name
@@ -122,6 +128,7 @@ final class GunProfile {
         self.manufacturer = manufacturer
         self.model = model
         self.innerBarrelLengthMm = innerBarrelLengthMm
+        self.targetShotCount = targetShotCount
         self.hopNotes = defaultHopSetting
         self.notes = notes
     }
@@ -161,7 +168,8 @@ final class GunProfile {
         SessionVariables(
             bbWeightGrams: defaultBBWeightGrams,
             gasType: defaultGasType,
-            hopSetting: defaultHopSetting
+            hopSetting: defaultHopSetting,
+            targetShotCount: targetShotCount
         )
     }
 

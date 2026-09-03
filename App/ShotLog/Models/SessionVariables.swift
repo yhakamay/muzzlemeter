@@ -1,4 +1,5 @@
 import Foundation
+import ShotLogKit
 
 /// 「その回の計測条件」。BB 重量・ガス種別・ホップ設定の 3 つ。
 ///
@@ -13,6 +14,11 @@ struct SessionVariables: Equatable, Sendable {
     var gasType: GasType = .hfc134a
     /// 自由記述（「3」「少し強め」など）。空文字は「記録なし」。
     var hopSetting: String = ""
+    /// 目標発数。`nil` は「手動で締める」。
+    ///
+    /// その回だけ「20 発だけ測る」と決めることがあるので、プロファイルの既定値ではなく
+    /// **セッションの条件**として持つ。
+    var targetShotCount: Int?
 
     /// Live のピル直下に出す 1 行（`0.25 g · HFC134a · ホップ 3`）。
     ///
@@ -23,6 +29,10 @@ struct SessionVariables: Equatable, Sendable {
         if category.usesGas { parts.append(gasType.label) }
         let hop = hopSetting.trimmingCharacters(in: .whitespacesAndNewlines)
         if !hop.isEmpty { parts.append(String(localized: "ホップ \(hop)")) }
+        // 目標発数は待機中にも見えている必要がある（撃ち始めてからでは遅い）。
+        if let target = ShotTarget(targetShotCount) {
+            parts.append(String(localized: "目標 \(target.count) 発"))
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -30,6 +40,11 @@ struct SessionVariables: Equatable, Sendable {
     var normalized: SessionVariables {
         var copy = self
         copy.hopSetting = hopSetting.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 0 や負数は「目標なし」と同義なので、保存前に nil へ寄せる（比較のためにも要る）。
+        copy.targetShotCount = ShotTarget(targetShotCount)?.count
         return copy
     }
+
+    /// 目標発数（成立していれば）。
+    var target: ShotTarget? { ShotTarget(targetShotCount) }
 }

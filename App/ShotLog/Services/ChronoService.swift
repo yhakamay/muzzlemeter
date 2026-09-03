@@ -99,6 +99,61 @@ final class ChronoService {
     /// 統計・ジュール計算に使う BB 重量。
     var massGrams: Double { variables.bbWeightGrams }
 
+    // MARK: - N 発モード
+
+    /// いま効いている目標発数。成立していなければ `nil`（手動で締める）。
+    var shotTarget: ShotTarget? { variables.target }
+
+    /// 「7 / 10」の進捗。目標が無ければ `nil`。
+    var targetProgressText: String? {
+        guard let target = shotTarget else { return nil }
+        return "\(currentShots.count) / \(target.count)"
+    }
+
+    /// 目標発数に届いて自動的に締めたセッションのまとめ。表示したら `nil` に戻す。
+    ///
+    /// `Identifiable` にしてあるのは、同じ内容のまとめが 2 回続いても
+    /// SwiftUI が別物として出せるようにするため（同じ条件で 2 回撃つのは普通にある）。
+    struct CompletedSummary: Identifiable, Equatable {
+        let id = UUID()
+        let stats: SessionStats
+        let overLimitCount: Int
+        let energyLimitJoules: Double
+        let targetShotCount: Int
+        let speedUnit: SpeedUnit
+    }
+
+    private(set) var completedSummary: CompletedSummary?
+
+    /// まとめを閉じる。`clearsTarget` が真なら目標発数も解除する（「閉じる」）。
+    func dismissCompletedSummary(clearsTarget: Bool) {
+        completedSummary = nil
+        guard clearsTarget else { return }
+        var updated = variables
+        updated.targetShotCount = nil
+        variables = updated
+    }
+
+    /// 目標に届いていればセッションを締めて、まとめを作る。
+    ///
+    /// **締めるのは保存が終わってから。** 途中で締めると最後の 1 発が
+    /// セッションに入らないまま「N 発撃った」ことになる。
+    private func finishIfTargetReached() {
+        guard let target = shotTarget, target.isReached(shotCount: currentShots.count) else {
+            return
+        }
+        let summary = CompletedSummary(
+            stats: stats,
+            overLimitCount: overLimitCount,
+            energyLimitJoules: energyLimitJoules,
+            targetShotCount: target.count,
+            speedUnit: speedUnit
+        )
+        endSession()
+        completedSummary = summary
+        feedback.reportSessionCompleted()
+    }
+
     // MARK: - 本体の弾設定との不一致
 
     /// 本体が報告した弾の重量と、いま効いている BB 重量の食い違い。
@@ -344,6 +399,8 @@ final class ChronoService {
         recomputeStats()
         // 上限の判定はセッションが決まってから（セッションが持つ上限を使う）。
         report(shot)
+        // N 発モードの締めは**保存の後**。途中で締めると最後の 1 発が入らない。
+        finishIfTargetReached()
     }
 
     /// 1 発ぶんの音・振動・読み上げを `FeedbackService` へ渡す。
@@ -507,6 +564,11 @@ final class ChronoService {
         var changed = false
         if let limit = ScreenshotSupport.energyLimitOverride, limit > 0 {
             profile.energyLimitJoules = limit
+            changed = true
+        }
+        if let target = ScreenshotSupport.targetShotCountOverride {
+            profile.targetShotCount = ShotTarget(target)?.count
+            pendingVariables = profile.defaultVariables
             changed = true
         }
         guard changed else { return }
