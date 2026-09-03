@@ -33,6 +33,8 @@ final class ChronoService {
     private let liveActivity: LiveActivityService
     /// セッション終了時にホーム画面ウィジェット用のまとめを書く（Round E）。
     private let homeWidgetWriter: HomeWidgetSnapshotWriter
+    /// Apple Watch アプリへの中継（Round E）。BLE の中心は iPhone のまま。
+    private let watchConnectivity: WatchConnectivityService
 
     /// 進行中のセッション。1 発も撃っていなければ nil。
     private(set) var activeSession: Session?
@@ -416,13 +418,15 @@ final class ChronoService {
         forceReplay: Bool? = nil,
         feedback: FeedbackService? = nil,
         liveActivity: LiveActivityService? = nil,
-        homeWidgetWriter: HomeWidgetSnapshotWriter? = nil
+        homeWidgetWriter: HomeWidgetSnapshotWriter? = nil,
+        watchConnectivity: WatchConnectivityService? = nil
     ) {
         self.defaults = defaults
         self.isReplaying = forceReplay ?? ReplaySupport.isEnabled
         self.feedback = feedback ?? FeedbackService(defaults: defaults)
         self.liveActivity = liveActivity ?? LiveActivityService()
         self.homeWidgetWriter = homeWidgetWriter ?? HomeWidgetSnapshotWriter()
+        self.watchConnectivity = watchConnectivity ?? WatchConnectivityService()
 
         self.speedUnit = defaults.string(forKey: Keys.speedUnit)
             .flatMap(SpeedUnit.init(rawValue:)) ?? .metersPerSecond
@@ -590,10 +594,11 @@ final class ChronoService {
         finishIfTargetReached()
     }
 
-    /// ライブアクティビティへ、いまの計測状態を伝える。
+    /// ライブアクティビティと Apple Watch へ、いまの計測状態を伝える。
     ///
-    /// **セッション開始時（1 発目）は必ず起動する。** それ以外の発は間引きに任せる
-    /// （間引き自体は `LiveActivityService` の中）。
+    /// **セッション開始時（1 発目）は両方へ必ず反映する**（Live Activity を起動し、
+    /// Watch へも状態全体を同期する）。それ以外の発は間引きに任せる（間引き自体は
+    /// `LiveActivityService` / `WatchConnectivityService` の中）。
     private func syncLiveState(isNewSession: Bool) {
         guard let session = activeSession else { return }
         let content = LiveActivityContent.derive(
@@ -604,11 +609,22 @@ final class ChronoService {
             target: shotTarget,
             gunName: gunName
         )
+        let watchState = WatchLiveState.derive(
+            shots: currentShots,
+            massGrams: massGrams,
+            speedUnit: speedUnit,
+            energyLimitJoules: energyLimitJoules,
+            target: shotTarget,
+            gunName: gunName,
+            isSessionActive: true
+        )
         if isNewSession {
             liveActivity.start(content: content, startedAt: session.startedAt)
+            watchConnectivity.syncState(watchState)
         } else {
             liveActivity.report(content: content)
         }
+        watchConnectivity.reportShot(state: watchState)
     }
 
     /// 1 発ぶんの音・振動・読み上げを `FeedbackService` へ渡す。
@@ -696,9 +712,9 @@ final class ChronoService {
         guard let session = activeSession else { return }
         session.endedAt = Date()
         try? modelContext?.save()
-        // ライブアクティビティは**終了前の状態**（＝最後のショットまで反映した状態）で
-        // 閉じる。session.endedAt を書いた後だが、統計は currentShots から計算するので
-        // どちらでも同じ値になる。
+        // ライブアクティビティ・Watch は**終了前の状態**（＝最後のショットまで反映した
+        // 状態）で閉じる。session.endedAt を書いた後だが、統計は currentShots から
+        // 計算するのでどちらでも同じ値になる。
         endLiveState()
         // 確定したセッションだけホーム画面ウィジェットへ渡す（破棄したものは出さない）。
         homeWidgetWriter.write(session: session, speedUnit: speedUnit)
@@ -718,7 +734,7 @@ final class ChronoService {
             modelContext.delete(session)
             try? modelContext.save()
         }
-        // 破棄でもライブアクティビティは必ず閉じる（残ったままにしない）。
+        // 破棄でもライブアクティビティ・Watch は必ず閉じる（残ったままにしない）。
         // ホーム画面ウィジェットには**書かない**（捨てた回を「最新の記録」として出さない）。
         endLiveState()
         activeSession = nil
@@ -727,7 +743,8 @@ final class ChronoService {
         recomputeStats()
     }
 
-    /// ライブアクティビティを終了する。終了・破棄の両方から呼ぶ共通処理。
+    /// ライブアクティビティを終了し、Watch へ「セッション終了」を同期する。
+    /// 終了・破棄の両方から呼ぶ共通処理。
     private func endLiveState() {
         let content = LiveActivityContent.derive(
             shots: currentShots,
@@ -738,6 +755,16 @@ final class ChronoService {
             gunName: gunName
         )
         liveActivity.end(content: content)
+        let watchState = WatchLiveState.derive(
+            shots: currentShots,
+            massGrams: massGrams,
+            speedUnit: speedUnit,
+            energyLimitJoules: energyLimitJoules,
+            target: shotTarget,
+            gunName: gunName,
+            isSessionActive: false
+        )
+        watchConnectivity.syncState(watchState)
     }
 
     private func recomputeStats() {

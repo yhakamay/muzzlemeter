@@ -15,6 +15,10 @@ let package = Package(
     platforms: [
         .iOS(.v17),
         .macOS(.v14),
+        // Round E: MuzzlemeterWatch（watchOS companion）が MuzzlemeterKit を直接使う
+        // （弾速計算・ジュール整形・Watch 側の状態組み立てを共有するため）。
+        // `muzzlemeter-sniff` は macOS 専用のままで、watchOS ではビルドしない。
+        .watchOS(.v10),
     ],
     products: [
         .library(name: "MuzzlemeterKit", targets: ["MuzzlemeterKit"]),

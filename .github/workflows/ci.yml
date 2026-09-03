@@ -41,7 +41,20 @@ jobs:
       - name: xcodegen generate
         run: xcodegen generate
 
-      - name: Build iOS app
+      # Round E: Muzzlemeter は MuzzlemeterWidgets（ウィジェット拡張）と
+      # MuzzlemeterWatch（watchOS コンパニオンアプリ）を埋め込むようになった。
+      # スキームの検証時に対応プラットフォームの Simulator ランタイムが
+      # 入っていないと「watchOS x.y must be installed」でビルドが落ちる。
+      # ランナーに無いことがあるため、明示的に取得しておく（既にあれば数秒で終わる）。
+      - name: Ensure watchOS simulator runtime
+        run: xcodebuild -downloadPlatform watchOS
+
+      # -scheme Muzzlemeter は「build: Muzzlemeter / MuzzlemeterWidgets /
+      # MuzzlemeterWatch を all」で構成してある（project.yml）ので、
+      # このコマンド 1 つでアプリ本体・ウィジェット拡張・Watch アプリの
+      # 3 ターゲットすべてがビルドされる。署名は CI では不要
+      # （CODE_SIGNING_ALLOWED=NO）。
+      - name: Build iOS app + widgets + watch app
         run: |
           xcodebuild -project Muzzlemeter.xcodeproj -scheme Muzzlemeter \
             -destination 'generic/platform=iOS Simulator' \

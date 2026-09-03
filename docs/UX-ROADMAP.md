@@ -95,7 +95,7 @@
 ## Round E: 拡張ターゲット
 4. ✅ ライブアクティビティ（Dynamic Island / ロック画面）
 10. ✅ ホーム画面ウィジェット
-12. Apple Watch の弾速表示
+12. ✅ Apple Watch の弾速表示
 
 Implementation notes (see the ADR in each commit for the full reasoning):
 
@@ -133,3 +133,32 @@ Implementation notes (see the ADR in each commit for the full reasoning):
   can preview them too) — `WidgetFamilyKind` is a tiny extension-independent
   stand-in for `WidgetKit.WidgetFamily` so that shared file doesn't need to
   import `WidgetKit` from the app target.
+- **12. Apple Watch velocity display**: added `MuzzlemeterWatch`, a standalone
+  watchOS 10 SwiftUI app target (companion to the iPhone app via
+  `WKCompanionAppBundleIdentifier`, not independently installable). **The
+  phone stays the BLE central; the watch never talks to the AC6000
+  directly** — `docs/PROTOCOL.md`'s handshake and framing only exist in
+  `ChronoDevice`/`CoreBluetoothTransport` on iOS, and duplicating that on
+  watchOS would mean two BLE stacks racing to connect to the same
+  chronograph. Instead `ChronoService` relays state to the watch over
+  `WatchConnectivity` through two paths, chosen for different reliability
+  needs: `WCSession.sendMessage` for a fast, low-latency push on every shot
+  (throttled with the same `LiveActivityUpdateThrottle` used for the Live
+  Activity, since full-auto would otherwise flood the channel), which only
+  arrives while the watch app is reachable in the foreground; and
+  `updateApplicationContext` at session start/end/discard, which the system
+  retains and redelivers the next time the watch app launches — this is
+  what makes the watch "robust to being closed" rather than just showing
+  stale data. What to send is `MuzzlemeterKit.WatchLiveState` (derived from
+  shots the same way `LiveActivityContent` is) and the smaller
+  `WatchShotMessage` for the per-shot push; `WatchPayloadCoding` is a tiny
+  helper that encodes/decodes those into the `[String: Any]` dictionaries
+  `WCSession` expects, without the kit importing `WatchConnectivity` itself
+  (unavailable on macOS, which the kit also targets). Added `.watchOS(.v10)`
+  to `Package.swift`'s platform list so the watch app can link
+  `MuzzlemeterKit` directly and reuse `JouleFormat`/`SpeedUnit`/`EnergyMargin`
+  for identical formatting; `MuzzlemeterSniff` (the macOS-only sniffer CLI)
+  is unaffected. A WidgetKit complication was **skipped** for this round —
+  the watch app itself was the higher-value target given the time
+  available, and a complication can be added later as its own small
+  extension without touching this design.
