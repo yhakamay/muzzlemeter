@@ -28,6 +28,13 @@ enum ScreenshotSupport {
     /// 起動直後に機器選択シートを開く。
     static var opensScanSheet: Bool { flag("--demo-scan-sheet") }
 
+    /// 接続ピルの「（デモ再生）」を隠す。
+    ///
+    /// App Store のスクリーンショットは実機で撮れない（シミュレータには CoreBluetooth の
+    /// ハードウェアが無く、必ず再生になる）。載せる絵に開発用の但し書きが写り込むのを
+    /// 避けるためだけの引数で、既定では**常に**「（デモ再生）」を出す。
+    static var hidesReplayBadge: Bool { flag("--demo-hide-replay-badge") }
+
     /// 履歴タブで、いちばん新しいセッションの詳細を開く。
     static var opensLatestSession: Bool { flag("--demo-latest-session") }
 
@@ -57,6 +64,12 @@ enum ScreenshotSupport {
     /// 「BB 重量を変えるとジュールが計算し直される」ことを、タップ操作なしで
     /// 確認するための引数（シミュレータの UI 操作ツールが使えない環境向け）。
     static var appliesBBWeightOverride: Double? { double(for: "--demo-apply-bb-weight") }
+
+    /// セッション詳細を開いたら、弾速グラフが画面のいちばん上に来るまでスクロールする。
+    ///
+    /// グラフは銃・条件・タグ・環境の下にあるので、開いただけでは画面に入らない。
+    /// タップでスクロールできない環境でグラフ（平均線・規制上限の線）を絵にするために要る。
+    static var scrollsToChart: Bool { flag("--demo-scroll-chart") }
 
     /// セッション詳細を開いたら、統計カード（ジュールが出る場所）までスクロールする。
     ///
@@ -145,22 +158,25 @@ extension ScreenshotSupport {
         let existing = (try? modelContext.fetchCount(FetchDescriptor<Session>())) ?? 0
         guard existing == 0 else { return }
 
+        let text = DemoText.current
+        // 弾は 0.20 g にする。再生の擬似本体が「0.20 g」を選んでいるので、
+        // 別の重さにすると弾設定の食い違いの帯が出っぱなしになる（目視確認の邪魔）。
         let rifle = GunProfile(
-            name: "次世代 M4",
-            bbWeightGrams: 0.25,
+            name: text.rifleName,
+            bbWeightGrams: 0.20,
             createdAt: Date().addingTimeInterval(-40 * 86_400),
             powerCategory: .electric,
             defaultHopSetting: "3",
-            manufacturer: "東京マルイ",
+            manufacturer: text.manufacturer,
             model: "HK416D"
         )
         let pistol = GunProfile(
-            name: "グロック 18C",
+            name: text.pistolName,
             bbWeightGrams: 0.20,
             createdAt: Date().addingTimeInterval(-30 * 86_400),
             powerCategory: .gas,
             defaultGasType: .hfc134a,
-            manufacturer: "東京マルイ",
+            manufacturer: text.manufacturer,
             model: "G18C"
         )
         modelContext.insert(rifle)
@@ -172,42 +188,42 @@ extension ScreenshotSupport {
             DemoSessionPlan(
                 profile: rifle,
                 daysAgo: 21,
-                title: "ホップ強めで様子見",
+                title: text.titleHopStrong,
                 velocities: [82.1, 83.4, 81.8, 84.0, 82.7, 83.1, 82.4, 83.8],
                 temperatureC: 12.4,
-                tags: ["ホップ強め", "屋内"]
+                tags: [text.tagHopStrong, text.tagIndoor]
             ),
             DemoSessionPlan(
                 profile: rifle,
                 daysAgo: 14,
-                title: "ホップ弱めに戻す",
+                title: text.titleHopWeak,
                 velocities: [85.2, 86.9, 84.6, 87.3, 85.8, 86.2, 85.1, 86.7, 85.9],
                 temperatureC: 18.2,
-                tags: ["ホップ弱め", "フィールド"]
+                tags: [text.tagHopWeak, text.tagField]
             ),
             DemoSessionPlan(
                 profile: rifle,
                 daysAgo: 5,
-                title: "スプリング交換後",
+                title: text.titleSpring,
                 velocities: [88.9, 89.6, 87.9, 90.2, 88.4, 89.1],
                 temperatureC: 24.6,
-                tags: ["スプリング交換", "新品"]
+                tags: [text.tagSpring, text.tagBrandNew]
             ),
             DemoSessionPlan(
                 profile: pistol,
                 daysAgo: 18,
-                title: "冬の屋内で試射",
+                title: text.titleWinter,
                 velocities: [78.2, 74.5, 71.0, 68.3, 65.9, 63.1],
                 temperatureC: 8.5,
-                tags: ["屋内"]
+                tags: [text.tagIndoor]
             ),
             DemoSessionPlan(
                 profile: pistol,
                 daysAgo: 2,
-                title: "夏のフィールドで試射",
+                title: text.titleSummer,
                 velocities: [95.4, 96.8, 94.2, 97.1, 95.9, 96.3],
                 temperatureC: 27.8,
-                tags: ["フィールド", "新品"]
+                tags: [text.tagField, text.tagBrandNew]
             ),
         ]
 
@@ -271,6 +287,93 @@ extension ScreenshotSupport {
         return nil
         #endif
     }
+}
+
+/// 見本データの文言。**表示言語に合わせて差し替える。**
+///
+/// 見本セッションの銃名・タイトル・タグは利用者が自分で入れる文字列なので
+/// String Catalog には載せない（製品の UI 文言ではない）。ただし日本語で固定すると、
+/// **英語や繁体字で動かしたときに画面の中だけ日本語が残る**。App Store の
+/// スクリーンショットのように「その言語だけで埋まった画面」が要る場面で困るので、
+/// 見本に限ってここで言語ごとの文字列を持つ。
+///
+/// 判定に `Bundle.main.preferredLocalizations` を使うのは、`-AppleLanguages` の
+/// 指定と実際にアプリが表示する言語（en / ja / zh-Hant のいずれか）が一致するため。
+private struct DemoText {
+    let rifleName: String
+    let pistolName: String
+    let manufacturer: String
+    let titleHopStrong: String
+    let titleHopWeak: String
+    let titleSpring: String
+    let titleWinter: String
+    let titleSummer: String
+    let tagHopStrong: String
+    let tagHopWeak: String
+    let tagIndoor: String
+    let tagField: String
+    let tagSpring: String
+    let tagBrandNew: String
+
+    static var current: DemoText {
+        switch Bundle.main.preferredLocalizations.first?.prefix(2) {
+        case "ja": return .japanese
+        case "zh": return .traditionalChinese
+        default: return .english
+        }
+    }
+
+    static let japanese = DemoText(
+        rifleName: "次世代 M4",
+        pistolName: "グロック 18C",
+        manufacturer: "東京マルイ",
+        titleHopStrong: "ホップ強めで様子見",
+        titleHopWeak: "ホップ弱めに戻す",
+        titleSpring: "スプリング交換後",
+        titleWinter: "冬の屋内で試射",
+        titleSummer: "夏のフィールドで試射",
+        tagHopStrong: "ホップ強め",
+        tagHopWeak: "ホップ弱め",
+        tagIndoor: "屋内",
+        tagField: "フィールド",
+        tagSpring: "スプリング交換",
+        tagBrandNew: "新品"
+    )
+
+    static let english = DemoText(
+        rifleName: "Next-gen M4",
+        pistolName: "Glock 18C",
+        manufacturer: "Tokyo Marui",
+        titleHopStrong: "Trying more hop",
+        titleHopWeak: "Back to less hop",
+        titleSpring: "After the spring swap",
+        titleWinter: "Winter indoor test",
+        titleSummer: "Summer field test",
+        tagHopStrong: "More hop",
+        tagHopWeak: "Less hop",
+        tagIndoor: "Indoor",
+        tagField: "Field",
+        tagSpring: "Spring swap",
+        tagBrandNew: "Brand new"
+    )
+
+    static let traditionalChinese = DemoText(
+        rifleName: "次世代 M4",
+        pistolName: "Glock 18C",
+        // 台湾では「馬牌」がマルイの通り名（`docs/LOCALIZATION-zh-Hant.md`）。
+        manufacturer: "馬牌 MARUI",
+        titleHopStrong: "加強 Hop 試射",
+        titleHopWeak: "調弱 Hop 回測",
+        titleSpring: "更換彈簧後",
+        titleWinter: "冬季室內試射",
+        titleSummer: "夏季野外試射",
+        tagHopStrong: "強 Hop",
+        tagHopWeak: "弱 Hop",
+        tagIndoor: "室內",
+        tagField: "野外",
+        tagSpring: "更換彈簧",
+        tagBrandNew: "全新"
+    )
 }
 
 /// 見本セッション 1 件分の設計図。

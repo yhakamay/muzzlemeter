@@ -103,6 +103,7 @@ struct SessionDetailView: View {
                         .frame(height: 220)
                         .listRowInsets(EdgeInsets(top: 12, leading: 8, bottom: 12, trailing: 16))
                 }
+                .id(Self.chartAnchor)
 
                 // StatsCard 自身が「セッション統計」の見出しを持っているので、
                 // Section 側に見出しを付けると同じ意味の行が 2 段重なる。
@@ -210,12 +211,19 @@ struct SessionDetailView: View {
                 if ScreenshotSupport.scrollsToStats {
                     proxy.scrollTo(Self.statsAnchor, anchor: .top)
                 }
+                // 同じく目視確認用。グラフを画面の上端に持ってくる（下に統計カードが続く）。
+                if ScreenshotSupport.scrollsToChart {
+                    proxy.scrollTo(Self.chartAnchor, anchor: .top)
+                }
             }
         }
     }
 
     /// 統計カードのセクションに付けた `id`。目視確認用のスクロール先。
     private static let statsAnchor = "session-detail-stats"
+
+    /// 弾速グラフのセクションに付けた `id`。目視確認用のスクロール先。
+    private static let chartAnchor = "session-detail-chart"
 
     // MARK: - チャート
 

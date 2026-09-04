@@ -470,16 +470,26 @@ xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
   --demo-edit-conditions \      # create a dedicated demo session and open its conditions/gun editor sheet
   --demo-apply-bb-weight 0.32 \ # overwrite that demo session's BB weight directly, then open its detail
   --demo-scroll-stats \         # scroll the session detail down to the stats card on open
+  --demo-scroll-chart \         # scroll to the velocity chart (session detail / the overlay on the comparison screen)
   --demo-filter 屋内 \          # apply a tag filter to the history tab
   --demo-profile-detail \        # open the first profile's detail in the settings tab
   --demo-device-log 12 \         # make the mock device report "12 records in its internal log"
   --demo-device-log-broken 4 \   # return the 5th of those records in an unsupported format
-  --demo-device-log-auto         # start the import without tapping the banner (for visually checking progress/results)
+  --demo-device-log-auto \       # start the import without tapping the banner (for visually checking progress/results)
+  --demo-hide-replay-badge       # drop the "(demo replay)" suffix from the connection pill
 ```
 
 `--demo-seed-sessions` exists for screens that **only appear once multiple sessions have
 accumulated**, like comparison, tags, and trends. It does nothing if sessions already
-exist.
+exist. The sample gun names, session titles and tags follow the display language (en /
+ja / zh-Hant), so a screen captured in one language does not carry text from another.
+
+`--demo-scroll-chart` and `--demo-hide-replay-badge` exist for App Store screenshots.
+The charts sit below the gun, conditions and tag sections, so opening a screen is not
+enough to get them into frame, and there is no tap-driven way to scroll here. The
+connection pill always says "(demo replay)" in the simulator (there is no CoreBluetooth
+hardware, so a replay is the only way to run), which is a developer note that does not
+belong in a store listing.
 
 `--demo-edit-conditions` and `--demo-apply-bb-weight <g>` exist for the finished-session
 "edit BB weight / gun info" sheet (`SessionConditionsEditor`). Both create one dedicated,

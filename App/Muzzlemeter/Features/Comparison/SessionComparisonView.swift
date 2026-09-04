@@ -34,6 +34,22 @@ struct SessionComparisonView: View {
     }
 
     var body: some View {
+        // 目視確認用（`--demo-scroll-chart`）に重ね合わせチャートまで送れるよう包む。
+        // 実行時の見た目は変わらない（スクロール位置を動かすのは Debug のシミュレータだけ）。
+        ScrollViewReader { proxy in
+            list
+                .task {
+                    if ScreenshotSupport.scrollsToChart {
+                        proxy.scrollTo(Self.overlayAnchor, anchor: .center)
+                    }
+                }
+        }
+    }
+
+    /// 重ね合わせチャートのセクションに付けた `id`。目視確認用のスクロール先。
+    private static let overlayAnchor = "session-comparison-overlay"
+
+    private var list: some View {
         List {
             Section {
                 ForEach(entries) { entry in
@@ -65,6 +81,7 @@ struct SessionComparisonView: View {
             } footer: {
                 Text("横軸は各セッションの何発目か。発数が違っても、立ち上がりからの動きかたを重ねて見られます。")
             }
+            .id(Self.overlayAnchor)
 
             Section {
                 summaryChart

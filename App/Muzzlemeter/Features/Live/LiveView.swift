@@ -484,7 +484,8 @@ struct ConnectionPill: View {
             reason.map { String(localized: "切断: \(ConnectionReasonText.localized($0))") }
                 ?? String(localized: "切断されました")
         }
-        return isReplaying ? String(localized: "\(base)（デモ再生）") : base
+        guard isReplaying, !ScreenshotSupport.hidesReplayBadge else { return base }
+        return String(localized: "\(base)（デモ再生）")
     }
 
     private var color: Color {
