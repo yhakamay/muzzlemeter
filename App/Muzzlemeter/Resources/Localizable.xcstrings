@@ -1489,6 +1489,23 @@
         }
       }
     },
+    "セッションを開く": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを開く"
+          }
+        }
+      }
+    },
     "セッション名": {
       "extractionState": "manual",
       "localizations": {

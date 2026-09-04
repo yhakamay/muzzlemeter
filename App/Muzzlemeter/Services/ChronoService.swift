@@ -324,6 +324,9 @@ final class ChronoService {
         }
 
         var savedShotCount = 0
+        // 取り込んだ結果の帯から**そのセッションへ直接飛べる**ようにするため保持する
+        // （「本体ログの取り込みが誤った銃/BB 重量を焼き込んでいた」を直す入口）。
+        var savedSession: Session?
         if let modelContext,
            let session = DeviceLogSessionBuilder.insertSession(
                shots: result.shots,
@@ -335,6 +338,7 @@ final class ChronoService {
            ) {
             savedShotCount = session.shots.count
             try? modelContext.save()
+            savedSession = session
         }
 
         // 読めなかったときだけ生データを残す。**これが実物の 0x63 を手に入れる唯一の経路。**
@@ -350,7 +354,8 @@ final class ChronoService {
             DeviceLogImportSummary(
                 savedShotCount: savedShotCount,
                 outcome: outcome,
-                debugFileName: fileName
+                debugFileName: fileName,
+                session: savedSession
             )
         )
     }

@@ -13,6 +13,9 @@ struct DeviceLogBanner: View {
     var onImport: () -> Void
     var onDismissPending: () -> Void
     var onDismissResult: () -> Void
+    /// 取り込んだセッションを開く。銃・BB 重量が間違って焼き込まれていたら、
+    /// その場で直しに行けるようにするための入口（結果に紐づくセッションがあるときだけ出す）。
+    var onOpenSession: (Session) -> Void
 
     var body: some View {
         switch state {
@@ -97,7 +100,17 @@ struct DeviceLogBanner: View {
             }
             .foregroundStyle(summary.isSuccess ? .green : .orange)
 
-            HStack {
+            HStack(spacing: 10) {
+                // 取り込めたセッションがあるときだけ出す。件数がゼロだった(例: 応答なし)
+                // ときに押しても行き先が無いので出さない。
+                if let session = summary.session {
+                    Button("セッションを開く", systemImage: "arrow.up.forward.square") {
+                        onOpenSession(session)
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
                 Button("閉じる", action: onDismissResult)
                     .font(.footnote)
                     .buttonStyle(.borderless)
@@ -159,7 +172,8 @@ struct DeviceLogBanner: View {
         pendingCount: 12,
         onImport: {},
         onDismissPending: {},
-        onDismissResult: {}
+        onDismissResult: {},
+        onOpenSession: { _ in }
     )
     .padding()
 }
@@ -170,7 +184,8 @@ struct DeviceLogBanner: View {
         pendingCount: nil,
         onImport: {},
         onDismissPending: {},
-        onDismissResult: {}
+        onDismissResult: {},
+        onOpenSession: { _ in }
     )
     .padding()
 }
@@ -181,13 +196,15 @@ struct DeviceLogBanner: View {
             DeviceLogImportSummary(
                 savedShotCount: 4,
                 outcome: .unsupportedFormat,
-                debugFileName: "device-log-20260903-121500.txt"
+                debugFileName: "device-log-20260903-121500.txt",
+                session: nil
             )
         ),
         pendingCount: nil,
         onImport: {},
         onDismissPending: {},
-        onDismissResult: {}
+        onDismissResult: {},
+        onOpenSession: { _ in }
     )
     .padding()
 }

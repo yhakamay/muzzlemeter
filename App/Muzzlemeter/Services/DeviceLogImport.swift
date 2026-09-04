@@ -31,6 +31,12 @@ struct DeviceLogImportSummary: Equatable {
     let outcome: Outcome
     /// 生データを書き出したファイル名（Documents 直下）。書き出していなければ nil。
     let debugFileName: String?
+    /// 取り込んで作ったセッション。1 件も保存できなかったときは nil。
+    ///
+    /// 取り込み時に選ばれていた銃・BB 重量をそのまま焼き込んでいるので、実際に撃ったときと
+    /// 違う可能性がある。結果の帯からこのセッションへ直接飛べるようにして、間違っていたら
+    /// その場で（`SessionConditionsEditor` で）直せるようにする。
+    let session: Session?
 
     var isSuccess: Bool { outcome == .completed }
 }

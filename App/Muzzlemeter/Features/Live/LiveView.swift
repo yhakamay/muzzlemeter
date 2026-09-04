@@ -17,6 +17,9 @@ struct LiveView: View {
     @State private var isEditingVariables = false
     @State private var isShowingProfileDetail = false
     @State private var isChoosingDevice = ScreenshotSupport.opensScanSheet
+    /// 本体ログの取り込み結果の帯から開いた先。詳細は Live のスタックに積まず、
+    /// プロファイル詳細と同じくシートで出す（計測中の巨大数字を押しのけないため）。
+    @State private var openedImportedSession: Session?
 
     var body: some View {
         @Bindable var service = service
@@ -130,6 +133,14 @@ struct LiveView: View {
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
+            // 取り込み直後、間違った銃・BB 重量に気付いたその場で直しに行けるようにする。
+            // プロファイル詳細と同じく、Live のスタックには積まずシートで出す。
+            .sheet(item: $openedImportedSession) { session in
+                NavigationStack {
+                    SessionDetailView(session: session)
+                }
+                .environment(service)
+            }
         }
     }
 
@@ -200,7 +211,8 @@ struct LiveView: View {
                 pendingCount: service.pendingDeviceLogCount,
                 onImport: { withAnimation(.snappy) { service.importDeviceLog() } },
                 onDismissPending: { withAnimation(.snappy) { service.dismissDeviceLogBanner() } },
-                onDismissResult: { withAnimation(.snappy) { service.dismissDeviceLogResult() } }
+                onDismissResult: { withAnimation(.snappy) { service.dismissDeviceLogResult() } },
+                onOpenSession: { openedImportedSession = $0 }
             )
         }
     }
