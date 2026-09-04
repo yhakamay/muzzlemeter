@@ -36,7 +36,8 @@ licensed.
 - Tagging, and filtering history by tag, gun, or free text
 - Per-profile trends (a time series of mean velocity ± SD, and a scatter plot against
   temperature)
-- Japanese / English (base language is Japanese)
+- English / Japanese. English is the fallback for any other locale; the source string
+  literals are Japanese and act as the catalog keys
 - A replay mode that lets you review the UI without the physical device (plays back a
   real capture)
 - Importing the log stored on the device itself (`0x62` / `0x63`, **confirmed on real
@@ -77,9 +78,9 @@ roughly every 10 s after connecting). Don't treat "unexpected" as an error.
 | `docs/PROTOCOL.md` | The reverse-engineering results (UUIDs, packet format, checksum) |
 | `tools/re/` | The working directory for protocol research; capture log storage (gitignored) |
 | `App/Muzzlemeter/` | The iOS app (SwiftUI + SwiftData) |
-| `App/Muzzlemeter/Resources/Localizable.xcstrings` | The String Catalog for UI text. **Base language is ja**, en is a complete translation |
+| `App/Muzzlemeter/Resources/Localizable.xcstrings` | The String Catalog for UI text. Its `sourceLanguage` is `ja` (the Swift literals are the keys); en and ja are both complete translations. `CFBundleDevelopmentRegion` is **en**, so any locale the app does not ship falls back to English |
 | `App/Info.plist` | A minimal base holding only `CFBundleLocalizations`; every other key is synthesized from build settings |
-| `App/Muzzlemeter/Resources/<lang>.lproj/InfoPlist.strings` | ja / en purpose strings for permission prompts, substituting build-setting values at runtime |
+| `App/Muzzlemeter/Resources/<lang>.lproj/InfoPlist.strings` | en / ja purpose strings for permission prompts, substituting build-setting values at runtime |
 | `App/Muzzlemeter.entitlements` | The WeatherKit entitlement (`CODE_SIGN_ENTITLEMENTS`) |
 | `project.yml` | The XcodeGen definition that `.xcodeproj` is generated from |
 

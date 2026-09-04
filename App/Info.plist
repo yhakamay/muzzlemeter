@@ -6,8 +6,8 @@
 	     ここには「ビルド設定では配列を書けないキー」だけを置く。 -->
 	<key>CFBundleLocalizations</key>
 	<array>
-		<string>ja</string>
 		<string>en</string>
+		<string>ja</string>
 	</array>
 	<!-- App Store validation (ITMS-90713) wants CFBundleIconName at the top level.
 	     actool only writes it nested under CFBundleIcons, so declare it here; the

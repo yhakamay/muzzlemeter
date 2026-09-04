@@ -9,11 +9,13 @@ options:
     iOS: "17.0"
     watchOS: "10.0"
   groupSortPosition: top
-  # UI 文言は日本語で書き、English は翻訳として持つ（詳細は該当コミットの ADR）。
-  # developmentLanguage は CFBundleDevelopmentRegion に、knownRegions は
-  # プロジェクトの既知リージョン（= 各 .lproj の生成対象）になる。
-  developmentLanguage: ja
-  knownRegions: [ja, en, Base]
+  # Source string literals stay Japanese (they are the String Catalog keys), but the
+  # app's *fallback* language is English: developmentLanguage becomes
+  # CFBundleDevelopmentRegion, which is what iOS falls back to when none of the
+  # user's preferred languages is shipped.
+  # knownRegions is the project's known region list (= the .lproj folders that get built).
+  developmentLanguage: en
+  knownRegions: [en, ja, Base]
 
 packages:
   # ルートの Package.swift（MuzzlemeterKit）をローカルパッケージとして参照する。
@@ -61,10 +63,11 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: App/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Muzzlemeter
-        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "弾速計 AC6000 と接続して計測値を受け取るために Bluetooth を使用します。"
-        # 用途説明はビルド設定に日本語（開発言語）を置き、各言語の文言は
-        # Resources/<lang>.lproj/InfoPlist.strings が実行時に差し替える。
-        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "計測した場所の気温・湿度・気圧を記録するために、セッションの開始時に一度だけ現在地を使用します。"
+        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "Used to connect to the AC6000 chronograph and receive its measurements."
+        # The usage descriptions carry the development language (English) in the build
+        # settings; Resources/<lang>.lproj/InfoPlist.strings substitutes the wording of
+        # each shipped language at runtime.
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Used once when a session starts, to record the temperature, humidity and pressure where you are shooting."
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"

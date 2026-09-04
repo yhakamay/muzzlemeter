@@ -5,8 +5,8 @@
 	<!-- 残りのキーは GENERATE_INFOPLIST_FILE と INFOPLIST_KEY_* から合成される。 -->
 	<key>CFBundleLocalizations</key>
 	<array>
-		<string>ja</string>
 		<string>en</string>
+		<string>ja</string>
 	</array>
 	<key>WKWatchOnly</key>
 	<false/>
