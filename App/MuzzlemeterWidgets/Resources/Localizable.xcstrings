@@ -15,6 +15,12 @@
             "state": "translated",
             "value": " %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %@"
+          }
         }
       }
     },
@@ -28,6 +34,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ J"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ J"
@@ -49,6 +61,12 @@
             "state": "translated",
             "value": "%lld 発 · 平均"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 發 · 平均"
+          }
         }
       }
     },
@@ -62,6 +80,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "—"
@@ -83,21 +107,33 @@
             "state": "translated",
             "value": "まだ記録がありません"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無紀錄"
+          }
         }
       }
     },
     "余裕": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Headroom"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "余裕"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Headroom"
+            "value": "餘裕"
           }
         }
       }
@@ -112,6 +148,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均 %@"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "平均 %@"
@@ -133,6 +175,12 @@
             "state": "translated",
             "value": "平均 %@ %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均 %@ %@"
+          }
         }
       }
     },
@@ -149,6 +197,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均弾速 · %lld 発"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均初速 · %lld 發"
           }
         }
       }
@@ -167,21 +221,33 @@
             "state": "translated",
             "value": "最新のセッション"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新紀錄"
+          }
         }
       }
     },
     "注意": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "注意"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Close"
+            "value": "接近"
           }
         }
       }
@@ -200,21 +266,33 @@
             "state": "translated",
             "value": "直近に締めたセッションの発数と平均弾速を表示します。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示最近結束的那筆紀錄的發數與平均初速。"
+          }
         }
       }
     },
     "超過": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "超過"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Over"
+            "value": "超標"
           }
         }
       }
@@ -232,6 +310,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "超過 %lld 発"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超標 %lld 發"
           }
         }
       }

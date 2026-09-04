@@ -7,6 +7,7 @@
 	<array>
 		<string>en</string>
 		<string>ja</string>
+		<string>zh-Hant</string>
 	</array>
 	<key>WKWatchOnly</key>
 	<false/>

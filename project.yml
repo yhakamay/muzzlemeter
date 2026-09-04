@@ -15,7 +15,7 @@ options:
   # user's preferred languages is shipped.
   # knownRegions is the project's known region list (= the .lproj folders that get built).
   developmentLanguage: en
-  knownRegions: [en, ja, Base]
+  knownRegions: [en, ja, zh-Hant, Base]
 
 packages:
   # ルートの Package.swift（MuzzlemeterKit）をローカルパッケージとして参照する。

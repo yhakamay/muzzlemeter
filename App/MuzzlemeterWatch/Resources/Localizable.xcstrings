@@ -15,6 +15,12 @@
             "state": "translated",
             "value": "%@ J"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ J"
+          }
         }
       }
     },
@@ -31,6 +37,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "iPhone がそばにありません"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone 不在附近"
           }
         }
       }
@@ -49,6 +61,12 @@
             "state": "translated",
             "value": "iPhone 側アプリ未検出"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到 iPhone 上的 App"
+          }
         }
       }
     },
@@ -65,6 +83,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "まだ計測なし"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無計測"
           }
         }
       }
@@ -83,6 +107,12 @@
             "state": "translated",
             "value": "待機中"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待中"
+          }
         }
       }
     },
@@ -100,6 +130,12 @@
             "state": "translated",
             "value": "接続中"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已連線"
+          }
         }
       }
     },
@@ -116,6 +152,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "直近%lld発"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 %lld 發"
           }
         }
       }

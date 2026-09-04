@@ -3,13 +3,19 @@
   "strings": {
     " %@": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": " %@"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": " %@"
@@ -19,13 +25,19 @@
     },
     "%@ J": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ J"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ J"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ J"
@@ -47,6 +59,12 @@
             "state": "translated",
             "value": "%@ を外す"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除 %@"
+          }
         }
       }
     },
@@ -63,6 +81,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@、%@ ジュール"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@，%@ 焦耳"
           }
         }
       }
@@ -81,6 +105,12 @@
             "state": "translated",
             "value": "%@（この中で最も良い）"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（其中最佳）"
+          }
         }
       }
     },
@@ -98,18 +128,30 @@
             "state": "translated",
             "value": "%@（デモ再生）"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（示範播放）"
+          }
         }
       }
     },
     "%lld / 4": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld / 4"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld / 4"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld / 4"
@@ -131,6 +173,12 @@
             "state": "translated",
             "value": "%lld 台"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找到 %lld 台"
+          }
         }
       }
     },
@@ -148,21 +196,33 @@
             "state": "translated",
             "value": "%lld 発"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 發"
+          }
         }
       }
     },
     "%lld 発 · 平均": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld shots · mean"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld 発 · 平均"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld shots · mean"
+            "value": "%lld 發 · 平均"
           }
         }
       }
@@ -181,6 +241,12 @@
             "state": "translated",
             "value": "%lld 発が上限 %@ を越えました"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有 %lld 發超過上限 %@"
+          }
         }
       }
     },
@@ -197,6 +263,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 発を撃ち終わりました"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已完成 %lld 發"
           }
         }
       }
@@ -215,6 +287,12 @@
             "state": "translated",
             "value": "* 連射速度は本体からの報告が無いため、ショット間隔から推定した値です。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "* 主機未回報連發速度，此數值是由射擊間隔推估而得。"
+          }
         }
       }
     },
@@ -228,6 +306,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+SD"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "+SD"
@@ -249,18 +333,30 @@
             "state": "translated",
             "value": "0.25"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.25"
+          }
         }
       }
     },
     "0.98": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.98"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "0.98"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "0.98"
@@ -282,6 +378,12 @@
             "state": "translated",
             "value": "1 発ごとに、表示している単位のまま弾速を読み上げます。上限を越えた発では「超過」も読み上げます。読み上げは音楽と同じ経路で再生するため、**本体のサイレントスイッチでは消えません**（音楽は少し音量が下がるだけで止まりません）。手も目も離せないときに耳で確認するための機能なので、意図的にこうしてあります。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以畫面上顯示的單位朗讀每一發的初速，超過上限的發還會念出「超標」。語音走的是與音樂相同的播放路徑，因此**靜音開關無法將它靜音**（音樂只會降低音量，不會停止）。這是刻意的設計，讓你在手和眼都忙不過來時仍能用耳朵確認。"
+          }
         }
       }
     },
@@ -298,6 +400,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BB 重量"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BB 彈重量"
           }
         }
       }
@@ -316,6 +424,12 @@
             "state": "translated",
             "value": "BB 重量の既定値"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BB 彈重量預設值"
+          }
         }
       }
     },
@@ -332,6 +446,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BB 重量を変えると、このセッションの統計・ジュール・CSV がすべて計算し直されます。規制上限（%@）は計測時に適用していた値のままです。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "變更 BB 彈重量後，本次紀錄的統計、焦耳與 CSV 都會重新計算。能量上限（%@）維持計測當時套用的數值。"
           }
         }
       }
@@ -350,6 +470,12 @@
             "state": "translated",
             "value": "Bluetooth がオフです"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "藍牙已關閉"
+          }
         }
       }
     },
@@ -367,6 +493,12 @@
             "state": "translated",
             "value": "Bluetooth の使用が許可されていません"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muzzlemeter 未取得藍牙使用權限"
+          }
         }
       }
     },
@@ -380,6 +512,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CO2"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "CO2"
@@ -401,6 +539,12 @@
             "state": "translated",
             "value": "CSV で共有"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以 CSV 分享"
+          }
         }
       }
     },
@@ -417,6 +561,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "CSV 書き出し"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯出 CSV"
           }
         }
       }
@@ -435,6 +585,12 @@
             "state": "translated",
             "value": "ES（Extreme Spread）"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ES（極差）"
+          }
         }
       }
     },
@@ -452,6 +608,12 @@
             "state": "translated",
             "value": "Extreme Spread = 最大 − 最小。そのセッションで最も速かった弾と最も遅かった弾の差です。1 発の外れ値でも大きくなるので、SD と合わせて見ます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "極差 = 最高 − 最低：該筆紀錄中最快與最慢一發之間的差距。只要有一發極端值就會變大，因此要與 SD 一起看。"
+          }
         }
       }
     },
@@ -465,6 +627,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HFC134a"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "HFC134a"
@@ -486,6 +654,12 @@
             "state": "translated",
             "value": "HFC152a"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HFC152a"
+          }
         }
       }
     },
@@ -499,6 +673,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HPA"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "HPA"
@@ -520,6 +700,12 @@
             "state": "translated",
             "value": "HPA (エアタンク)"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HPA（氣瓶）"
+          }
         }
       }
     },
@@ -537,6 +723,12 @@
             "state": "translated",
             "value": "J（ジュール）"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "J（焦耳）"
+          }
         }
       }
     },
@@ -550,6 +742,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "Live"
@@ -571,6 +769,12 @@
             "state": "translated",
             "value": "Live 画面で 1 発撃つと自動的にセッションが始まります。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Live 畫面射出一發，紀錄就會自動開始。"
+          }
         }
       }
     },
@@ -587,6 +791,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "RPS / RPM（連射速度）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RPS / RPM（連發速度）"
           }
         }
       }
@@ -605,6 +815,12 @@
             "state": "translated",
             "value": "Rounds Per Second / Rounds Per Minute = 連射速度。1 秒あたり／1 分あたりの発射数です。単位は設定画面で切り替えられます。「*」が付いているときは、本体から連射速度の報告が無かったため、端末が受け取った時刻の間隔から推定した値です。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rounds Per Second / Rounds Per Minute，也就是每秒／每分鐘的發射數。單位可在設定畫面切換。標示「*」時，代表主機沒有回報連發速度，數值是由手機收到各發的時間間隔推估而得。"
+          }
         }
       }
     },
@@ -618,6 +834,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SD"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "SD"
@@ -639,6 +861,12 @@
             "state": "translated",
             "value": "SD（標準偏差）"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SD（標準差）"
+          }
         }
       }
     },
@@ -656,18 +884,30 @@
             "state": "translated",
             "value": "Standard Deviation = 標準偏差。弾速のばらつきの大きさです。標本標準偏差（n−1）で計算しています。値が小さいほど、毎回同じ速度で撃てている＝安定した個体です。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標準差：初速在每一發之間的離散程度，以樣本標準差（n−1）計算。數值越小，代表每一發的速度越一致，槍也越穩定。"
+          }
         }
       }
     },
     "compact": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "compact"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "compact"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "compact"
@@ -677,13 +917,19 @@
     },
     "expanded": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "expanded"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "expanded"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "expanded"
@@ -705,18 +951,30 @@
             "state": "translated",
             "value": "· 最大 %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "· 最高 %@"
+          }
         }
       }
     },
     "—": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "—"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "—"
@@ -738,6 +996,12 @@
             "state": "translated",
             "value": "℃"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "°C"
+          }
         }
       }
     },
@@ -751,6 +1015,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "−SD"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "−SD"
@@ -772,6 +1042,12 @@
             "state": "translated",
             "value": "、超過"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "，超標"
+          }
         }
       }
     },
@@ -788,6 +1064,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "「もう一度」は同じ条件でもう %lld 発。「閉じる」は目標発数を解除します。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「再一次」會以相同條件再打 %lld 發。「關閉」則解除目標發數。"
           }
         }
       }
@@ -806,6 +1088,12 @@
             "state": "translated",
             "value": "「ホップ強め」「新品」のような短い言葉を付けておくと、履歴で絞り込めます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加上「Hop 強」「全新」這類簡短字詞，之後就能在歷史中篩選。"
+          }
         }
       }
     },
@@ -822,6 +1110,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "あとで"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "稍後"
           }
         }
       }
@@ -840,6 +1134,12 @@
             "state": "translated",
             "value": "このセッションで撃った弾の初速の平均です。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次紀錄中各發初速的平均值。"
+          }
         }
       }
     },
@@ -856,6 +1156,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "このセッションで最も速かった 1 発の初速です。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次紀錄中最快一發的初速。"
           }
         }
       }
@@ -874,6 +1180,12 @@
             "state": "translated",
             "value": "このセッションで最も遅かった 1 発の初速です。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次紀錄中最慢一發的初速。"
+          }
         }
       }
     },
@@ -890,6 +1202,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "このセッションの CSV"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次紀錄的 CSV"
           }
         }
       }
@@ -908,6 +1226,12 @@
             "state": "translated",
             "value": "このセッションの操作"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紀錄操作"
+          }
         }
       }
     },
@@ -924,6 +1248,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "このプロファイルで 1 発でも撃つと、ここに推移が出ます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用這個設定檔射出任何一發後，這裡就會顯示變化趨勢。"
           }
         }
       }
@@ -942,6 +1272,12 @@
             "state": "translated",
             "value": "この機器を忘れる"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "忘記此裝置"
+          }
         }
       }
     },
@@ -958,6 +1294,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "この端末では Bluetooth Low Energy が使えません"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此裝置不支援 Bluetooth Low Energy"
           }
         }
       }
@@ -976,6 +1318,12 @@
             "state": "translated",
             "value": "この銃の設定"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這把槍的設定"
+          }
         }
       }
     },
@@ -992,6 +1340,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "この銃を登録したプロファイルが後で変わっても、このセッションの記録は変わりません。プロファイルがもう無い（本体ログからの取り込みなど）ときは、ここで直接直せます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即使日後登錄這把槍的設定檔有所變更，本次紀錄也不會改變。設定檔已經不存在時（例如從主機日誌匯入的紀錄），可以在這裡直接修改。"
           }
         }
       }
@@ -1010,6 +1364,12 @@
             "state": "translated",
             "value": "これまで"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前為止"
+          }
         }
       }
     },
@@ -1026,6 +1386,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべての銃"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有槍枝"
           }
         }
       }
@@ -1044,6 +1410,12 @@
             "state": "translated",
             "value": "すべて自動値に戻す"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部恢復為自動值"
+          }
         }
       }
     },
@@ -1060,6 +1432,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "その他"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他"
           }
         }
       }
@@ -1078,6 +1456,12 @@
             "state": "translated",
             "value": "ばらつきの要約"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "離散程度摘要"
+          }
         }
       }
     },
@@ -1094,6 +1478,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "まだセッションがありません"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無紀錄"
           }
         }
       }
@@ -1112,6 +1502,12 @@
             "state": "translated",
             "value": "まだタグがありません。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無標籤。"
+          }
         }
       }
     },
@@ -1128,6 +1524,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "まだ記録がありません"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無紀錄"
           }
         }
       }
@@ -1146,6 +1548,12 @@
             "state": "translated",
             "value": "もう一度"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再一次"
+          }
         }
       }
     },
@@ -1162,6 +1570,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "もう一度探す"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新搜尋"
           }
         }
       }
@@ -1180,6 +1594,12 @@
             "state": "translated",
             "value": "よく使っているタグから順に出ます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最常使用的標籤會排在前面。"
+          }
         }
       }
     },
@@ -1196,6 +1616,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "インナーバレル長"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "內管長度"
           }
         }
       }
@@ -1214,6 +1640,12 @@
             "state": "translated",
             "value": "エアコッキング"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手拉（空氣）"
+          }
         }
       }
     },
@@ -1230,6 +1662,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ガス"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "瓦斯"
           }
         }
       }
@@ -1248,6 +1686,12 @@
             "state": "translated",
             "value": "ガス種別"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "瓦斯種類"
+          }
         }
       }
     },
@@ -1264,6 +1708,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ガス種別の既定値"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "瓦斯種類預設值"
           }
         }
       }
@@ -1282,6 +1732,12 @@
             "state": "translated",
             "value": "キャンセル"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消"
+          }
         }
       }
     },
@@ -1298,6 +1754,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "グリーンガス"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "綠瓦斯"
           }
         }
       }
@@ -1316,6 +1778,12 @@
             "state": "translated",
             "value": "サービス探索に失敗: %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服務探索失敗：%@"
+          }
         }
       }
     },
@@ -1332,6 +1800,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "シミュレータ／`--replay` 起動のため、記録済みパケットのデモ再生で動作しています。実機の AC6000 に繋ぐときは、iPhone 実機で `--replay` を付けずに起動してください。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前以錄製封包的示範播放模式運作，因為執行環境是模擬器，或啟動時加上了 `--replay`。要連接真正的 AC6000 時，請在實機 iPhone 上不加 `--replay` 啟動。"
           }
         }
       }
@@ -1350,6 +1824,12 @@
             "state": "translated",
             "value": "ショット"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發數"
+          }
         }
       }
     },
@@ -1366,6 +1846,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ショットがありません"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無射擊資料"
           }
         }
       }
@@ -1384,6 +1870,12 @@
             "state": "translated",
             "value": "ジュールも読み上げる"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同時朗讀焦耳"
+          }
         }
       }
     },
@@ -1400,6 +1892,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "スキャンを開始できません: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法開始掃描：%@"
           }
         }
       }
@@ -1418,6 +1916,12 @@
             "state": "translated",
             "value": "スプリング、内部カスタム、注意点など"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "彈簧、內部改裝、注意事項等"
+          }
         }
       }
     },
@@ -1434,6 +1938,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "スプリング交換"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更換彈簧"
           }
         }
       }
@@ -1452,6 +1962,12 @@
             "state": "translated",
             "value": "セッション"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紀錄"
+          }
         }
       }
     },
@@ -1468,6 +1984,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッションは保存されました。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紀錄已儲存。"
           }
         }
       }
@@ -1486,6 +2008,12 @@
             "state": "translated",
             "value": "セッションを %@ にする"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次紀錄使用 %@"
+          }
         }
       }
     },
@@ -1502,6 +2030,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッションを開く"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟紀錄"
           }
         }
       }
@@ -1520,6 +2054,12 @@
             "state": "translated",
             "value": "セッション名"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紀錄名稱"
+          }
         }
       }
     },
@@ -1536,6 +2076,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッション数"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紀錄數"
           }
         }
       }
@@ -1554,6 +2100,12 @@
             "state": "translated",
             "value": "セッション条件"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紀錄條件"
+          }
         }
       }
     },
@@ -1570,6 +2122,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッション比較"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紀錄比較"
           }
         }
       }
@@ -1588,6 +2146,12 @@
             "state": "translated",
             "value": "セッション統計"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "紀錄統計"
+          }
         }
       }
     },
@@ -1604,6 +2168,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイトル・メモ・タグを検索"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋標題、備註與標籤"
           }
         }
       }
@@ -1622,6 +2192,12 @@
             "state": "translated",
             "value": "タグ"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標籤"
+          }
         }
       }
     },
@@ -1638,6 +2214,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "タグはまだありません。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無標籤。"
           }
         }
       }
@@ -1656,6 +2238,12 @@
             "state": "translated",
             "value": "タグを編集"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯標籤"
+          }
         }
       }
     },
@@ -1672,6 +2260,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "タグ・銃・検索語のどれかを外すと戻ります。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除標籤、槍枝或搜尋字詞，紀錄就會重新出現。"
           }
         }
       }
@@ -1690,6 +2284,12 @@
             "state": "translated",
             "value": "デモ再生では、記録済みの広告から作った擬似的な機器が 1 台だけ見えます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "示範播放中只會看到一台由錄製的廣播封包做出的模擬裝置。"
+          }
         }
       }
     },
@@ -1706,6 +2306,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ハンドシェイクを送信できません: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法送出交握訊息：%@"
           }
         }
       }
@@ -1724,6 +2330,12 @@
             "state": "translated",
             "value": "パワーソース"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動力來源"
+          }
         }
       }
     },
@@ -1740,6 +2352,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "フィールド"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "場地"
           }
         }
       }
@@ -1758,6 +2376,12 @@
             "state": "translated",
             "value": "プリセット"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預設"
+          }
         }
       }
     },
@@ -1774,6 +2398,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロファイル「%@」の既定値も、この条件で上書きします。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些條件也會一併覆寫「%@」設定檔的預設值。"
           }
         }
       }
@@ -1792,6 +2422,12 @@
             "state": "translated",
             "value": "プロファイルから読み込む"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從設定檔載入"
+          }
         }
       }
     },
@@ -1808,6 +2444,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロファイルがありません"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚無設定檔"
           }
         }
       }
@@ -1826,6 +2468,12 @@
             "state": "translated",
             "value": "プロファイルの既定値に戻す"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢復為設定檔預設值"
+          }
         }
       }
     },
@@ -1842,6 +2490,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロファイルの詳細"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定檔詳細資料"
           }
         }
       }
@@ -1860,6 +2514,12 @@
             "state": "translated",
             "value": "プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで編集、右スワイプで選択、左スワイプで削除。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定檔包含槍枝本身的資料，以及計測條件的預設值。點一下編輯，右滑選取，左滑刪除。"
+          }
         }
       }
     },
@@ -1876,6 +2536,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで詳細（推移と編集）、右スワイプで選択、左スワイプで削除。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定檔包含槍枝本身的資料，以及紀錄條件的預設值。點一下查看詳細資料（趨勢與編輯），右滑選取，左滑刪除。"
           }
         }
       }
@@ -1894,6 +2560,12 @@
             "state": "translated",
             "value": "プロファイルを作成"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建立設定檔"
+          }
         }
       }
     },
@@ -1910,6 +2582,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロファイルを編集"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯設定檔"
           }
         }
       }
@@ -1928,6 +2606,12 @@
             "state": "translated",
             "value": "プロファイルを追加"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增設定檔"
+          }
         }
       }
     },
@@ -1944,6 +2628,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ホップ"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hop"
           }
         }
       }
@@ -1962,6 +2652,12 @@
             "state": "translated",
             "value": "ホップ %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hop %@"
+          }
         }
       }
     },
@@ -1978,6 +2674,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ホップの既定値"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hop 預設值"
           }
         }
       }
@@ -1996,6 +2698,12 @@
             "state": "translated",
             "value": "ホップ弱め"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hop 弱"
+          }
         }
       }
     },
@@ -2013,21 +2721,33 @@
             "state": "translated",
             "value": "ホップ強め"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hop 強"
+          }
         }
       }
     },
     "ホーム画面ウィジェット（見本）": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home Screen widget (sample)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ホーム画面ウィジェット（見本）"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Home Screen widget (sample)"
+            "value": "主畫面小工具（範例）"
           }
         }
       }
@@ -2046,6 +2766,12 @@
             "state": "translated",
             "value": "マイガン"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的槍"
+          }
         }
       }
     },
@@ -2062,6 +2788,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "メモ"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "備註"
           }
         }
       }
@@ -2080,6 +2812,12 @@
             "state": "translated",
             "value": "メーカー"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "製造商"
+          }
         }
       }
     },
@@ -2096,6 +2834,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "メーカー / モデル"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "製造商 / 型號"
           }
         }
       }
@@ -2114,21 +2858,33 @@
             "state": "translated",
             "value": "モデル"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "型號"
+          }
         }
       }
     },
     "ロック画面 / Dynamic Island（見本）": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock Screen / Dynamic Island (sample)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ロック画面 / Dynamic Island（見本）"
           }
         },
-        "en": {
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lock Screen / Dynamic Island (sample)"
+            "value": "鎖定畫面 / 動態島（範例）"
           }
         }
       }
@@ -2143,6 +2899,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限 %@"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "上限 %@"
@@ -2164,6 +2926,12 @@
             "state": "translated",
             "value": "上限 / 余裕"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限 / 餘裕"
+          }
         }
       }
     },
@@ -2180,6 +2948,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "上限に近づいた 1 発（上限の 10 % 以内）と、上限を越えた 1 発を知らせます。音は本体のサイレントスイッチに従います。上限はプロファイルごとに設定できます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "當一發接近上限（在上限的 10 % 以內），或超過上限時通知你。音效依照裝置的靜音開關。上限可以為每個設定檔分別設定。"
           }
         }
       }
@@ -2198,6 +2972,12 @@
             "state": "translated",
             "value": "上限はプロファイルごとに決める規制値（日本の法令上限は 0.98 J）です。余裕は「上限 − そのセッションで最も高かった 1 発」で、残りどれだけ出せるかを表します。上限の 10 % 以内に入ると橙色の「注意」、上限に達すると赤色の「超過」になり、音とハプティクスで知らせます（設定で切り替え）。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限是每個設定檔各自設定的能量上限（日本的法規上限為 0.98 J）。餘裕是「上限 − 該筆紀錄中最高的一發」，代表還剩下多少空間。進入上限的 10 % 以內會變成橘色的「接近」，達到或超過上限則變成紅色的「超標」，並以音效與觸覺回饋提醒（可在設定中切換）。"
+          }
         }
       }
     },
@@ -2214,6 +2994,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "仕様"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "規格"
           }
         }
       }
@@ -2232,6 +3018,12 @@
             "state": "translated",
             "value": "他のセッションと比較"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "與其他紀錄比較"
+          }
         }
       }
     },
@@ -2248,6 +3040,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "付いているタグ"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本次紀錄的標籤"
           }
         }
       }
@@ -2266,6 +3064,12 @@
             "state": "translated",
             "value": "余裕"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "餘裕"
+          }
         }
       }
     },
@@ -2282,6 +3086,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "余裕 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "餘裕 %@"
           }
         }
       }
@@ -2300,6 +3110,12 @@
             "state": "translated",
             "value": "使う銃の名前と BB 重量を登録すると、1 発ごとのジュールを計算できます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登錄使用的槍名與 BB 彈重量後，Muzzlemeter 就能算出每一發的能量。"
+          }
         }
       }
     },
@@ -2313,6 +3129,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "使用"
@@ -2334,6 +3156,12 @@
             "state": "translated",
             "value": "例: 3 / 少し強め"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：3 / 稍微強一點"
+          }
         }
       }
     },
@@ -2350,6 +3178,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "例: HK416D"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：HK416D"
           }
         }
       }
@@ -2368,6 +3202,12 @@
             "state": "translated",
             "value": "例: ホップ強め"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：Hop 強"
+          }
         }
       }
     },
@@ -2384,6 +3224,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "例: 屋内レンジ、風なし"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：室內靶場、無風"
           }
         }
       }
@@ -2402,6 +3248,12 @@
             "state": "translated",
             "value": "例: 東京マルイ"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：東京丸井"
+          }
         }
       }
     },
@@ -2418,6 +3270,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "例: 次世代 M4"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：M4A1"
           }
         }
       }
@@ -2436,6 +3294,12 @@
             "state": "translated",
             "value": "保存"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存"
+          }
         }
       }
     },
@@ -2452,6 +3316,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "候補"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建議"
           }
         }
       }
@@ -2470,6 +3340,12 @@
             "state": "translated",
             "value": "値の受信に失敗: %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法接收數值：%@"
+          }
         }
       }
     },
@@ -2486,6 +3362,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全セッションの CSV"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有紀錄的 CSV"
           }
         }
       }
@@ -2504,6 +3386,12 @@
             "state": "translated",
             "value": "全件を CSV 書き出し"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部匯出為 CSV"
+          }
         }
       }
     },
@@ -2520,6 +3408,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "切断: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已中斷連線：%@"
           }
         }
       }
@@ -2538,6 +3432,12 @@
             "state": "translated",
             "value": "切断されました"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已中斷連線"
+          }
         }
       }
     },
@@ -2554,6 +3454,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "初速と BB 重量から計算した運動エネルギー（E = ½mv²）です。重量は選択中のプロファイルの値を使います。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由初速與 BB 彈重量計算出的動能（E = ½mv²）。重量取自選取中的設定檔。"
           }
         }
       }
@@ -2572,6 +3478,12 @@
             "state": "translated",
             "value": "前回接続"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次使用"
+          }
         }
       }
     },
@@ -2588,6 +3500,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "区分"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "類別"
           }
         }
       }
@@ -2606,6 +3524,12 @@
             "state": "translated",
             "value": "印は「小さいほうが良い」項目（SD・ES・超過発数）にだけ付きます。平均や最大は速ければ良いというものではないので、印を付けていません。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "標記只會出現在「越小越好」的項目（SD、ES、超標發數）。平均與最高並不是越快越好，因此不加標記。"
+          }
         }
       }
     },
@@ -2622,6 +3546,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "取り込む"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "匯入"
           }
         }
       }
@@ -2640,6 +3570,12 @@
             "state": "translated",
             "value": "合計発数"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "總發數"
+          }
         }
       }
     },
@@ -2656,6 +3592,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "同じタグは 2 つ付きません。大文字小文字と全角半角の違いは同じタグとして扱います。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一個標籤不會重複加入。大小寫與全形半形的差異會視為同一個標籤。"
           }
         }
       }
@@ -2674,6 +3616,12 @@
             "state": "translated",
             "value": "名前"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名稱"
+          }
         }
       }
     },
@@ -2691,6 +3639,12 @@
             "state": "translated",
             "value": "名前を変更"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新命名"
+          }
         }
       }
     },
@@ -2704,6 +3658,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "基本"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "基本"
@@ -2725,6 +3685,12 @@
             "state": "translated",
             "value": "場所"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地點"
+          }
         }
       }
     },
@@ -2741,6 +3707,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "変更はこのセッション全体に適用され、ジュールが計算し直されます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "變更會套用到整筆紀錄，焦耳也會重新計算。"
           }
         }
       }
@@ -2759,6 +3731,12 @@
             "state": "translated",
             "value": "変更はこのセッション全体に適用され、ジュールが計算し直されます。目標発数に届くと、その時点でセッションが自動的に締まります。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "變更會套用到整筆紀錄，焦耳也會重新計算。達到目標發數時，紀錄會在該時點自動結束。"
+          }
         }
       }
     },
@@ -2775,6 +3753,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "天気"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天氣"
           }
         }
       }
@@ -2793,6 +3777,12 @@
             "state": "translated",
             "value": "完了"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完成"
+          }
         }
       }
     },
@@ -2809,6 +3799,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "屋内"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "室內"
           }
         }
       }
@@ -2827,6 +3823,12 @@
             "state": "translated",
             "value": "屋内 / 屋外、風、日射など、数値にならない条件を残せます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可以記下室內／室外、風、日照等無法用數字表示的條件。"
+          }
         }
       }
     },
@@ -2844,6 +3846,12 @@
             "state": "translated",
             "value": "履歴"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "歷史"
+          }
         }
       }
     },
@@ -2857,6 +3865,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "平均"
@@ -2878,6 +3892,12 @@
             "state": "translated",
             "value": "平均 %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均 %@"
+          }
         }
       }
     },
@@ -2891,6 +3911,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均 %@ %@"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "平均 %@ %@"
@@ -2912,6 +3938,12 @@
             "state": "translated",
             "value": "平均 J"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均 J"
+          }
         }
       }
     },
@@ -2928,6 +3960,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均と SD は、このプロファイルで撃った全ショットをまとめて 1 つの標本として計算しています。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均與 SD 是把這個設定檔射出的所有發數合併成一個樣本來計算的。"
           }
         }
       }
@@ -2946,6 +3984,12 @@
             "state": "translated",
             "value": "平均弾速 · %lld 発"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均初速 · %lld 發"
+          }
         }
       }
     },
@@ -2962,6 +4006,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均弾速の推移"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均初速的變化"
           }
         }
       }
@@ -2980,6 +4030,12 @@
             "state": "translated",
             "value": "平均線を出す"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示平均線"
+          }
         }
       }
     },
@@ -2996,6 +4052,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "弾速"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "初速"
           }
         }
       }
@@ -3014,6 +4076,12 @@
             "state": "translated",
             "value": "弾速の重ね合わせ"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "初速疊圖"
+          }
         }
       }
     },
@@ -3031,6 +4099,12 @@
             "state": "translated",
             "value": "弾速を読み上げる"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "朗讀初速"
+          }
         }
       }
     },
@@ -3044,6 +4118,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "待機中"
@@ -3065,6 +4145,12 @@
             "state": "translated",
             "value": "必要なサービスが見つかりません"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到必要的 BLE 服務"
+          }
         }
       }
     },
@@ -3078,6 +4164,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手動"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "手動"
@@ -3099,6 +4191,12 @@
             "state": "translated",
             "value": "手動で上書き"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手動覆寫"
+          }
         }
       }
     },
@@ -3115,6 +4213,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "探しています…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜尋中…"
           }
         }
       }
@@ -3133,6 +4237,12 @@
             "state": "translated",
             "value": "接続"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連線"
+          }
         }
       }
     },
@@ -3149,6 +4259,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "接続に失敗しました: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連線失敗：%@"
           }
         }
       }
@@ -3167,6 +4283,12 @@
             "state": "translated",
             "value": "接続中"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連線中"
+          }
         }
       }
     },
@@ -3183,6 +4305,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "接続済み"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已連線"
           }
         }
       }
@@ -3201,6 +4329,12 @@
             "state": "translated",
             "value": "新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新的紀錄會以這些條件開始。也可以在 Live 畫面只針對該次做變更。"
+          }
         }
       }
     },
@@ -3217,6 +4351,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新しいセッションはこの条件で始まります。Live 画面から、その回だけ変えることもできます。目標発数を入れると、その発数に届いた時点でセッションが自動的に締まります（空欄なら手動）。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新的紀錄會以這些設定開始，也可以在 Live 畫面只針對該次做變更。設定目標發數後，達到該發數時紀錄會自動結束（留空則手動結束）。"
           }
         }
       }
@@ -3235,6 +4375,12 @@
             "state": "translated",
             "value": "新しいタグ"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新標籤"
+          }
         }
       }
     },
@@ -3251,6 +4397,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新品"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全新"
           }
         }
       }
@@ -3269,6 +4421,12 @@
             "state": "translated",
             "value": "新規プロファイル"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增設定檔"
+          }
         }
       }
     },
@@ -3285,6 +4443,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "既定値として保存"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存為預設值"
           }
         }
       }
@@ -3303,6 +4467,12 @@
             "state": "translated",
             "value": "日付"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期"
+          }
         }
       }
     },
@@ -3319,6 +4489,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "晴れ時々くもり"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "晴時多雲"
           }
         }
       }
@@ -3337,6 +4513,12 @@
             "state": "translated",
             "value": "書き込みに失敗: %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "寫入失敗：%@"
+          }
         }
       }
     },
@@ -3353,6 +4535,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "最初の 1 発でセッションが始まります"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "射出第一發後紀錄就會開始"
           }
         }
       }
@@ -3371,6 +4559,12 @@
             "state": "translated",
             "value": "最大"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最高"
+          }
         }
       }
     },
@@ -3387,6 +4581,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "最大 J"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最高 J"
           }
         }
       }
@@ -3405,6 +4605,12 @@
             "state": "translated",
             "value": "最小"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最低"
+          }
         }
       }
     },
@@ -3421,6 +4627,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "最後に接続した機器を覚えて、アプリを開いたら自動で繋ぎ直します。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記住上次連線的測速器，開啟 App 時自動重新連線。"
           }
         }
       }
@@ -3439,6 +4651,12 @@
             "state": "translated",
             "value": "最後のセッション"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最後一筆紀錄"
+          }
         }
       }
     },
@@ -3455,6 +4673,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "未対応の形式が出たところで読み出しを止めました。ここまでが読めたぶんです。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "讀取在遇到不支援的資料時停止了。以下是能夠讀取到的部分。"
           }
         }
       }
@@ -3473,6 +4697,12 @@
             "state": "translated",
             "value": "未対応の形式でした。ログを保存しました"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "格式不支援。已儲存日誌"
+          }
         }
       }
     },
@@ -3486,6 +4716,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未設定"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "未設定"
@@ -3507,6 +4743,12 @@
             "state": "translated",
             "value": "本体から応答がありませんでした"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "測速器沒有回應"
+          }
         }
       }
     },
@@ -3523,6 +4765,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "本体に未取込のログが %lld 件あります"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "測速器上有 %lld 筆尚未匯入的日誌"
           }
         }
       }
@@ -3541,6 +4789,12 @@
             "state": "translated",
             "value": "本体のログ形式に対応できていない可能性があります。あとでもう一度試せます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可能還不支援主機的日誌格式。稍後可以再試一次。"
+          }
         }
       }
     },
@@ -3557,6 +4811,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "本体の弾設定 %@ がセッションの %@ と違います"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "測速器設定為 %@，但本次紀錄使用 %@"
           }
         }
       }
@@ -3575,6 +4835,12 @@
             "state": "translated",
             "value": "本体の電源が切れました"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "測速器已關機"
+          }
         }
       }
     },
@@ -3591,6 +4857,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "本体ログ"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主機日誌"
           }
         }
       }
@@ -3609,6 +4881,12 @@
             "state": "translated",
             "value": "本体ログ %lld 件"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主機日誌（%lld 筆）"
+          }
         }
       }
     },
@@ -3625,6 +4903,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "本体ログ %lld 件を取り込みました"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已從主機日誌匯入 %lld 筆"
           }
         }
       }
@@ -3643,6 +4927,12 @@
             "state": "translated",
             "value": "本体ログを取り込み中 %lld / %lld"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匯入主機日誌 %lld / %lld"
+          }
         }
       }
     },
@@ -3659,6 +4949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "本体（クロノグラフ）内蔵のログから取り込みました。履歴に「本体ログ」タグで入っています。時刻は取り込んだ時刻です。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從測速器內建的日誌匯入。已加上「主機日誌」標籤存進歷史。時間是匯入的時間。"
           }
         }
       }
@@ -3677,6 +4973,12 @@
             "state": "translated",
             "value": "本体（クロノグラフ）内蔵のログから取り込みました。本体はログに計測時刻を記録しないため、取り込んだ時刻を表示しています。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從測速器內建的日誌匯入。主機不會在日誌中記錄計測時間，因此顯示的是匯入的時間。"
+          }
         }
       }
     },
@@ -3693,6 +4995,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "条件と銃を編集"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯條件與槍枝"
           }
         }
       }
@@ -3711,6 +5019,12 @@
             "state": "translated",
             "value": "条件に合うセッションがありません"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有符合條件的紀錄"
+          }
         }
       }
     },
@@ -3727,6 +5041,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "横軸は各セッションの何発目か。発数が違っても、立ち上がりからの動きかたを重ねて見られます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "橫軸是各筆紀錄中的第幾發，因此發數不同的紀錄也能從第一發開始疊在一起看。"
           }
         }
       }
@@ -3745,6 +5065,12 @@
             "state": "translated",
             "value": "機器の一覧を開きます"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟裝置列表"
+          }
         }
       }
     },
@@ -3761,6 +5087,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "機器を探しています"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在尋找測速器"
           }
         }
       }
@@ -3779,6 +5111,12 @@
             "state": "translated",
             "value": "機器を選ぶ"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇裝置"
+          }
         }
       }
     },
@@ -3795,6 +5133,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "次のセッション（最初の 1 発）はこの条件で始まります。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一筆紀錄（從第一發開始）會使用這些條件。"
           }
         }
       }
@@ -3813,6 +5157,12 @@
             "state": "translated",
             "value": "次のセッション（最初の 1 発）はこの条件で始まります。目標発数を入れると、その発数に届いた時点でセッションが自動的に締まります（空欄なら手動）。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下一筆紀錄（從第一發開始）會使用這些設定。設定目標發數後，達到該發數時紀錄會自動結束（留空則手動結束）。"
+          }
         }
       }
     },
@@ -3829,6 +5179,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "比べたいセッションを 2〜3 件選んでください（%lld / %lld）"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請選擇 2 至 3 筆要比較的紀錄（%lld / %lld）"
           }
         }
       }
@@ -3847,6 +5203,12 @@
             "state": "translated",
             "value": "比べているセッション"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較中的紀錄"
+          }
         }
       }
     },
@@ -3863,6 +5225,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "比べられるセッションが他にありません。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有其他可以比較的紀錄。"
           }
         }
       }
@@ -3881,6 +5249,12 @@
             "state": "translated",
             "value": "比べる相手（最大 %lld 件）"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較對象（最多 %lld 筆）"
+          }
         }
       }
     },
@@ -3894,6 +5268,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "比較"
@@ -3915,6 +5295,12 @@
             "state": "translated",
             "value": "比較したセッションの CSV"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已比較紀錄的 CSV"
+          }
         }
       }
     },
@@ -3931,6 +5317,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "比較する"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較"
           }
         }
       }
@@ -3949,6 +5341,12 @@
             "state": "translated",
             "value": "比較のもと"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較基準紀錄"
+          }
         }
       }
     },
@@ -3965,6 +5363,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "気圧"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "氣壓"
           }
         }
       }
@@ -3983,6 +5387,12 @@
             "state": "translated",
             "value": "気温"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "氣溫"
+          }
         }
       }
     },
@@ -3999,6 +5409,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "気温が記録されているセッションが %lld 件しかありません。傾きを読み取るには %lld 件以上ほしいところです。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只有 %lld 筆紀錄有氣溫資料。要看出趨勢，最好有 %lld 筆以上。"
           }
         }
       }
@@ -4017,6 +5433,12 @@
             "state": "translated",
             "value": "気温が記録されているセッションだけを出しています。ガス銃は気温で初速が大きく動きます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只顯示有記錄氣溫的紀錄。瓦斯槍的初速會隨氣溫大幅變化。"
+          }
         }
       }
     },
@@ -4033,6 +5455,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "気温との関係"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "與氣溫的關係"
           }
         }
       }
@@ -4051,6 +5479,12 @@
             "state": "translated",
             "value": "気温と平均弾速の散布図"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "氣溫與平均初速散布圖"
+          }
         }
       }
     },
@@ -4067,6 +5501,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "注意"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接近"
           }
         }
       }
@@ -4085,6 +5525,12 @@
             "state": "translated",
             "value": "湿度"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "濕度"
+          }
         }
       }
     },
@@ -4098,6 +5544,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備中"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "準備中"
@@ -4119,6 +5571,12 @@
             "state": "translated",
             "value": "点が 1 セッションの平均、縦の線が ±SD（そのセッションのばらつき）です。点をタップするとそのセッションを開きます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每個點是一筆紀錄的平均，垂直線是 ±SD（該筆紀錄的離散程度）。點一下圓點即可開啟該筆紀錄。"
+          }
         }
       }
     },
@@ -4135,6 +5593,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無視"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "忽略"
           }
         }
       }
@@ -4153,6 +5617,12 @@
             "state": "translated",
             "value": "環境"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "環境條件"
+          }
         }
       }
     },
@@ -4169,6 +5639,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "環境の記録がありません。「編集」から手で入力できます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有環境條件的紀錄。可以點「編輯」手動輸入。"
           }
         }
       }
@@ -4187,6 +5663,12 @@
             "state": "translated",
             "value": "環境を編集"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯環境條件"
+          }
         }
       }
     },
@@ -4203,6 +5685,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "発"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發"
           }
         }
       }
@@ -4221,6 +5709,12 @@
             "state": "translated",
             "value": "発数"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "發數"
+          }
         }
       }
     },
@@ -4237,6 +5731,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "発目"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第幾發"
           }
         }
       }
@@ -4255,6 +5755,12 @@
             "state": "translated",
             "value": "目標 %lld 発"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標 %lld 發"
+          }
         }
       }
     },
@@ -4271,6 +5777,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "目標発数"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標發數"
           }
         }
       }
@@ -4289,6 +5801,12 @@
             "state": "translated",
             "value": "目標発数の進捗"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標發數進度"
+          }
         }
       }
     },
@@ -4305,6 +5823,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "直近 %lld 発"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 %lld 發"
           }
         }
       }
@@ -4323,6 +5847,12 @@
             "state": "translated",
             "value": "破棄する"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "捨棄"
+          }
         }
       }
     },
@@ -4339,6 +5869,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "空にすると、日時と銃名の自動タイトルに戻ります。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "留空即可恢復為日期與槍名的自動標題。"
           }
         }
       }
@@ -4357,6 +5893,12 @@
             "state": "translated",
             "value": "空欄にすると、その項目は自動取得した値に戻ります。薄い文字は自動値です。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將欄位留空，該項目就會恢復為自動取得的數值。淺色文字就是該數值。"
+          }
         }
       }
     },
@@ -4373,6 +5915,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "細い縦線が最小〜最大、太い帯が平均 ±SD、点が平均です。帯が細いほど安定しています。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "細的直線是最低到最高的範圍，粗的色帶是平均 ±SD，圓點是平均。色帶越細代表越穩定。"
           }
         }
       }
@@ -4391,6 +5939,12 @@
             "state": "translated",
             "value": "終了して保存"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束並儲存"
+          }
         }
       }
     },
@@ -4407,6 +5961,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "絞り込みを解除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除篩選"
           }
         }
       }
@@ -4425,6 +5985,12 @@
             "state": "translated",
             "value": "絞り込んだセッションの CSV"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "篩選後紀錄的 CSV"
+          }
         }
       }
     },
@@ -4442,6 +6008,12 @@
             "state": "translated",
             "value": "絞り込んだ結果を CSV 書き出し"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將篩選結果匯出為 CSV"
+          }
         }
       }
     },
@@ -4455,6 +6027,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "統計"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "統計"
@@ -4476,6 +6054,12 @@
             "state": "translated",
             "value": "統計の見かた"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如何解讀這些統計"
+          }
         }
       }
     },
@@ -4493,6 +6077,12 @@
             "state": "translated",
             "value": "編集"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯"
+          }
         }
       }
     },
@@ -4506,6 +6096,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "自動"
@@ -4527,6 +6123,12 @@
             "state": "translated",
             "value": "自動再接続"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動重新連線"
+          }
         }
       }
     },
@@ -4543,6 +6145,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自由入力"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自行輸入"
           }
         }
       }
@@ -4561,6 +6169,12 @@
             "state": "translated",
             "value": "表示単位"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "單位"
+          }
         }
       }
     },
@@ -4577,6 +6191,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "見つかった機器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找到的裝置"
           }
         }
       }
@@ -4595,6 +6215,12 @@
             "state": "translated",
             "value": "見つかっていません"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未找到"
+          }
         }
       }
     },
@@ -4611,6 +6237,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "見本の場所"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "範例地點"
           }
         }
       }
@@ -4629,6 +6261,12 @@
             "state": "translated",
             "value": "規制上限"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "能量上限"
+          }
         }
       }
     },
@@ -4645,6 +6283,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "規制上限と余裕"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "能量上限與餘裕"
           }
         }
       }
@@ -4663,6 +6307,12 @@
             "state": "translated",
             "value": "規制上限の通知"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "能量上限提醒"
+          }
         }
       }
     },
@@ -4679,6 +6329,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "規制上限は日本の法令上限 0.98 J が既定です。フィールド独自の上限があるときは、その値に変えられます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "能量上限預設為日本的法規上限 0.98 J。如果場地有自己的上限，可以改成該數值。"
           }
         }
       }
@@ -4697,6 +6353,12 @@
             "state": "translated",
             "value": "解除"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除"
+          }
         }
       }
     },
@@ -4713,6 +6375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "計測に使うプロファイル"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "計測使用的設定檔"
           }
         }
       }
@@ -4731,6 +6399,12 @@
             "state": "translated",
             "value": "計測の既定値"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "計測預設值"
+          }
         }
       }
     },
@@ -4744,6 +6418,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "設定"
@@ -4765,6 +6445,12 @@
             "state": "translated",
             "value": "読み上げ"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語音朗讀"
+          }
         }
       }
     },
@@ -4781,6 +6467,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "読み上げの速さ"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "朗讀速度"
           }
         }
       }
@@ -4799,6 +6491,12 @@
             "state": "translated",
             "value": "読めたぶんだけ履歴に保存しました。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只有能夠讀取的資料已存入歷史。"
+          }
         }
       }
     },
@@ -4815,6 +6513,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "読めたぶんは履歴に、生データは %@ に保存しました。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可讀取的資料已存入歷史，原始資料已儲存至 %@。"
           }
         }
       }
@@ -4833,6 +6537,12 @@
             "state": "translated",
             "value": "購読に失敗: %@"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "訂閱失敗：%@"
+          }
         }
       }
     },
@@ -4849,6 +6559,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "購読に失敗しました: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法訂閱：%@"
           }
         }
       }
@@ -4867,6 +6583,12 @@
             "state": "translated",
             "value": "超過"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超標"
+          }
         }
       }
     },
@@ -4883,6 +6605,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "超過 %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超標 %@"
           }
         }
       }
@@ -4901,6 +6629,12 @@
             "state": "translated",
             "value": "超過 %lld 発"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超標 %lld 發"
+          }
         }
       }
     },
@@ -4917,6 +6651,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "超過時のハプティクス"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超標時的觸覺回饋"
           }
         }
       }
@@ -4935,6 +6675,12 @@
             "state": "translated",
             "value": "超過時の音"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超標時的音效"
+          }
         }
       }
     },
@@ -4951,6 +6697,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "超過発数"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "超標發數"
           }
         }
       }
@@ -4969,6 +6721,12 @@
             "state": "translated",
             "value": "追加"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新增"
+          }
         }
       }
     },
@@ -4985,6 +6743,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "速度"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "初速"
           }
         }
       }
@@ -5003,6 +6767,12 @@
             "state": "translated",
             "value": "連射速度"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連發速度"
+          }
         }
       }
     },
@@ -5016,6 +6786,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "進行中"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "進行中"
@@ -5037,6 +6813,12 @@
             "state": "translated",
             "value": "選ぶと、名前・メーカー / モデル・インナーバレル長・区分をそのプロファイルの値で上書きします。BB 重量やガス種別、下のセッション条件は変わりません。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇後會以該設定檔的數值覆寫名稱、製造商 / 型號、內管長度與類別。BB 彈重量、瓦斯種類，以及下方的紀錄條件不會變更。"
+          }
         }
       }
     },
@@ -5050,6 +6832,12 @@
           }
         },
         "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重量"
+          }
+        },
+        "zh-Hant": {
           "stringUnit": {
             "state": "translated",
             "value": "重量"
@@ -5071,6 +6859,12 @@
             "state": "translated",
             "value": "銃"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "槍"
+          }
         }
       }
     },
@@ -5087,6 +6881,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "銃プロファイル"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "槍枝設定檔"
           }
         }
       }
@@ -5105,6 +6905,12 @@
             "state": "translated",
             "value": "鍵ハンドシェイク（0x4B）に応答がありません。本体の電源を入れ直すか、本体の電源ボタンを押してペアリングを許可してください。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金鑰交握（0x4B）沒有回應。請將測速器關機再開機，或按下主機的電源鍵以允許配對。"
+          }
         }
       }
     },
@@ -5121,6 +6927,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "閉じる"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉"
           }
         }
       }
@@ -5139,6 +6951,12 @@
             "state": "translated",
             "value": "電動"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電動（AEG）"
+          }
         }
       }
     },
@@ -5155,6 +6973,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電波が強いほど近くにあります。前回つないだ機器には印が付きます。タップするとその機器に繋ぎ直します。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "訊號越強代表裝置越近。上次連線過的裝置會有標記。點一下裝置即可重新連線。"
           }
         }
       }
@@ -5173,6 +6997,12 @@
             "state": "translated",
             "value": "電波強度"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "訊號強度"
+          }
         }
       }
     },
@@ -5190,6 +7020,12 @@
             "state": "translated",
             "value": "項目名をタップすると説明が出ます。"
           }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "點一下項目名稱即可看到說明。"
+          }
         }
       }
     },
@@ -5206,6 +7042,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "駆動方式は気温での初速の動きかたが違うので、後から見返すときの手掛かりになります。ガス種別はセッションごとに変えられます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不同的動力來源對氣溫的反應不同，日後回頭檢視資料時會是個線索。瓦斯種類可以每筆紀錄分別設定。"
           }
         }
       }

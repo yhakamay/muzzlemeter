@@ -8,6 +8,7 @@
 	<array>
 		<string>en</string>
 		<string>ja</string>
+		<string>zh-Hant</string>
 	</array>
 	<!-- App Store validation (ITMS-90713) wants CFBundleIconName at the top level.
 	     actool only writes it nested under CFBundleIcons, so declare it here; the
