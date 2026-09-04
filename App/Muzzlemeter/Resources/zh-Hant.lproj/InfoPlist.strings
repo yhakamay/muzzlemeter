@@ -1,3 +1,3 @@
 /* Why the app needs location: only to look up the weather where you are shooting. */
-"NSLocationWhenInUseUsageDescription" = "在每次紀錄開始時使用一次目前位置，以記錄該地點的氣溫、濕度與氣壓。";
-"NSBluetoothAlwaysUsageDescription" = "用於連接 AC6000 測速器並接收其計測數值。";
+"NSLocationWhenInUseUsageDescription" = "在每筆紀錄開始時使用一次目前位置，以記錄該地點的氣溫、濕度與氣壓。";
+"NSBluetoothAlwaysUsageDescription" = "用於連接 AC6000 測速器並接收測得的初速。";

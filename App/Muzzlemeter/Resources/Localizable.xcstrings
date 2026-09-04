@@ -291,7 +291,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "* 主機未回報連發速度，此數值是由射擊間隔推估而得。"
+            "value": "* 測速器未回報射速，此數值是由射擊間隔推估而得。"
           }
         }
       }
@@ -405,7 +405,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "BB 彈重量"
+            "value": "BB 彈重"
           }
         }
       }
@@ -428,7 +428,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "BB 彈重量預設值"
+            "value": "BB 彈重預設值"
           }
         }
       }
@@ -451,7 +451,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "變更 BB 彈重量後，本次紀錄的統計、焦耳與 CSV 都會重新計算。能量上限（%@）維持計測當時套用的數值。"
+            "value": "變更 BB 彈重後，本次紀錄的統計、焦耳與 CSV 都會重新計算。動能上限（%@）維持測量當時套用的數值。"
           }
         }
       }
@@ -589,7 +589,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "ES（極差）"
+            "value": "ES（全距）"
           }
         }
       }
@@ -612,7 +612,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "極差 = 最高 − 最低：該筆紀錄中最快與最慢一發之間的差距。只要有一發極端值就會變大，因此要與 SD 一起看。"
+            "value": "全距 = 最高 − 最低：該筆紀錄中最快與最慢一發之間的差距。只要有一發極端值就會變大，因此要與 SD 一起看。"
           }
         }
       }
@@ -796,7 +796,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "RPS / RPM（連發速度）"
+            "value": "RPS / RPM（射速）"
           }
         }
       }
@@ -819,7 +819,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rounds Per Second / Rounds Per Minute，也就是每秒／每分鐘的發射數。單位可在設定畫面切換。標示「*」時，代表主機沒有回報連發速度，數值是由手機收到各發的時間間隔推估而得。"
+            "value": "Rounds Per Second / Rounds Per Minute，也就是每秒／每分鐘的發射數。單位可在設定畫面切換。標示「*」時，代表測速器沒有回報射速，數值是由手機收到各發的時間間隔推估而得。"
           }
         }
       }
@@ -1345,7 +1345,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "即使日後登錄這把槍的設定檔有所變更，本次紀錄也不會改變。設定檔已經不存在時（例如從主機日誌匯入的紀錄），可以在這裡直接修改。"
+            "value": "即使日後這把槍的設定檔有所變更，本次紀錄也不會改變。設定檔已經不存在時（例如從測速器日誌匯入的紀錄），可以在這裡直接修改。"
           }
         }
       }
@@ -1644,7 +1644,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "手拉（空氣）"
+            "value": "手拉空氣"
           }
         }
       }
@@ -2518,7 +2518,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定檔包含槍枝本身的資料，以及計測條件的預設值。點一下編輯，右滑選取，左滑刪除。"
+            "value": "設定檔包含槍枝本身的資料，以及測量條件的預設值。點一下編輯，右滑選取，左滑刪除。"
           }
         }
       }
@@ -2816,7 +2816,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "製造商"
+            "value": "廠牌"
           }
         }
       }
@@ -2839,7 +2839,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "製造商 / 型號"
+            "value": "廠牌 / 型號"
           }
         }
       }
@@ -2930,7 +2930,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "上限 / 餘裕"
+            "value": "上限 / 餘量"
           }
         }
       }
@@ -2976,7 +2976,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "上限是每個設定檔各自設定的能量上限（日本的法規上限為 0.98 J）。餘裕是「上限 − 該筆紀錄中最高的一發」，代表還剩下多少空間。進入上限的 10 % 以內會變成橘色的「接近」，達到或超過上限則變成紅色的「超標」，並以音效與觸覺回饋提醒（可在設定中切換）。"
+            "value": "上限是每個設定檔各自設定的動能上限（日本的法規上限為 0.98 J）。餘量是「上限 − 該筆紀錄中最高的一發」，代表還剩下多少空間。進入上限的 10 % 以內會變成橘色的「接近」，達到或超過上限則變成紅色的「超標」，並以音效與觸覺回饋提醒（可在設定中切換）。"
           }
         }
       }
@@ -3068,7 +3068,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "餘裕"
+            "value": "正常"
           }
         }
       }
@@ -3091,7 +3091,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "餘裕 %@"
+            "value": "餘量 %@"
           }
         }
       }
@@ -3114,7 +3114,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "登錄使用的槍名與 BB 彈重量後，Muzzlemeter 就能算出每一發的能量。"
+            "value": "設定好槍名與 BB 彈重之後，Muzzlemeter 就能算出每一發的動能。"
           }
         }
       }
@@ -3252,7 +3252,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "例：東京丸井"
+            "value": "例：馬牌 MARUI"
           }
         }
       }
@@ -3275,7 +3275,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "例：M4A1"
+            "value": "例：次世代 M4"
           }
         }
       }
@@ -3459,7 +3459,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "由初速與 BB 彈重量計算出的動能（E = ½mv²）。重量取自選取中的設定檔。"
+            "value": "由初速與 BB 彈重計算出的動能（E = ½mv²）。彈重取自選取中的設定檔。"
           }
         }
       }
@@ -3482,7 +3482,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "上次使用"
+            "value": "上次連線"
           }
         }
       }
@@ -4793,7 +4793,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "可能還不支援主機的日誌格式。稍後可以再試一次。"
+            "value": "可能還不支援測速器的日誌格式。稍後可以再試一次。"
           }
         }
       }
@@ -4862,7 +4862,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "主機日誌"
+            "value": "測速器日誌"
           }
         }
       }
@@ -4885,7 +4885,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "主機日誌（%lld 筆）"
+            "value": "測速器日誌（%lld 筆）"
           }
         }
       }
@@ -4908,7 +4908,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "已從主機日誌匯入 %lld 筆"
+            "value": "已從測速器日誌匯入 %lld 筆"
           }
         }
       }
@@ -4931,7 +4931,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "正在匯入主機日誌 %lld / %lld"
+            "value": "正在匯入測速器日誌 %lld / %lld"
           }
         }
       }
@@ -4954,7 +4954,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從測速器內建的日誌匯入。已加上「主機日誌」標籤存進歷史。時間是匯入的時間。"
+            "value": "從測速器內建的日誌匯入。已加上「測速器日誌」標籤存進歷史。時間是匯入的時間。"
           }
         }
       }
@@ -4977,7 +4977,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從測速器內建的日誌匯入。主機不會在日誌中記錄計測時間，因此顯示的是匯入的時間。"
+            "value": "從測速器內建的日誌匯入。測速器不會在日誌中記錄測量時間，因此顯示的是匯入的時間。"
           }
         }
       }
@@ -6265,7 +6265,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "能量上限"
+            "value": "動能上限"
           }
         }
       }
@@ -6288,7 +6288,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "能量上限與餘裕"
+            "value": "動能上限與餘量"
           }
         }
       }
@@ -6311,7 +6311,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "能量上限提醒"
+            "value": "動能上限提醒"
           }
         }
       }
@@ -6334,7 +6334,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "能量上限預設為日本的法規上限 0.98 J。如果場地有自己的上限，可以改成該數值。"
+            "value": "動能上限預設為日本的法規上限 0.98 J。如果場地有自己的上限，可以改成該數值。"
           }
         }
       }
@@ -6380,7 +6380,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "計測使用的設定檔"
+            "value": "測量使用的設定檔"
           }
         }
       }
@@ -6403,7 +6403,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "計測預設值"
+            "value": "測量預設值"
           }
         }
       }
@@ -6771,7 +6771,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "連發速度"
+            "value": "射速"
           }
         }
       }
@@ -6817,7 +6817,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇後會以該設定檔的數值覆寫名稱、製造商 / 型號、內管長度與類別。BB 彈重量、瓦斯種類，以及下方的紀錄條件不會變更。"
+            "value": "選擇後會以該設定檔的數值覆寫名稱、廠牌 / 型號、內管長度與類別。BB 彈重、瓦斯種類，以及下方的紀錄條件不會變更。"
           }
         }
       }
@@ -6909,7 +6909,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "金鑰交握（0x4B）沒有回應。請將測速器關機再開機，或按下主機的電源鍵以允許配對。"
+            "value": "金鑰交握（0x4B）沒有回應。請將測速器關機再開機，或按下測速器的電源鍵以允許配對。"
           }
         }
       }
@@ -6955,7 +6955,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "電動（AEG）"
+            "value": "電動"
           }
         }
       }
