@@ -71,6 +71,10 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         # ロック画面 / Dynamic Island のライブアクティビティを許可する（Round E）。
         INFOPLIST_KEY_NSSupportsLiveActivities: YES
+        # The app ships no encryption of its own (only HTTPS/WeatherKit and the
+        # standard OS crypto, which are exempt). Declaring this here answers the
+        # export-compliance question once, instead of per TestFlight build.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         # App icon lives in App/Muzzlemeter/Resources/Assets.xcassets.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
