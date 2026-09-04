@@ -71,6 +71,8 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         # ロック画面 / Dynamic Island のライブアクティビティを許可する（Round E）。
         INFOPLIST_KEY_NSSupportsLiveActivities: YES
+        # App icon lives in App/Muzzlemeter/Resources/Assets.xcassets.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   MuzzlemeterWidgets:
     type: app-extension
@@ -123,6 +125,8 @@ targets:
         INFOPLIST_KEY_WKApplication: YES
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.yhakamay.muzzlemeter
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
+        # watchOS needs its own icon set; it does not inherit the iPhone app's.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SKIP_INSTALL: YES
 
 schemes:

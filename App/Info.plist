@@ -9,5 +9,10 @@
 		<string>ja</string>
 		<string>en</string>
 	</array>
+	<!-- App Store validation (ITMS-90713) wants CFBundleIconName at the top level.
+	     actool only writes it nested under CFBundleIcons, so declare it here; the
+	     value is the app icon set's name in App/Muzzlemeter/Resources/Assets.xcassets. -->
+	<key>CFBundleIconName</key>
+	<string>AppIcon</string>
 </dict>
 </plist>
