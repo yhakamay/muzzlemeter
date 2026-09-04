@@ -49,6 +49,22 @@ enum ScreenshotSupport {
     /// 履歴タブで、見本のセッションの詳細を開いてタグ編集シートまで出す。
     static var opensTagEditor: Bool { flag("--demo-tag-editor") }
 
+    /// 履歴タブで、見本のセッションの詳細を開いて条件・銃の編集シートまで出す。
+    static var opensConditionsEditor: Bool { flag("--demo-edit-conditions") }
+
+    /// 目視確認用。見本のセッションの BB 重量をこの重量（g）へ直接上書きしてから開く。
+    ///
+    /// 「BB 重量を変えるとジュールが計算し直される」ことを、タップ操作なしで
+    /// 確認するための引数（シミュレータの UI 操作ツールが使えない環境向け）。
+    static var appliesBBWeightOverride: Double? { double(for: "--demo-apply-bb-weight") }
+
+    /// セッション詳細を開いたら、統計カード（ジュールが出る場所）までスクロールする。
+    ///
+    /// `--demo-apply-bb-weight` と組み合わせて使う。統計カードは画面の下の方にあるので、
+    /// タップでスクロールできない環境では、ここまで自動で送らないとジュールの変化が
+    /// スクリーンショットに写らない。
+    static var scrollsToStats: Bool { flag("--demo-scroll-stats") }
+
     /// 設定タブで、最初のプロファイルの詳細を開く。
     static var opensProfileDetail: Bool { flag("--demo-profile-detail") }
 
@@ -199,6 +215,60 @@ extension ScreenshotSupport {
             plan.insert(into: modelContext)
         }
         try? modelContext.save()
+        #endif
+    }
+
+    /// `--demo-edit-conditions` / `--demo-apply-bb-weight` 用に、終わったセッションを
+    /// 1 件専用に作って返す。
+    ///
+    /// 履歴に溜まった実データや、直前の再生でできたセッションから「それらしいもの」を
+    /// 拾おうとすると、**実行のたびに対象が揺れる**（再生の巻き戻し／前回落として
+    /// 閉じ忘れたセッション／過去の目視確認で作った見本が入り混じるため）。
+    /// 見本を専用に 1 件作って直接返すことで、目視確認を安定させる。
+    ///
+    /// `seedDemoSessionsIfNeeded` と違って**既存データの有無を問わない**（呼ばれたら
+    /// 毎回 1 件足す）。この 2 つの引数を目視確認するときは他の見本を必要としないので、
+    /// 履歴が汚れても実害が無い。
+    @MainActor
+    static func makeConditionsDemoSessionIfNeeded(modelContext: ModelContext) -> Session? {
+        #if DEBUG && targetEnvironment(simulator)
+        guard opensConditionsEditor || appliesBBWeightOverride != nil else { return nil }
+        let profile = GunProfile(
+            name: "マイガン",
+            bbWeightGrams: 0.25,
+            powerCategory: .electric,
+            manufacturer: "東京マルイ",
+            model: "HK416D"
+        )
+        modelContext.insert(profile)
+        let start = Date().addingTimeInterval(-600)
+        let velocities: [Double] = [90.2, 91.5, 89.8, 92.3, 90.9]
+        let session = Session(
+            startedAt: start,
+            endedAt: start.addingTimeInterval(Double(velocities.count) * 2),
+            title: "目視確認用セッション",
+            gunName: profile.name,
+            variables: profile.defaultVariables,
+            gunPowerCategory: profile.powerCategory,
+            energyLimitJoules: profile.energyLimitJoules,
+            gunManufacturer: profile.manufacturer,
+            gunModel: profile.model,
+            gunInnerBarrelLengthMm: profile.innerBarrelLengthMm
+        )
+        modelContext.insert(session)
+        for (index, velocity) in velocities.enumerated() {
+            let record = ShotRecord(
+                timestamp: start.addingTimeInterval(Double(index) * 2),
+                velocityMetersPerSecond: velocity,
+                session: session
+            )
+            modelContext.insert(record)
+            session.shots.append(record)
+        }
+        try? modelContext.save()
+        return session
+        #else
+        return nil
         #endif
     }
 }

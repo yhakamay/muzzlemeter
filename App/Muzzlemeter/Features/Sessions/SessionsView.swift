@@ -73,6 +73,21 @@ struct SessionsView: View {
                    let seeded = sessions.first(where: { $0.startedAt < ScreenshotSupport.launchedAt }) {
                     path.append(seeded)
                 }
+                // 履歴から「それらしい 1 件」を拾おうとすると、再生や前回の目視確認で
+                // 溜まったセッションが混ざって実行のたびに対象が揺れる。専用の見本を
+                // 1 件作って直接使う（`makeConditionsDemoSessionIfNeeded` 参照）。
+                if let demo = ScreenshotSupport.makeConditionsDemoSessionIfNeeded(modelContext: modelContext) {
+                    if let weight = ScreenshotSupport.appliesBBWeightOverride {
+                        // タップせずに「BB 重量を変えるとジュールが計算し直される」ことを
+                        // 見せるための引数。本番の編集経路（`ChronoService.saveEditedSession`）
+                        // をそのまま通す。
+                        var updated = demo.variables
+                        updated.bbWeightGrams = weight
+                        demo.variables = updated
+                        service.saveEditedSession(demo)
+                    }
+                    path.append(demo)
+                }
                 if ScreenshotSupport.opensComparison,
                    let request = SessionComparisonRequest(
                        // 起動と同時に再生が始まって作られるセッションは外す

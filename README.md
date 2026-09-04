@@ -466,6 +466,9 @@ xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
   --demo-seed-sessions \        # seed 5 sample sessions (only when the store is empty)
   --demo-compare \              # open the comparison screen for the last 3 sessions in the history tab
   --demo-tag-editor \           # open a sample session's detail and its tag editor sheet
+  --demo-edit-conditions \      # create a dedicated demo session and open its conditions/gun editor sheet
+  --demo-apply-bb-weight 0.32 \ # overwrite that demo session's BB weight directly, then open its detail
+  --demo-scroll-stats \         # scroll the session detail down to the stats card on open
   --demo-filter 屋内 \          # apply a tag filter to the history tab
   --demo-profile-detail \        # open the first profile's detail in the settings tab
   --demo-device-log 12 \         # make the mock device report "12 records in its internal log"
@@ -476,6 +479,19 @@ xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
 `--demo-seed-sessions` exists for screens that **only appear once multiple sessions have
 accumulated**, like comparison, tags, and trends. It does nothing if sessions already
 exist.
+
+`--demo-edit-conditions` and `--demo-apply-bb-weight <g>` exist for the finished-session
+"edit BB weight / gun info" sheet (`SessionConditionsEditor`). Both create one dedicated,
+finished demo session (`ScreenshotSupport.makeConditionsDemoSessionIfNeeded`) rather than
+picking "whatever looks like a sample session" out of the history — picking one that way
+turned out to drift between runs (a leftover unfinished session from a previous replay, an
+older visual-check sample, etc.), which made the screen's contents unpredictable. The
+simulator's UI automation tool is also unreliable in this environment, so instead of
+tapping through the sheet, `--demo-apply-bb-weight` drives the real edit path
+(`ChronoService.saveEditedSession`) directly and opens the session's detail already
+showing the recomputed joules. Add `--demo-scroll-stats` to also scroll straight to the
+stats card (further down the list), since the changed joules aren't visible without
+scrolling and there's no tap-driven way to scroll in this environment either.
 
 `--demo-device-log` exists for importing the device's internal log. The mock device (the
 `ReplayTransport` responder) answers `0x62` / `0x63`, so **the app side goes through the

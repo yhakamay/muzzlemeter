@@ -445,6 +445,25 @@ final class ChronoService {
         variables.normalized == (selectedProfile?.defaultVariables ?? SessionVariables()).normalized
     }
 
+    // MARK: - 過去のセッションを直す（Round D 続き）
+    //
+    // `variables` は「進行中 or 待機中」専用で、Live 画面が見ている 1 か所だけを指す。
+    // セッション詳細からは**任意の**（進行中とは限らない）セッションを直せる必要があるので、
+    // そちらは呼び出し側（`SessionConditionsEditor` / `SessionDetailView`）が `Session` を
+    // 直接書き換え、保存だけをここに任せる。対象がたまたま進行中のセッションと同じ実体
+    // だったときは、Live 画面が見ているキャッシュ（`stats`）も合わせて計算し直す。
+    // そうしないと、詳細画面で BB 重量を直しても Live 画面の数字が次の 1 発まで
+    // 古いままになってしまう。
+    //
+    // 参照の比較には `===` を使う（`selectedProfile` の didSet と同じ理由。値の中身が
+    // 同じでも別の実体なら別として扱いたいので、synthesized Equatable には頼らない）。
+    func saveEditedSession(_ session: Session) {
+        try? modelContext?.save()
+        if session === activeSession {
+            recomputeStats()
+        }
+    }
+
     // MARK: - 内部
 
     private enum Keys {

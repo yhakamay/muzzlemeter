@@ -319,6 +319,23 @@
         }
       }
     },
+    "BB 重量を変えると、このセッションの統計・ジュール・CSV がすべて計算し直されます。規制上限（%@）は計測時に適用していた値のままです。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changing the BB weight recalculates this session's stats, joules, and CSV. The regulation limit (%@) stays the value that was applied at the time of measurement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BB 重量を変えると、このセッションの統計・ジュール・CSV がすべて計算し直されます。規制上限（%@）は計測時に適用していた値のままです。"
+          }
+        }
+      }
+    },
     "Bluetooth がオフです": {
       "extractionState": "manual",
       "localizations": {
@@ -958,6 +975,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "この銃の設定"
+          }
+        }
+      }
+    },
+    "この銃を登録したプロファイルが後で変わっても、このセッションの記録は変わりません。プロファイルがもう無い（本体ログからの取り込みなど）ときは、ここで直接直せます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Even if the profile this gun was registered under changes later, this session's record won't change. If the profile no longer exists (e.g. an import from the device's internal log), you can correct it directly here."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この銃を登録したプロファイルが後で変わっても、このセッションの記録は変わりません。プロファイルがもう無い（本体ログからの取り込みなど）ときは、ここで直接直せます。"
           }
         }
       }
@@ -1723,6 +1757,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロファイル「%@」の既定値も、この条件で上書きします。"
+          }
+        }
+      }
+    },
+    "プロファイルから読み込む": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Load from a profile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイルから読み込む"
           }
         }
       }
@@ -3612,6 +3663,23 @@
         }
       }
     },
+    "条件と銃を編集": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit conditions and gun"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "条件と銃を編集"
+          }
+        }
+      }
+    },
     "条件に合うセッションがありません": {
       "extractionState": "manual",
       "localizations": {
@@ -4934,6 +5002,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "進行中"
+          }
+        }
+      }
+    },
+    "選ぶと、名前・メーカー / モデル・インナーバレル長・区分をそのプロファイルの値で上書きします。BB 重量やガス種別、下のセッション条件は変わりません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choosing one overwrites the name, manufacturer / model, inner barrel length, and category with that profile's values. It doesn't change the BB weight, gas type, or the session conditions below."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選ぶと、名前・メーカー / モデル・インナーバレル長・区分をそのプロファイルの値で上書きします。BB 重量やガス種別、下のセッション条件は変わりません。"
           }
         }
       }

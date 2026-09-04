@@ -13,173 +13,209 @@ struct SessionDetailView: View {
     @State private var isComparing = false
     // 目視確認用（Debug のシミュレータのみ）。起動引数からタグ編集シートまで開く。
     @State private var isEditingTags = ScreenshotSupport.opensTagEditor
+    /// 「銃」「セッション条件」を直すシート。BB 重量・ガス種別・ホップに加え、
+    /// 銃情報（プロファイルの再選択・直接編集）もここで一緒に扱う。
+    // 目視確認用（Debug のシミュレータのみ）。起動引数から条件編集シートまで開く。
+    @State private var isEditingConditions = ScreenshotSupport.opensConditionsEditor
 
     var body: some View {
         let shots = session.orderedShots
         let stats = session.stats
 
-        List {
-            Section("銃") {
-                LabeledContent("名前", value: session.gunName)
-                if let makeAndModel = session.gunMakeAndModel {
-                    LabeledContent("メーカー / モデル", value: makeAndModel)
-                }
-                if let category = session.gunPowerCategory {
-                    LabeledContent("パワーソース") {
-                        PowerCategoryBadge(category: category)
+        ScrollViewReader { proxy in
+            List {
+                Section {
+                    LabeledContent("名前", value: session.gunName)
+                    if let makeAndModel = session.gunMakeAndModel {
+                        LabeledContent("メーカー / モデル", value: makeAndModel)
                     }
-                }
-                if let barrel = session.gunInnerBarrelLengthMm {
-                    LabeledContent("インナーバレル長", value: "\(barrel) mm")
-                }
-            }
-
-            // 「その回の条件」。統計とジュールはすべてこの値で計算されているので、
-            // 銃の仕様とは別のまとまりとして、数字より先に読める位置に置く。
-            Section {
-                LabeledContent("BB 重量", value: GunProfile.weightLabel(session.bbWeightGrams))
-                if let gasType = session.gasType {
-                    LabeledContent("ガス種別", value: gasType.label)
-                }
-                if !session.hopSetting.isEmpty {
-                    LabeledContent("ホップ", value: session.hopSetting)
-                }
-                LabeledContent(
-                    "規制上限",
-                    value: GunProfile.energyLimitLabel(session.energyLimitJoules)
-                )
-            } header: {
-                HStack {
-                    Text("セッション条件")
-                    Spacer()
-                    // 一瞥用の 1 行。Live 画面のピル直下に出ているものと同じ書式にして、
-                    // 「あのとき見ていた条件」とそのまま突き合わせられるようにする。
-                    Text(verbatim: session.variablesSummary)
-                        .textCase(nil)
-                }
-            }
-
-            // タグは「条件」と「環境」の間。どちらでも表せない、その回の文脈
-            // （何を試したか・どこで撃ったか）を置く場所として並びを揃える。
-            Section {
-                if session.tags.isEmpty {
-                    Text("タグはまだありません。")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                } else {
-                    TagChipRow(tags: session.tags)
-                        .padding(.vertical, 2)
-                }
-                Button("タグを編集", systemImage: "tag") { isEditingTags = true }
-            } header: {
-                Text("タグ")
-            } footer: {
-                Text("「ホップ強め」「新品」のような短い言葉を付けておくと、履歴で絞り込めます。")
-            }
-
-            SessionEnvironmentSection(session: session, isEditing: $isEditingEnvironment)
-
-            Section {
-                chart(shots: shots, stats: stats)
-                    .frame(height: 220)
-                    .listRowInsets(EdgeInsets(top: 12, leading: 8, bottom: 12, trailing: 16))
-            }
-
-            // StatsCard 自身が「セッション統計」の見出しを持っているので、
-            // Section 側に見出しを付けると同じ意味の行が 2 段重なる。
-            Section {
-                StatsCard(
-                    stats: stats,
-                    speedUnit: service.speedUnit,
-                    rateOfFireUnit: service.rateOfFireUnit,
-                    fallbackRateOfFireRPS: RateOfFire.estimateRPS(shots: session.domainShots),
-                    energyLimitJoules: session.energyLimitJoules,
-                    overLimitCount: EnergyLimit.overLimitCount(
-                        shots: session.domainShots,
-                        massGrams: session.bbWeightGrams,
-                        limitJoules: session.energyLimitJoules
-                    )
-                )
-                .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-                .listRowBackground(Color.clear)
-            }
-
-            Section("ショット") {
-                ForEach(Array(shots.enumerated()), id: \.element.persistentModelID) { index, shot in
-                    let margin = EnergyLimit.margin(
-                        joules: shot.joules(massGrams: session.bbWeightGrams),
-                        limitJoules: session.energyLimitJoules
-                    )
-                    HStack {
-                        Text(verbatim: "\(index + 1)")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.tertiary)
-                            .frame(width: 32, alignment: .leading)
-                        Text(service.speedUnit.formatted(metersPerSecond: shot.velocityMetersPerSecond))
-                            .font(.body.monospacedDigit())
-                            .foregroundStyle(margin.tint ?? .primary)
-                        if margin.isOver {
-                            Image(systemName: margin.symbolName)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                                .accessibilityLabel(Text("超過"))
+                    if let category = session.gunPowerCategory {
+                        LabeledContent("パワーソース") {
+                            PowerCategoryBadge(category: category)
                         }
+                    }
+                    if let barrel = session.gunInnerBarrelLengthMm {
+                        LabeledContent("インナーバレル長", value: "\(barrel) mm")
+                    }
+                } header: {
+                    HStack {
+                        Text("銃")
                         Spacer()
-                        Text(JouleFormat.labeled(shot.joules(massGrams: session.bbWeightGrams)))
-                            .font(.callout.monospacedDigit())
-                            .foregroundStyle(margin.tint ?? .secondary)
-                        Text(shot.timestamp, format: .dateTime.hour().minute().second())
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.tertiary)
-                            .padding(.leading, 8)   // ジュール値と時刻がくっつかないように
+                        // 本体ログの取り込みは取り込み時点で選ばれていたプロファイルを
+                        // そのまま焼き込む。撃ったときと違う銃・BB 重量だったときに
+                        // 直せる場所が無いと直しようが無いので、ここに置く。
+                        Button("編集") { isEditingConditions = true }
+                            .font(.caption.weight(.semibold))
+                            .textCase(nil)
+                    }
+                }
+
+                // 「その回の条件」。統計とジュールはすべてこの値で計算されているので、
+                // 銃の仕様とは別のまとまりとして、数字より先に読める位置に置く。
+                Section {
+                    LabeledContent("BB 重量", value: GunProfile.weightLabel(session.bbWeightGrams))
+                    if let gasType = session.gasType {
+                        LabeledContent("ガス種別", value: gasType.label)
+                    }
+                    if !session.hopSetting.isEmpty {
+                        LabeledContent("ホップ", value: session.hopSetting)
+                    }
+                    LabeledContent(
+                        "規制上限",
+                        value: GunProfile.energyLimitLabel(session.energyLimitJoules)
+                    )
+                } header: {
+                    HStack {
+                        Text("セッション条件")
+                        Button("編集") { isEditingConditions = true }
+                            .font(.caption.weight(.semibold))
+                            .textCase(nil)
+                        Spacer()
+                        // 一瞥用の 1 行。Live 画面のピル直下に出ているものと同じ書式にして、
+                        // 「あのとき見ていた条件」とそのまま突き合わせられるようにする。
+                        Text(verbatim: session.variablesSummary)
+                            .textCase(nil)
+                    }
+                }
+
+                // タグは「条件」と「環境」の間。どちらでも表せない、その回の文脈
+                // （何を試したか・どこで撃ったか）を置く場所として並びを揃える。
+                Section {
+                    if session.tags.isEmpty {
+                        Text("タグはまだありません。")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        TagChipRow(tags: session.tags)
+                            .padding(.vertical, 2)
+                    }
+                    Button("タグを編集", systemImage: "tag") { isEditingTags = true }
+                } header: {
+                    Text("タグ")
+                } footer: {
+                    Text("「ホップ強め」「新品」のような短い言葉を付けておくと、履歴で絞り込めます。")
+                }
+
+                SessionEnvironmentSection(session: session, isEditing: $isEditingEnvironment)
+
+                Section {
+                    chart(shots: shots, stats: stats)
+                        .frame(height: 220)
+                        .listRowInsets(EdgeInsets(top: 12, leading: 8, bottom: 12, trailing: 16))
+                }
+
+                // StatsCard 自身が「セッション統計」の見出しを持っているので、
+                // Section 側に見出しを付けると同じ意味の行が 2 段重なる。
+                Section {
+                    StatsCard(
+                        stats: stats,
+                        speedUnit: service.speedUnit,
+                        rateOfFireUnit: service.rateOfFireUnit,
+                        fallbackRateOfFireRPS: RateOfFire.estimateRPS(shots: session.domainShots),
+                        energyLimitJoules: session.energyLimitJoules,
+                        overLimitCount: EnergyLimit.overLimitCount(
+                            shots: session.domainShots,
+                            massGrams: session.bbWeightGrams,
+                            limitJoules: session.energyLimitJoules
+                        )
+                    )
+                    .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+                    .listRowBackground(Color.clear)
+                }
+                .id(Self.statsAnchor)
+
+                Section("ショット") {
+                    ForEach(Array(shots.enumerated()), id: \.element.persistentModelID) { index, shot in
+                        let margin = EnergyLimit.margin(
+                            joules: shot.joules(massGrams: session.bbWeightGrams),
+                            limitJoules: session.energyLimitJoules
+                        )
+                        HStack {
+                            Text(verbatim: "\(index + 1)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.tertiary)
+                                .frame(width: 32, alignment: .leading)
+                            Text(service.speedUnit.formatted(metersPerSecond: shot.velocityMetersPerSecond))
+                                .font(.body.monospacedDigit())
+                                .foregroundStyle(margin.tint ?? .primary)
+                            if margin.isOver {
+                                Image(systemName: margin.symbolName)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                    .accessibilityLabel(Text("超過"))
+                            }
+                            Spacer()
+                            Text(JouleFormat.labeled(shot.joules(massGrams: session.bbWeightGrams)))
+                                .font(.callout.monospacedDigit())
+                                .foregroundStyle(margin.tint ?? .secondary)
+                            Text(shot.timestamp, format: .dateTime.hour().minute().second())
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.tertiary)
+                                .padding(.leading, 8)   // ジュール値と時刻がくっつかないように
+                        }
                     }
                 }
             }
-        }
-        .navigationTitle(session.displayTitle)
-        .navigationBarTitleDisplayMode(.inline)
-        .sessionRenameAlert(target: $renamingSession)
-        .sheet(isPresented: $isEditingEnvironment) {
-            SessionEnvironmentEditor(session: session)
-        }
-        .sheet(isPresented: $isEditingTags) {
-            SessionTagEditor(session: session)
-        }
-        .sheet(isPresented: $isComparing) {
-            SessionComparisonPicker(base: session)
-                .environment(service)
-        }
-        .toolbar {
-            // 名前の変更と比較は「ときどき使う」操作なので、CSV（共有の標準アイコン）と
-            // 並べず 1 つのメニューに畳む。ツールバーに 3 つ並べると、押し間違いが増える。
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("名前を変更", systemImage: "pencil") {
-                        renamingSession = session
+            .navigationTitle(session.displayTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .sessionRenameAlert(target: $renamingSession)
+            .sheet(isPresented: $isEditingEnvironment) {
+                SessionEnvironmentEditor(session: session)
+            }
+            .sheet(isPresented: $isEditingConditions) {
+                SessionConditionsEditor(session: session)
+                    .environment(service)
+            }
+            .sheet(isPresented: $isEditingTags) {
+                SessionTagEditor(session: session)
+            }
+            .sheet(isPresented: $isComparing) {
+                SessionComparisonPicker(base: session)
+                    .environment(service)
+            }
+            .toolbar {
+                // 名前の変更と比較は「ときどき使う」操作なので、CSV（共有の標準アイコン）と
+                // 並べず 1 つのメニューに畳む。ツールバーに 3 つ並べると、押し間違いが増える。
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button("名前を変更", systemImage: "pencil") {
+                            renamingSession = session
+                        }
+                        Button("タグを編集", systemImage: "tag") {
+                            isEditingTags = true
+                        }
+                        Button("他のセッションと比較", systemImage: "chart.line.uptrend.xyaxis") {
+                            isComparing = true
+                        }
+                    } label: {
+                        Label("このセッションの操作", systemImage: "ellipsis.circle")
                     }
-                    Button("タグを編集", systemImage: "tag") {
-                        isEditingTags = true
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShareLink(
+                        item: CSVFile(
+                            name: CSVExporter.fileName(for: session),
+                            text: CSVExporter.csv(for: session)
+                        ),
+                        preview: SharePreview("このセッションの CSV")
+                    ) {
+                        Label("CSV 書き出し", systemImage: "square.and.arrow.up")
                     }
-                    Button("他のセッションと比較", systemImage: "chart.line.uptrend.xyaxis") {
-                        isComparing = true
-                    }
-                } label: {
-                    Label("このセッションの操作", systemImage: "ellipsis.circle")
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                ShareLink(
-                    item: CSVFile(
-                        name: CSVExporter.fileName(for: session),
-                        text: CSVExporter.csv(for: session)
-                    ),
-                    preview: SharePreview("このセッションの CSV")
-                ) {
-                    Label("CSV 書き出し", systemImage: "square.and.arrow.up")
+            .task {
+                // 目視確認用（Debug のシミュレータのみ）。BB 重量を直した直後、ジュールが
+                // 変わったこと自体を見せたい統計カードまでタップ無しでスクロールする
+                // （シミュレータの UI 操作ツールが使えない環境向け）。
+                if ScreenshotSupport.scrollsToStats {
+                    proxy.scrollTo(Self.statsAnchor, anchor: .top)
                 }
             }
         }
     }
+
+    /// 統計カードのセクションに付けた `id`。目視確認用のスクロール先。
+    private static let statsAnchor = "session-detail-stats"
 
     // MARK: - チャート
 
