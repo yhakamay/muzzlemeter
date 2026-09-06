@@ -38,8 +38,12 @@ licensed.
   temperature)
 - English / Japanese / Traditional Chinese (zh-Hant). English is the fallback for any
   other locale; the source string literals are Japanese and act as the catalog keys
-- A replay mode that lets you review the UI without the physical device (plays back a
-  real capture)
+- **Demo mode**: anyone can turn it on from Settings (or from the Live screen the first
+  time, before any chronograph has ever connected) and watch a synthetic airsoft session
+  run through the whole app without owning a chronograph. It is marked DEMO everywhere it
+  appears, and demo sessions can be deleted in one action
+- A replay mode for development that lets you review the UI without the physical device
+  (plays back a real capture)
 - Importing the log stored on the device itself (`0x62` / `0x63`, **confirmed on real
   hardware**. The log is volatile, so the app remembers how far it read into each
   device's log last time and reads only the difference)
@@ -75,6 +79,7 @@ roughly every 10 s after connecting). Don't treat "unexpected" as an error.
 | `Sources/MuzzlemeterKit/` | Domain / protocol / BLE abstractions (a library shared by iOS and macOS) |
 | `Sources/MuzzlemeterSniff/` | The macOS CLI: BLE scanning / GATT enumeration / packet dumping |
 | `Tests/MuzzlemeterKitTests/` | Tests written with Swift Testing |
+| `Tests/MuzzlemeterAppModelsTests/` | Tests for the app's SwiftData models (demo-session flagging and cleanup) against an in-memory store. `Package.swift` compiles `App/Muzzlemeter/Models/` a second time as the `MuzzlemeterAppModels` target purely so `swift test` can reach it; the app target links no such library and just compiles the same files itself |
 | `docs/PROTOCOL.md` | The reverse-engineering results (UUIDs, packet format, checksum) |
 | `tools/re/` | The working directory for protocol research; capture log storage (gitignored) |
 | `App/Muzzlemeter/` | The iOS app (SwiftUI + SwiftData) |
@@ -428,8 +433,14 @@ xcodebuild -project Muzzlemeter.xcodeproj -scheme Muzzlemeter \
 | Environment | Transport |
 |---|---|
 | Real iPhone | `CoreBluetoothTransport` (actually connects to the AC6000) |
-| Simulator | `ReplayTransport` (automatic, since there's no CoreBluetooth hardware) |
-| Real hardware + `--replay` | `ReplayTransport` |
+| Demo mode on (any build, any device) | `ReplayTransport` playing `MuzzlemeterKit.DemoScript` |
+| Simulator, Debug | `ReplayTransport` (automatic, since there's no CoreBluetooth hardware) |
+| Any build + `--replay` / `--replay-capture` | `ReplayTransport` |
+
+A **Release** build on the simulator does *not* replay automatically. It starts from the
+same "nothing connected yet" state a real first-run device does, which is exactly the
+state demo mode exists for — and it is how demo mode gets verified in a build that is
+configured the way the shipped one is.
 
 **The decoder and configuration are the same in both cases**
 (`MuzzlemeterDecoder` + `ChronoDevice.Configuration.ac6000()`). Replay goes through the
@@ -449,13 +460,90 @@ There are two replay sources:
 `ReplayScript` can **also read the log format produced by `muzzlemeter-sniff dump`
 directly**, so a freshly captured log can be dropped in and replayed as-is.
 
-#### Launch arguments for visual verification (Debug builds on the simulator only)
+### Demo mode (a shipping feature, not a debug switch)
+
+Without an AC6000 in hand, every measuring screen in this app is empty. App Review has
+nothing to exercise, and someone whose unit has not arrived yet cannot see what the app
+does. Demo mode fixes that in **Release builds**, for anyone.
+
+**Turning it on**
+
+- Settings -> *Demo mode* -> *Try demo mode*.
+- Or, on the Live screen, the *No chronograph? Try it anyway* card. It is shown only
+  while **no chronograph has ever connected** on this install, so it disappears for good
+  the first time a real device is paired.
+
+**Turning it off** — the Live screen carries a *Turn off demo mode* button inside the
+banner that stays on screen for the whole demo, and the Settings toggle flips back. The
+way in and the way out are both one tap, and the way out is on the screen showing the
+numbers.
+
+**What it plays** — `Sources/MuzzlemeterKit/Demo/DemoScript.swift`: an AEG at about
+90 m/s on 0.20 g BBs (≈0.81 J, under the Japanese 0.98 J limit with a visible headroom),
+six semi-auto shots followed by a twelve-round burst at ≈13 rps, looping. The bytes are
+**the real protocol**, played by the same `ReplayTransport` and decoded by the same
+`MuzzlemeterDecoder` as real hardware, through the same key handshake. So the Live
+screen, the statistics, the energy-limit colouring, the rate of fire, the Live Activity,
+the Home Screen widget and the Apple Watch app all run their production code paths.
+
+While demo mode is on, the session's BB weight follows the script's 0.20 g rather than
+the profile default (0.25 g out of the box); otherwise the demo would open on a red
+"over the limit" screen that misrepresents the app. **The gun profile itself is never
+modified** — only the "conditions for the next session" value, which is restored when
+demo mode is turned off.
+
+**Never mistakable for a real measurement.** This app is used to check whether a gun is
+under a field's energy limit, so a demo reading that looks real is a hazard, not just a
+confusion:
+
+- The connection pill turns purple and reads `DEMO` / *Demo mode* — and unlike the
+  developer replay note, **`--demo-hide-replay-badge` cannot hide it**.
+- A `DEMO` banner sits above the numbers for the entire session.
+- `Session.isDemo` is written **into the record at the moment the session is created**
+  (not decided at display time), so the badge cannot fall off later. It shows in History,
+  in Session Detail (as the first row, above every number), on the Live Activity, on the
+  Home Screen widget and on the watch.
+- The CSV export carries an `is_demo` column (`demo` / empty).
+- Demo sessions are **excluded from a gun profile's trends and statistics**, with a note
+  on that screen saying so. Marking them and leaving them in the series was rejected:
+  one synthetic session silently skews the mean, the SD and the temperature slope, and
+  "spot which scatter point is the demo" is not a thing to ask of someone reading a chart.
+- Demo sessions record **no weather and no location**, and demo mode never triggers the
+  location permission prompt. A synthetic shot carrying the real temperature where you
+  are standing would be indistinguishable from a measurement.
+
+**Real hardware always wins.** Two rules, and between them a demo shot and a real shot
+cannot land in the same session:
+
+1. While demo mode is on, `CoreBluetoothTransport` is **not constructed at all**
+   (`ChronoService.makeDevice`), so no chronograph can connect mid-demo. There is nothing
+   to "stop the demo" for, because there is nothing to connect.
+2. Demo mode **cannot be started while a chronograph is connected** (or being connected
+   to). The Settings toggle is disabled and says why. Tearing down a live connection
+   behind the user's back would leave the physical device's light on while the numbers on
+   screen quietly became synthetic.
+
+Turning demo mode on or off also ends any in-progress session first, and closes any demo
+session left open by an earlier launch (`DemoSessionStore.closeOpenDemoSessions`).
+
+**Cleaning up** — Settings -> *Delete demo data* removes every session with `isDemo` set,
+and nothing else. The row only appears when there is demo data to delete, and shows the
+count.
+
+#### Launch arguments for visual verification (simulator only)
 
 Things like the regulation-limit color coding or N-shot mode are only visible when
 "specific values happen to be present." So that this state can be produced without
 manually operating the simulator, `ScreenshotSupport` interprets the following arguments
-**only on Debug builds running in the simulator** (a release build never even parses
-these arguments, so they have no effect on the shipped behavior):
+**only when running in the simulator**. On an iPhone or iPad they are not even parsed, so
+they have no effect on anything a user ever receives — TestFlight and the App Store take
+device-architecture builds, and a simulator slice never reaches a distribution channel.
+
+This used to be limited to `DEBUG` builds, which made a Release build impossible to check
+visually (the simulator UI-automation tool does not work in this environment, so launch
+arguments are the only way to reach a screen). "Is demo mode really usable in a Release
+build?" is not a question worth asking if it cannot be answered, so the condition was
+widened to the simulator.
 
 ```sh
 xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
@@ -476,7 +564,16 @@ xcrun simctl launch <udid> com.yhakamay.muzzlemeter --replay-capture \
   --demo-device-log 12 \         # make the mock device report "12 records in its internal log"
   --demo-device-log-broken 4 \   # return the 5th of those records in an unsupported format
   --demo-device-log-auto \       # start the import without tapping the banner (for visually checking progress/results)
+  --demo-scroll-demo \           # scroll the settings tab down to the demo-mode section
   --demo-hide-replay-badge       # drop the "(demo replay)" suffix from the connection pill
+```
+
+Demo mode itself is a **real setting**, so it is switched with a `UserDefaults` launch
+argument rather than one of the above — which is also what makes it reachable in a
+Release build:
+
+```sh
+xcrun simctl launch <udid> com.yhakamay.muzzlemeter -muzzlemeter.demoMode YES
 ```
 
 `--demo-seed-sessions` exists for screens that **only appear once multiple sessions have
@@ -487,9 +584,10 @@ ja / zh-Hant), so a screen captured in one language does not carry text from ano
 `--demo-scroll-chart` and `--demo-hide-replay-badge` exist for App Store screenshots.
 The charts sit below the gun, conditions and tag sections, so opening a screen is not
 enough to get them into frame, and there is no tap-driven way to scroll here. The
-connection pill always says "(demo replay)" in the simulator (there is no CoreBluetooth
-hardware, so a replay is the only way to run), which is a developer note that does not
-belong in a store listing.
+connection pill says "(demo replay)" whenever the developer replay is running, which is a
+developer note that does not belong in a store listing. **It cannot hide the user-facing
+demo mode's `DEMO` marker** — that would turn a screenshot flag into a way to present
+synthetic numbers as measurements.
 
 `--demo-edit-conditions` and `--demo-apply-bb-weight <g>` exist for the finished-session
 "edit BB weight / gun info" sheet (`SessionConditionsEditor`). Both create one dedicated,

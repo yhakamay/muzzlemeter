@@ -1,14 +1,22 @@
 import Foundation
 import SwiftData
 
-/// スクリーンショット・目視確認のための起動引数。**Debug ビルドのシミュレータでのみ効く。**
+/// スクリーンショット・目視確認のための起動引数。**シミュレータでのみ効く。**
 ///
 /// なぜ要るか: 規制上限の色分けや N 発モードのような機能は「特定の値が入っている状態」で
 /// ないと見えない。実機を撃たずに、あるいはシミュレータを手で操作せずにその状態を作れないと、
 /// 変更のたびに UI を目視確認する手間が現実的でなくなる。
 ///
-/// リリースビルドでは全て `nil` / `false` を返す（引数の解釈すら行わない）ので、
-/// 製品の挙動には一切関わらない。
+/// **iPhone / iPad 実機では全て `nil` / `false` を返す**（引数の解釈すら行わない）ので、
+/// 利用者の手に渡るビルドの挙動には一切関わらない。TestFlight と App Store が受け取るのは
+/// 実機アーキテクチャのビルドだけで、シミュレータ用のスライスは配布経路に乗らない。
+///
+/// 以前は `DEBUG` のシミュレータに限っていたが、それだと **Release ビルドを目視確認
+/// できなかった**（この環境ではシミュレータのタップ操作ツールが動かないので、
+/// 起動引数以外に画面へ到達する手段が無い）。「デモモードが Release ビルドで本当に
+/// 使えるか」は確かめないと意味が無い項目なので、条件をシミュレータだけに広げた。
+/// なお `--demo-hide-replay-badge` が消せるのは**開発用の再生**の但し書きだけで、
+/// 利用者が入れたデモモードの「DEMO」表示は消せない（`ConnectionPill` 参照）。
 ///
 /// ```sh
 /// xcrun simctl launch <udid> com.yhakamay.muzzlemeter \
@@ -33,6 +41,10 @@ enum ScreenshotSupport {
     /// App Store のスクリーンショットは実機で撮れない（シミュレータには CoreBluetooth の
     /// ハードウェアが無く、必ず再生になる）。載せる絵に開発用の但し書きが写り込むのを
     /// 避けるためだけの引数で、既定では**常に**「（デモ再生）」を出す。
+    ///
+    /// **消せるのは開発用の再生の印だけ。** 利用者が入れたデモモードの「DEMO」は
+    /// この引数では消えない（`ConnectionPill.showsDemoMarker`）。合成値を実測に
+    /// 見せる手段になってはいけない。
     static var hidesReplayBadge: Bool { flag("--demo-hide-replay-badge") }
 
     /// 履歴タブで、いちばん新しいセッションの詳細を開く。
@@ -43,7 +55,7 @@ enum ScreenshotSupport {
 
     /// この起動が始まったおおよその時刻。
     ///
-    /// シミュレータでは常に再生が走ってセッションが 1 件できる。見本として入れた
+    /// 再生やデモが走っている起動ではセッションが 1 件できる。見本として入れた
     /// セッションと区別するために、**この起動より前に始まったもの**だけを見本として扱う。
     static let launchedAt = Date()
 
@@ -81,6 +93,12 @@ enum ScreenshotSupport {
     /// 設定タブで、最初のプロファイルの詳細を開く。
     static var opensProfileDetail: Bool { flag("--demo-profile-detail") }
 
+    /// 設定タブを開いたら、デモモードのセクションまでスクロールする。
+    ///
+    /// デモモードは設定の下の方（銃プロファイルの次）にあるので、タブを開いただけでは
+    /// 画面に入らない。この環境ではタップでスクロールできないので、絵にするには要る。
+    static var scrollsToDemoSection: Bool { flag("--demo-scroll-demo") }
+
     /// 履歴タブで、このタグの絞り込みを掛けた状態にする。
     static var filterTag: String? { value(for: "--demo-filter") }
 
@@ -113,7 +131,7 @@ enum ScreenshotSupport {
     // MARK: - 引数の読み取り
 
     private static var isEnabled: Bool {
-        #if DEBUG && targetEnvironment(simulator)
+        #if targetEnvironment(simulator)
         return true
         #else
         return false
@@ -152,7 +170,7 @@ extension ScreenshotSupport {
     /// 既にセッションがあるときは何もしない（実データを持っている状態に混ぜない）。
     @MainActor
     static func seedDemoSessionsIfNeeded(modelContext: ModelContext) {
-        #if DEBUG && targetEnvironment(simulator)
+        #if targetEnvironment(simulator)
         _ = launchedAt   // 起動直後の時刻で固定する（再生で増えるセッションと区別するため）
         guard seedsDemoSessions else { return }
         let existing = (try? modelContext.fetchCount(FetchDescriptor<Session>())) ?? 0
@@ -247,7 +265,7 @@ extension ScreenshotSupport {
     /// 履歴が汚れても実害が無い。
     @MainActor
     static func makeConditionsDemoSessionIfNeeded(modelContext: ModelContext) -> Session? {
-        #if DEBUG && targetEnvironment(simulator)
+        #if targetEnvironment(simulator)
         guard opensConditionsEditor || appliesBBWeightOverride != nil else { return nil }
         let profile = GunProfile(
             name: "マイガン",

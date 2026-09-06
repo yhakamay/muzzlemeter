@@ -39,7 +39,11 @@ struct HomeWidgetSnapshotWriter {
                 limitJoules: session.energyLimitJoules
             ),
             endedAt: session.endedAt ?? Date(),
-            speedUnit: speedUnit
+            speedUnit: speedUnit,
+            // ホーム画面のウィジェットは、何日か経ってから文脈なしに見られる場所。
+            // デモの数字がそこに「最新の記録」として出るのがいちばん危ないので、
+            // 出どころをそのまま渡してウィジェット側に DEMO を出させる。
+            isDemo: session.isDemo
         )
         HomeWidgetSnapshotStore.save(snapshot, to: defaults)
         WidgetCenter.shared.reloadTimelines(ofKind: WidgetKinds.sessionSummary)

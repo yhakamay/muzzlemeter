@@ -7,9 +7,13 @@ struct SettingsView: View {
     @Environment(ChronoService.self) private var service
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \GunProfile.createdAt) private var profiles: [GunProfile]
+    /// デモセッションの件数を数えるためだけの取得。`@Query` にしてあるのは、
+    /// 削除したその場で行が消えてほしいから（数を持ち回すと消しても残って見える）。
+    @Query private var allSessions: [Session]
 
     @State private var editingProfile: GunProfile?
     @State private var isAddingProfile = false
+    @State private var isConfirmingDemoDataDeletion = false
     /// 目視確認の起動引数からプロファイル詳細を開けるように、遷移を値で持つ。
     @State private var path = NavigationPath()
 
@@ -18,6 +22,7 @@ struct SettingsView: View {
         @Bindable var feedback = service.feedback
 
         NavigationStack(path: $path) {
+            ScrollViewReader { proxy in
             Form {
                 Section("表示単位") {
                     // `.segmented` は Picker のラベルを描かないので、何を切り替えているのか
@@ -120,6 +125,9 @@ struct SettingsView: View {
                     Text("プロファイルは銃そのものの情報と、計測条件の既定値を持ちます。タップで詳細（推移と編集）、右スワイプで選択、左スワイプで削除。")
                 }
 
+                demoSection
+                    .id(Self.demoSectionAnchor)
+
                 Section {
                     Toggle("自動再接続", isOn: $service.autoReconnect)
                     Button("この機器を忘れる", systemImage: "xmark.circle", role: .destructive) {
@@ -141,13 +149,30 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("設定")
+            .confirmationDialog(
+                "デモモードで作った記録をすべて削除します",
+                isPresented: $isConfirmingDemoDataDeletion,
+                titleVisibility: .visible
+            ) {
+                Button("デモデータを削除", role: .destructive) {
+                    service.deleteDemoData()
+                }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                Text("実際に計測した記録は残ります。")
+            }
             .navigationDestination(for: GunProfile.self) { profile in
                 GunProfileDetailView(profile: profile)
             }
             .task {
-                // 目視確認用（Debug のシミュレータのみ）。最初のプロファイルの詳細を開く。
+                // 目視確認用（シミュレータのみ）。最初のプロファイルの詳細を開く。
                 if ScreenshotSupport.opensProfileDetail, let first = profiles.first {
                     path.append(first)
+                }
+                if ScreenshotSupport.scrollsToDemoSection {
+                    // 描画が落ち着いてから送る（Form が組み上がる前だと届かない）。
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    withAnimation { proxy.scrollTo(Self.demoSectionAnchor, anchor: .top) }
                 }
             }
             .sheet(isPresented: $isAddingProfile) {
@@ -164,7 +189,58 @@ struct SettingsView: View {
                     try? modelContext.save()
                 }
             }
+            }
         }
+    }
+
+    /// `--demo-scroll-demo` の送り先。
+    private static let demoSectionAnchor = "demo-section"
+
+    /// デモモードのセクション。
+    ///
+    /// **入れるのも切るのも同じ 1 か所**に置く。入り口と出口が別の画面に分かれていると、
+    /// 「デモのまま使い続ける」が起こる。デモの記録の削除も同じ場所に置いて、
+    /// 「試したものを片付ける」までを 1 画面で完結させる。
+    @ViewBuilder
+    private var demoSection: some View {
+        Section {
+            Toggle("デモモードを試す", isOn: demoModeBinding)
+                .disabled(!service.canEnableDemoMode)
+            if demoSessionCount > 0 {
+                Button("デモデータを削除", systemImage: "trash", role: .destructive) {
+                    isConfirmingDemoDataDeletion = true
+                }
+                .foregroundStyle(.red)
+                .badge(demoSessionCount)
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Text("デモモード")
+                if service.isDemoMode { DemoBadge() }
+            }
+        } footer: {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("クロノグラフが手元に無くても、デモモードなら見本の射撃データが流れて、計測中の画面をそのまま確かめられます。デモ中に記録されたセッションには DEMO の印が付き、推移や統計には数えません。")
+                if !service.canEnableDemoMode {
+                    // 断る理由をその場に書く。トグルが押せないだけだと壊れて見える。
+                    Text("クロノグラフに接続中はデモモードを始められません。")
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+    }
+
+    /// トグルの束縛。`ChronoService.setDemoMode` は機器を作り直すので、
+    /// `@Bindable` の直接束縛ではなく明示的に呼ぶ。
+    private var demoModeBinding: Binding<Bool> {
+        Binding(
+            get: { service.isDemoMode },
+            set: { service.setDemoMode($0) }
+        )
+    }
+
+    private var demoSessionCount: Int {
+        allSessions.filter(\.isDemo).count
     }
 
     /// セグメンテッドピッカーに見出しを添えた 1 行。

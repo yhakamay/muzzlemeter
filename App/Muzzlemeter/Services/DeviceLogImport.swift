@@ -92,6 +92,7 @@ enum DeviceLogSessionBuilder {
         profile: GunProfile?,
         gunName: String,
         isPartial: Bool,
+        isDemo: Bool = false,
         into modelContext: ModelContext
     ) -> Session? {
         guard !shots.isEmpty else { return nil }
@@ -105,7 +106,9 @@ enum DeviceLogSessionBuilder {
             energyLimitJoules: profile?.energyLimitJoules ?? 0.98,
             gunManufacturer: profile?.manufacturer ?? "",
             gunModel: profile?.model ?? "",
-            gunInnerBarrelLengthMm: profile?.innerBarrelLengthMm
+            gunInnerBarrelLengthMm: profile?.innerBarrelLengthMm,
+            // 取り込み元がデモの擬似本体なら、できたセッションもデモ。
+            isDemo: isDemo
         )
         session.tags = [tag]
         // **出どころと、時刻が無いことを記録に残す。** 本体（クロノグラフ）内蔵のログから

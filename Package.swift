@@ -54,6 +54,29 @@ let package = Package(
                 )
             ]
         ),
+        // アプリの SwiftData モデルと、その上で動く小さなサービスだけを取り出した
+        // ターゲット。**製品としてはビルドしない**（`products` に出さない）。
+        //
+        // なぜ要るか: 「デモのセッションに印が付くか」「デモデータの削除で実データが
+        // 残るか」「デモを切ったら開いているセッションが締まるか」は保存層の話で、
+        // 画面もハードウェアも要らない。だが `Session` は Xcode のアプリターゲット側に
+        // あり、`swift test` からは見えなかった。ここで**同じソースファイルを**
+        // パッケージ側のモジュールとしてももう一度コンパイルすることで、
+        // インメモリの `ModelContainer` に対して `swift test` から直接検証できる。
+        // アプリターゲットはこのライブラリをリンクしない（自分で同じファイルを
+        // コンパイルする）ので、型が二重に定義されることはない。
+        .target(
+            name: "MuzzlemeterAppModels",
+            dependencies: ["MuzzlemeterKit"],
+            path: "App/Muzzlemeter/Models",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+        ),
+        .testTarget(
+            name: "MuzzlemeterAppModelsTests",
+            dependencies: ["MuzzlemeterAppModels", "MuzzlemeterKit"],
+            path: "Tests/MuzzlemeterAppModelsTests",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+        ),
         .testTarget(
             name: "MuzzlemeterKitTests",
             dependencies: ["MuzzlemeterKit"],

@@ -52,6 +52,9 @@ struct SmallSummaryView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            // ホーム画面は何日か経ってから文脈なしに見られる場所。出どころを
+            // 銃名より前に置いて、数字より先に目に入るようにする。
+            if snapshot.isDemo { DemoBadge() }
             Text(snapshot.gunName)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -82,9 +85,12 @@ struct MediumSummaryView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(snapshot.title)
-                    .font(.headline)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    if snapshot.isDemo { DemoBadge() }
+                    Text(snapshot.title)
+                        .font(.headline)
+                        .lineLimit(1)
+                }
                 Text(snapshot.gunName)
                     .font(.caption)
                     .foregroundStyle(.secondary)

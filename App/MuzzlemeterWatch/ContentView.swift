@@ -77,6 +77,19 @@ private struct SpeedDisplay: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+            if state.isDemo {
+                // 手首の上でも出どころが分かるようにする。iPhone 側の
+                // `DemoBadge` と同じ「DEMO」の文字・同じ色にそろえてある
+                // （`App/Shared/DemoTag.swift` は watchOS ターゲットに入らないので、
+                // `EnergyMarginTint` と同じく最小限だけこちらにも書く）。
+                Text(verbatim: "DEMO")
+                    .font(.caption2.weight(.bold))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background(Color.purple.opacity(0.22), in: .capsule)
+                    .foregroundStyle(Color.purple)
+                    .padding(.top, 2)
+            }
             if !state.gunName.isEmpty {
                 Text(state.gunName)
                     .font(.caption2)

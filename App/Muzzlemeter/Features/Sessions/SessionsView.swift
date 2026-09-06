@@ -329,6 +329,9 @@ struct SessionRow: View {
                 Text(session.displayTitle)
                     .font(.headline)
                     .lineLimit(1)
+                // 出どころの印はタイトルのすぐ隣。行の下の方に置くと、
+                // 一覧をスクロールしているときに読み飛ばされる。
+                if session.isDemo { DemoBadge() }
                 if session.isActive {
                     Text("進行中")
                         .font(.caption2.weight(.bold))

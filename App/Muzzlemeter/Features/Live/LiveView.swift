@@ -30,10 +30,12 @@ struct LiveView: View {
                     // 待機中は項目が少ないので、スクロールさせずに画面の中央へ置く。
                     VStack(spacing: 20) {
                         connectionPill
+                        demoBanner
                         ammoMismatchBanner
                         deviceLogBanner
                         Spacer()
                         idleState(selection: $service.selectedProfile)
+                        demoOffer
                         Spacer()
                         Spacer()
                     }
@@ -42,6 +44,7 @@ struct LiveView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             connectionPill
+                            demoBanner
                             ammoMismatchBanner
                             deviceLogBanner
 
@@ -154,6 +157,7 @@ struct LiveView: View {
         } label: {
             ConnectionPill(
                 state: service.connectionState,
+                isDemo: service.isDemoActive,
                 isReplaying: service.isReplaying,
                 foundCount: service.discovery.count
             )
@@ -184,6 +188,34 @@ struct LiveView: View {
             .animation(.snappy, value: service.currentShots.count)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(Text("目標発数の進捗"))
+        }
+    }
+
+    /// デモモードの間ずっと出しておく帯。**接続ピルのすぐ下**（本体まわりの知らせと
+    /// 同じ場所）に置いて、数字を見ている姿勢のまま気づけるようにする。
+    ///
+    /// 開発用の再生（`--replay` / Debug のシミュレータ）では出さない。そちらは
+    /// 接続ピルの「（デモ再生）」で十分で、目視確認のたびに画面が押し下がると
+    /// スクリーンショットの構図が変わってしまう。
+    @ViewBuilder
+    private var demoBanner: some View {
+        if service.isDemoMode {
+            DemoModeBanner {
+                withAnimation(.snappy) { service.setDemoMode(false) }
+            }
+        }
+    }
+
+    /// 実機を一度も繋いだことがない人にだけ出す、デモモードの案内。
+    ///
+    /// 「プロファイルがありません」の初期状態では出さない。先にやることが 2 つ並ぶと、
+    /// どちらを押せばいいのか決められなくなる。
+    @ViewBuilder
+    private var demoOffer: some View {
+        if !service.isDemoActive, !service.hasEverConnectedChronograph, !profiles.isEmpty {
+            DemoOfferCard {
+                withAnimation(.snappy) { service.setDemoMode(true) }
+            }
         }
     }
 
@@ -445,6 +477,8 @@ struct ProfileMenu: View {
 
 struct ConnectionPill: View {
     let state: ConnectionState
+    /// デモ由来の数字が流れているか。真なら**ピルはデモの表示に置き換わる**。
+    var isDemo: Bool = false
     let isReplaying: Bool
     /// スキャンで見つかっている台数。1 台より多いときだけ出す
     /// （**取り違えが起こり得る状況かどうか**が一目で分かる）。
@@ -455,6 +489,10 @@ struct ConnectionPill: View {
             Circle()
                 .fill(color)
                 .frame(width: 9, height: 9)
+            if showsDemoMarker {
+                Text(verbatim: "DEMO")
+                    .font(.caption2.weight(.bold))
+            }
             Text(label)
                 .font(.footnote.weight(.medium))
             if foundCount > 1 {
@@ -473,7 +511,18 @@ struct ConnectionPill: View {
         .foregroundStyle(color)
     }
 
+    /// デモの印を出すか。
+    ///
+    /// **利用者のデモモードでは必ず出す**（`--demo-hide-replay-badge` でも消えない）。
+    /// あの引数は App Store のスクリーンショットから開発用の但し書きを外すためのもので、
+    /// 「デモの数字を実測に見せる」ために使えてはいけない。消せるのは開発用の再生の印だけ。
+    private var showsDemoMarker: Bool {
+        if isDemo && !isReplaying { return true }
+        return isReplaying && !ScreenshotSupport.hidesReplayBadge
+    }
+
     private var label: String {
+        if isDemo && !isReplaying { return String(localized: "デモモード") }
         let base: String = switch state {
         case .idle: String(localized: "待機中")
         case .scanning: String(localized: "機器を探しています")
@@ -489,11 +538,14 @@ struct ConnectionPill: View {
     }
 
     private var color: Color {
+        // デモ中は状態の色ではなく**デモの色**にする。緑（接続済み）のまま
+        // 「DEMO」を添えるだけだと、一瞥では実機に繋がっているのと同じに見える。
+        if isDemo && !isReplaying { return DemoMarkerStyle.tint }
         switch state {
-        case .ready: .green
-        case .scanning, .connecting, .pairing: .orange
-        case .idle: .secondary
-        case .disconnected: .red
+        case .ready: return .green
+        case .scanning, .connecting, .pairing: return .orange
+        case .idle: return .secondary
+        case .disconnected: return .red
         }
     }
 }

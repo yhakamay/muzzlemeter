@@ -18,10 +18,15 @@ struct LockScreenLiveActivityView: View {
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(state.gunName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    // ロック画面は**文脈なしに読まれる**場所なので、銃名と同じ行に
+                    // 出どころを出す。数字だけを見て実測と思われてはいけない。
+                    if state.isDemo { DemoBadge(isProminent: true) }
+                    Text(state.gunName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 SpeedText(state: state, font: .system(size: 40, weight: .bold, design: .rounded))
                 HStack(spacing: 8) {
                     Label(String(localized: "\(state.joulesText) J"), systemImage: "bolt.fill")
@@ -44,6 +49,7 @@ struct ExpandedBottomRow: View {
 
     var body: some View {
         HStack {
+            if state.isDemo { DemoBadge(isProminent: true) }
             if let mean = state.meanSpeedText {
                 Label(String(localized: "平均 \(mean) \(state.speedUnitSymbol)"), systemImage: "chart.bar.fill")
                     .font(.caption)

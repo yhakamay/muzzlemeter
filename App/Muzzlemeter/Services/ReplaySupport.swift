@@ -1,7 +1,11 @@
 import MuzzlemeterKit
 import Foundation
 
-/// 実機が無いときにアプリを動かすための再生ソース。
+/// **開発用**の再生ソース（起動引数と、Debug ビルドのシミュレータ）。
+///
+/// 利用者が自分で入れる「デモモード」は別物で、`ChronoService.isDemoMode` が持つ。
+/// こちらは目視確認とスクリーンショット撮影のための仕掛けで、`ScreenshotSupport` の
+/// 起動引数と対で使う。
 ///
 /// **デモ専用のエンコーディングはもう存在しない。** 流すバイト列は実プロトコル
 /// （`docs/PROTOCOL.md`）そのもので、`MuzzlemeterDecoder` が実機と同じように復号する。
@@ -15,13 +19,19 @@ enum ReplaySupport {
         case synthetic
     }
 
-    /// `--replay` 起動、またはシミュレータで動かしているか。
+    /// `--replay` 起動、または **Debug の**シミュレータで動かしているか。
     ///
-    /// シミュレータには CoreBluetooth のハードウェアが無いので、常に再生にする。
+    /// シミュレータには CoreBluetooth のハードウェアが無いので、以前は
+    /// **構成に関係なく**常に再生していた。デモモードが製品機能になったので、
+    /// 暗黙の再生は Debug に限る。Release のシミュレータでは実機と同じく
+    /// 「まだ何にも繋がっていない」状態から始まり、Live 画面のデモの案内と
+    /// 設定のデモモードが、実機を持っていない人が見るのと同じ順序で確認できる。
+    /// `ScreenshotSupport` の起動引数はもともと Debug のシミュレータ限定なので、
+    /// 既存の目視確認・スクリーンショットの手順は何も変わらない。
     static var isEnabled: Bool {
         if CommandLine.arguments.contains("--replay") { return true }
         if CommandLine.arguments.contains("--replay-capture") { return true }
-        #if targetEnvironment(simulator)
+        #if DEBUG && targetEnvironment(simulator)
         return true
         #else
         return false
@@ -99,49 +109,13 @@ enum ReplaySupport {
         return syntheticScript
     }
 
-    // MARK: - 合成スクリプト（実プロトコルのバイト列）
+    // MARK: - 合成スクリプト
 
-    private static let keys = DeviceKeys(key1: 0xC4, key2: 0x94)
-    private static let notify = ChronoUUIDs.notifyCharacteristic
+    private static let keys = DemoScript.keys
 
-    /// 単発 6 発 → フルオート 12 発。実機と同じ `0x52` フレームで組む。
+    /// 単発 6 発 → フルオート 12 発。中身は `MuzzlemeterKit.DemoScript` にある。
     ///
-    /// 先頭に `ACK(0x4B)` を置いてあるのは、再生でも鍵ハンドシェイクを成立させて
-    /// `.ready` に到達させるため（実機の初期化と同じ順序）。
-    static let syntheticScript: ReplayScript = {
-        var entries = [ReplayEntry]()
-
-        func append(_ offset: TimeInterval, _ data: Data) {
-            entries.append(ReplayEntry(offsetSeconds: offset, characteristic: notify, data: data))
-        }
-
-        // 鍵ハンドシェイクの ACK と、現在の弾（6.00 mm / 0.20 g）。
-        append(0.2, ChronoFrame(command: .ack, payload: [ChronoCommand.readKey.rawValue]).encode(keys: keys))
-        append(
-            0.6,
-            ChronoFrame(command: .currentAmmo, payload: [0x01, 0x01, 0x58, 0x02, 0x14, 0x00]).encode(keys: keys)
-        )
-
-        func fireReport(metersPerSecond: Double, rawRev: UInt16 = 0) -> Data {
-            let raw = UInt16(clamping: Int((metersPerSecond * FireReport.speedScale).rounded()))
-            let payload: [UInt8] = [
-                0x00, 0x00,
-                UInt8(raw & 0xFF), UInt8(raw >> 8),
-                UInt8(rawRev & 0xFF), UInt8(rawRev >> 8),
-            ]
-            return ChronoFrame(command: .fireReport, payload: payload).encode(keys: keys)
-        }
-
-        var offset: TimeInterval = 1.5
-        for velocity in [91.2, 92.5, 90.8, 93.1, 92.0, 91.6] {
-            append(offset, fireReport(metersPerSecond: velocity))
-            offset += 1.6
-        }
-        offset += 1.5
-        for velocity in [89.9, 90.4, 91.1, 90.2, 89.5, 90.9, 91.4, 90.0, 89.7, 90.6, 91.8, 90.3] {
-            append(offset, fireReport(metersPerSecond: velocity))
-            offset += 0.077   // ≒ 13 rps
-        }
-        return ReplayScript(entries: entries)
-    }()
+    /// 利用者向けのデモモードと**同じ射撃列**を使う。開発用の再生とデモモードで
+    /// 流れる弾速が違うと、目視確認で見ている画面が製品のデモと別物になる。
+    static var syntheticScript: ReplayScript { DemoScript.script(keys: keys) }
 }

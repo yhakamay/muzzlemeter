@@ -24,6 +24,20 @@ struct SessionDetailView: View {
 
         ScrollViewReader { proxy in
             List {
+                // 出どころは**画面のいちばん上**。統計もジュールもこの下に並ぶので、
+                // 数字を読む前に「これはデモだ」と分かる位置でなければ意味が無い。
+                if session.isDemo {
+                    Section {
+                        HStack(alignment: .top, spacing: 10) {
+                            DemoBadge()
+                            Text("このセッションはデモモードで作られたもので、実測ではありません。")
+                                .font(.callout)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+
                 Section {
                     LabeledContent("名前", value: session.gunName)
                     if let makeAndModel = session.gunMakeAndModel {

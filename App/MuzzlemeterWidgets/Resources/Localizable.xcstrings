@@ -116,6 +116,29 @@
         }
       }
     },
+    "デモモードの記録": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo-mode session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモモードの記録"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "示範模式的紀錄"
+          }
+        }
+      }
+    },
     "余裕": {
       "localizations": {
         "en": {

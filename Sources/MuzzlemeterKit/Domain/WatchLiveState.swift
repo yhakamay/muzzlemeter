@@ -48,6 +48,8 @@ public struct WatchLiveState: Sendable, Hashable, Codable {
     /// Newest first, at most 10 entries.
     public let recentShots: [WatchShotEntry]
     public let updatedAt: Date
+    /// Whether these numbers came from **demo mode** (synthetic shots, no chronograph).
+    public let isDemo: Bool
 
     public init(
         gunName: String,
@@ -59,7 +61,8 @@ public struct WatchLiveState: Sendable, Hashable, Codable {
         margin: EnergyMargin,
         speedUnit: SpeedUnit,
         recentShots: [WatchShotEntry],
-        updatedAt: Date
+        updatedAt: Date,
+        isDemo: Bool = false
     ) {
         self.gunName = gunName
         self.isSessionActive = isSessionActive
@@ -71,6 +74,26 @@ public struct WatchLiveState: Sendable, Hashable, Codable {
         self.speedUnit = speedUnit
         self.recentShots = recentShots
         self.updatedAt = updatedAt
+        self.isDemo = isDemo
+    }
+
+    /// Decodes leniently for `isDemo`: the watch may still be holding an application
+    /// context written by an older phone build.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        gunName = try container.decode(String.self, forKey: .gunName)
+        isSessionActive = try container.decode(Bool.self, forKey: .isSessionActive)
+        shotCount = try container.decode(Int.self, forKey: .shotCount)
+        targetCount = try container.decodeIfPresent(Int.self, forKey: .targetCount)
+        latestSpeedMetersPerSecond = try container.decodeIfPresent(
+            Double.self, forKey: .latestSpeedMetersPerSecond
+        )
+        latestJoules = try container.decodeIfPresent(Double.self, forKey: .latestJoules)
+        margin = try container.decode(EnergyMargin.self, forKey: .margin)
+        speedUnit = try container.decode(SpeedUnit.self, forKey: .speedUnit)
+        recentShots = try container.decode([WatchShotEntry].self, forKey: .recentShots)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        isDemo = try container.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
     }
 
     /// The default state before connecting / before a session has started.
@@ -100,6 +123,7 @@ public struct WatchLiveState: Sendable, Hashable, Codable {
         target: ShotTarget?,
         gunName: String,
         isSessionActive: Bool,
+        isDemo: Bool = false,
         now: Date = Date()
     ) -> WatchLiveState {
         let last = shots.last
@@ -123,7 +147,8 @@ public struct WatchLiveState: Sendable, Hashable, Codable {
             margin: margin,
             speedUnit: speedUnit,
             recentShots: Array(recent),
-            updatedAt: now
+            updatedAt: now,
+            isDemo: isDemo
         )
     }
 }
@@ -141,6 +166,7 @@ public struct WatchShotMessage: Sendable, Hashable, Codable {
     public let margin: EnergyMargin
     public let speedUnit: SpeedUnit
     public let gunName: String
+    public let isDemo: Bool
 
     public init(
         shot: WatchShotEntry,
@@ -148,7 +174,8 @@ public struct WatchShotMessage: Sendable, Hashable, Codable {
         targetCount: Int?,
         margin: EnergyMargin,
         speedUnit: SpeedUnit,
-        gunName: String
+        gunName: String,
+        isDemo: Bool = false
     ) {
         self.shot = shot
         self.shotCount = shotCount
@@ -156,6 +183,18 @@ public struct WatchShotMessage: Sendable, Hashable, Codable {
         self.margin = margin
         self.speedUnit = speedUnit
         self.gunName = gunName
+        self.isDemo = isDemo
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        shot = try container.decode(WatchShotEntry.self, forKey: .shot)
+        shotCount = try container.decode(Int.self, forKey: .shotCount)
+        targetCount = try container.decodeIfPresent(Int.self, forKey: .targetCount)
+        margin = try container.decode(EnergyMargin.self, forKey: .margin)
+        speedUnit = try container.decode(SpeedUnit.self, forKey: .speedUnit)
+        gunName = try container.decode(String.self, forKey: .gunName)
+        isDemo = try container.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
     }
 
     /// Can't be built when there's no recent shot (i.e. nothing to send yet).
@@ -167,7 +206,8 @@ public struct WatchShotMessage: Sendable, Hashable, Codable {
             targetCount: state.targetCount,
             margin: state.margin,
             speedUnit: state.speedUnit,
-            gunName: state.gunName
+            gunName: state.gunName,
+            isDemo: state.isDemo
         )
     }
 }

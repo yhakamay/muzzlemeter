@@ -11,6 +11,7 @@ enum CSVExporter {
     static let header = [
         "timestamp",
         "session_id",
+        "is_demo",
         "session_title",
         "gun",
         "power_category",
@@ -49,6 +50,10 @@ enum CSVExporter {
 
     private static func rows(for session: Session) -> [String] {
         let sessionID = Self.identifier(for: session)
+        // デモで作った記録は CSV でも見分けが付かないといけない。表計算に貼った時点で
+        // 「アプリの中で DEMO と書いてあった」という文脈は失われるので、列として持つ。
+        // 実測は空欄（`demo` を検索・絞り込みするだけで済む）。
+        let isDemo = session.isDemo ? "demo" : ""
         let gun = escape(session.gunName)
         let title = escape(session.displayTitle)
         // 区分とガス種別は表示名ではなく raw 値を出す。表計算で集計するときに
@@ -81,6 +86,7 @@ enum CSVExporter {
             return [
                 timestampStyle.format(shot.timestamp),
                 sessionID,
+                isDemo,
                 title,
                 gun,
                 powerCategory,

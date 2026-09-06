@@ -1235,6 +1235,29 @@
         }
       }
     },
+    "このセッションはデモモードで作られたもので、実測ではありません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This session was created in demo mode. It is not a real measurement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このセッションはデモモードで作られたもので、実測ではありません。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這筆紀錄是在示範模式下建立的，並非實際測量結果。"
+          }
+        }
+      }
+    },
     "このプロファイルで 1 発でも撃つと、ここに推移が出ます。": {
       "extractionState": "manual",
       "localizations": {
@@ -1737,6 +1760,75 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消"
+          }
+        }
+      }
+    },
+    "クロノグラフが手元に無くても、デモモードなら見本の射撃データが流れて、計測中の画面をそのまま確かめられます。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Even without a chronograph at hand, demo mode streams sample shot data so you can see the measuring screen exactly as it works."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クロノグラフが手元に無くても、デモモードなら見本の射撃データが流れて、計測中の画面をそのまま確かめられます。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "就算手邊沒有測速器，示範模式也會播放範例的射擊資料，讓你直接看到測量中的畫面。"
+          }
+        }
+      }
+    },
+    "クロノグラフが手元に無くても、デモモードなら見本の射撃データが流れて、計測中の画面をそのまま確かめられます。デモ中に記録されたセッションには DEMO の印が付き、推移や統計には数えません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Even without a chronograph at hand, demo mode streams sample shot data so you can see the measuring screen exactly as it works. Sessions recorded during a demo are marked DEMO and are left out of the trends and statistics."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クロノグラフが手元に無くても、デモモードなら見本の射撃データが流れて、計測中の画面をそのまま確かめられます。デモ中に記録されたセッションには DEMO の印が付き、推移や統計には数えません。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "就算手邊沒有測速器，示範模式也會播放範例的射擊資料，讓你直接看到測量中的畫面。示範模式下記錄的紀錄會標上 DEMO，也不會計入趨勢與統計。"
+          }
+        }
+      }
+    },
+    "クロノグラフに接続中はデモモードを始められません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo mode can't be started while a chronograph is connected."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クロノグラフに接続中はデモモードを始められません。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連線到測速器時無法啟動示範模式。"
           }
         }
       }
@@ -2266,6 +2358,167 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除標籤、槍枝或搜尋字詞，紀錄就會重新出現。"
+          }
+        }
+      }
+    },
+    "デモデータを削除": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete demo data"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモデータを削除"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除示範資料"
+          }
+        }
+      }
+    },
+    "デモモード": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo mode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモモード"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "示範模式"
+          }
+        }
+      }
+    },
+    "デモモードで作った記録は、この画面の数字と推移には含めていません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions created in demo mode are left out of the numbers and trends on this screen."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモモードで作った記録は、この画面の数字と推移には含めていません。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在示範模式下建立的紀錄，不會計入本畫面的數字與趨勢。"
+          }
+        }
+      }
+    },
+    "デモモードで作った記録をすべて削除します": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete every session created in demo mode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモモードで作った記録をすべて削除します"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除所有在示範模式下建立的紀錄"
+          }
+        }
+      }
+    },
+    "デモモードの記録": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo-mode session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモモードの記録"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "示範模式的紀錄"
+          }
+        }
+      }
+    },
+    "デモモードを終了": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off demo mode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモモードを終了"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束示範模式"
+          }
+        }
+      }
+    },
+    "デモモードを試す": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try demo mode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デモモードを試す"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "試用示範模式"
           }
         }
       }
@@ -3782,6 +4035,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成"
+          }
+        }
+      }
+    },
+    "実機が無くても試せます": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No chronograph? Try it anyway"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実機が無くても試せます"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有測速器也能先試用"
+          }
+        }
+      }
+    },
+    "実際に計測した記録は残ります。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions you actually measured are kept."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実際に計測した記録は残ります。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "實際測量的紀錄會保留。"
           }
         }
       }
@@ -6151,6 +6450,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "自行輸入"
+          }
+        }
+      }
+    },
+    "表示している数値は合成した見本で、実測ではありません。": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These numbers are a synthetic sample, not a real measurement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示している数値は合成した見本で、実測ではありません。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "畫面上的數值是合成的範例資料，並非實際測量結果。"
           }
         }
       }

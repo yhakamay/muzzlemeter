@@ -23,6 +23,9 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
     /// The most recent shot's stage relative to the regulation limit.
     public let margin: EnergyMargin
     public let gunName: String
+    /// Whether these numbers came from **demo mode** (synthetic shots, no chronograph).
+    /// The lock screen and Dynamic Island say so, because they are read out of context.
+    public let isDemo: Bool
 
     public init(
         speedText: String,
@@ -31,7 +34,8 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
         shotCountText: String,
         meanSpeedText: String?,
         margin: EnergyMargin,
-        gunName: String
+        gunName: String,
+        isDemo: Bool = false
     ) {
         self.speedText = speedText
         self.speedUnitSymbol = speedUnitSymbol
@@ -40,10 +44,30 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
         self.meanSpeedText = meanSpeedText
         self.margin = margin
         self.gunName = gunName
+        self.isDemo = isDemo
+    }
+
+    /// Decodes leniently for `isDemo`, so a Live Activity started by an older build
+    /// (its `ContentState` is persisted by the system across an app update) still
+    /// decodes instead of tearing the activity down.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        speedText = try container.decode(String.self, forKey: .speedText)
+        speedUnitSymbol = try container.decode(String.self, forKey: .speedUnitSymbol)
+        joulesText = try container.decode(String.self, forKey: .joulesText)
+        shotCountText = try container.decode(String.self, forKey: .shotCountText)
+        meanSpeedText = try container.decodeIfPresent(String.self, forKey: .meanSpeedText)
+        margin = try container.decode(EnergyMargin.self, forKey: .margin)
+        gunName = try container.decode(String.self, forKey: .gunName)
+        isDemo = try container.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
     }
 
     /// The state before any shot has been fired (shown right after a session starts).
-    public static func idle(gunName: String, speedUnit: SpeedUnit) -> LiveActivityContent {
+    public static func idle(
+        gunName: String,
+        speedUnit: SpeedUnit,
+        isDemo: Bool = false
+    ) -> LiveActivityContent {
         LiveActivityContent(
             speedText: "—",
             speedUnitSymbol: speedUnit.symbol,
@@ -51,7 +75,8 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
             shotCountText: "0",
             meanSpeedText: nil,
             margin: .safe,
-            gunName: gunName
+            gunName: gunName,
+            isDemo: isDemo
         )
     }
 
@@ -64,9 +89,12 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
         speedUnit: SpeedUnit,
         energyLimitJoules: Double,
         target: ShotTarget?,
-        gunName: String
+        gunName: String,
+        isDemo: Bool = false
     ) -> LiveActivityContent {
-        guard let last = shots.last else { return .idle(gunName: gunName, speedUnit: speedUnit) }
+        guard let last = shots.last else {
+            return .idle(gunName: gunName, speedUnit: speedUnit, isDemo: isDemo)
+        }
         let stats = SessionStats.compute(shots: shots, massGrams: massGrams)
         let margin = EnergyLimit.margin(
             massGrams: massGrams,
@@ -81,7 +109,8 @@ public struct LiveActivityContent: Sendable, Hashable, Codable {
             shotCountText: shotCountText,
             meanSpeedText: stats.meanMetersPerSecond.map { speedUnit.format(metersPerSecond: $0) },
             margin: margin,
-            gunName: gunName
+            gunName: gunName,
+            isDemo: isDemo
         )
     }
 }

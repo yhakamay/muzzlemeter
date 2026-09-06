@@ -18,6 +18,10 @@ public struct HomeWidgetSnapshot: Sendable, Hashable, Codable {
     public let overLimitCount: Int
     public let endedAt: Date
     public let speedUnit: SpeedUnit
+    /// Whether this session was measured in **demo mode** (synthetic shots, no
+    /// chronograph). The widget shows it, because the Home Screen is the surface most
+    /// likely to be glanced at days later with no memory of how the numbers got there.
+    public let isDemo: Bool
 
     public init(
         title: String,
@@ -27,7 +31,8 @@ public struct HomeWidgetSnapshot: Sendable, Hashable, Codable {
         meanJoules: Double?,
         overLimitCount: Int,
         endedAt: Date,
-        speedUnit: SpeedUnit
+        speedUnit: SpeedUnit,
+        isDemo: Bool = false
     ) {
         self.title = title
         self.gunName = gunName
@@ -37,6 +42,28 @@ public struct HomeWidgetSnapshot: Sendable, Hashable, Codable {
         self.overLimitCount = overLimitCount
         self.endedAt = endedAt
         self.speedUnit = speedUnit
+        self.isDemo = isDemo
+    }
+
+    /// Decodes leniently for `isDemo`.
+    ///
+    /// A snapshot written by an older build has no `isDemo` key, and the widget reads
+    /// whatever is already in the App Group when the app updates. Synthesized decoding
+    /// would fail on that payload and blank the widget, so the missing key is read as
+    /// `false` (the old builds had no demo mode, so that is also the true value).
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decode(String.self, forKey: .title)
+        gunName = try container.decode(String.self, forKey: .gunName)
+        shotCount = try container.decode(Int.self, forKey: .shotCount)
+        meanSpeedMetersPerSecond = try container.decodeIfPresent(
+            Double.self, forKey: .meanSpeedMetersPerSecond
+        )
+        meanJoules = try container.decodeIfPresent(Double.self, forKey: .meanJoules)
+        overLimitCount = try container.decode(Int.self, forKey: .overLimitCount)
+        endedAt = try container.decode(Date.self, forKey: .endedAt)
+        speedUnit = try container.decode(SpeedUnit.self, forKey: .speedUnit)
+        isDemo = try container.decodeIfPresent(Bool.self, forKey: .isDemo) ?? false
     }
 
     /// Mean speed with its unit symbol. `nil` for 0 shots.

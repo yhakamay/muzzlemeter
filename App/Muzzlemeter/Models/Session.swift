@@ -32,6 +32,14 @@ final class Session {
     /// 目標発数（N 発モード）。`nil` は「手動で締める」。
     /// **どのセッションが N 発モードだったか**は後から見て意味があるので記録する。
     var targetShotCount: Int?
+    /// **デモモードで作られたセッションか。**
+    ///
+    /// このアプリは「その銃がフィールドの上限に収まっているか」を確かめるために使う。
+    /// 合成した弾速が本物の計測に見えてしまうのは、単なる紛らわしさではなく危険なので、
+    /// 出どころは**記録そのものに焼き込む**（表示のときに判定するのではなく）。
+    /// 既定値付きなのでライトウェイトマイグレーションで済む。
+    var isDemo: Bool = false
+
     /// タグ。改行区切りの 1 列で持つ。
     ///
     /// `[String]` を transformable にすると述語で扱えず、別モデルにするとテーブルが
@@ -97,7 +105,8 @@ final class Session {
         energyLimitJoules: Double = 0.98,
         gunManufacturer: String = "",
         gunModel: String = "",
-        gunInnerBarrelLengthMm: Int? = nil
+        gunInnerBarrelLengthMm: Int? = nil,
+        isDemo: Bool = false
     ) {
         self.startedAt = startedAt
         self.endedAt = endedAt
@@ -113,6 +122,7 @@ final class Session {
         self.gunManufacturer = gunManufacturer
         self.gunModel = gunModel
         self.gunInnerBarrelLengthMm = gunInnerBarrelLengthMm
+        self.isDemo = isDemo
     }
 
     /// 記録されているパワーソース区分。古いセッション（列が無かった頃）は nil。

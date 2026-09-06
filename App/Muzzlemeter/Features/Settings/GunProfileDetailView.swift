@@ -64,8 +64,14 @@ struct GunProfileDetailView: View {
         } header: {
             Text("これまで")
         } footer: {
-            // 「セッションごとの SD を平均したもの」だと思われないように書いておく。
-            Text("平均と SD は、このプロファイルで撃った全ショットをまとめて 1 つの標本として計算しています。")
+            VStack(alignment: .leading, spacing: 4) {
+                // 「セッションごとの SD を平均したもの」だと思われないように書いておく。
+                Text("平均と SD は、このプロファイルで撃った全ショットをまとめて 1 つの標本として計算しています。")
+                if excludedDemoSessionCount > 0 {
+                    // 黙って除くと「撃ったはずの回が数に入っていない」と読まれる。
+                    Text("デモモードで作った記録は、この画面の数字と推移には含めていません。")
+                }
+            }
         }
     }
 
@@ -246,8 +252,18 @@ struct GunProfileDetailView: View {
     /// 後からの編集で変わってはいけないため）。その代わり、プロファイル名を変えると
     /// それ以前のセッションはここに出てこなくなる。名前は銃の同一性そのものなので、
     /// 参照を持たせるより副作用が小さいと判断した。
+    /// **デモのセッションは除く。** この画面は「この銃はいまどうなっているか」を
+    /// 読むためのもので、合成した弾速が平均・標準偏差・気温との傾きに 1 件でも
+    /// 混ざると、出てくる数字が静かに嘘になる。印を付けて並べるだけでは、
+    /// 「散布図の点のどれがデモか」を毎回見分けさせることになって割に合わない。
+    /// 除いたことは下の注記で伝える（黙って消さない）。
     private var sessions: [Session] {
-        allSessions.filter { $0.gunName == profile.name }
+        allSessions.filter { $0.gunName == profile.name && !$0.isDemo }
+    }
+
+    /// この銃で除外したデモセッションの件数。0 なら注記も出さない。
+    private var excludedDemoSessionCount: Int {
+        allSessions.filter { $0.gunName == profile.name && $0.isDemo }.count
     }
 
     private var samples: [ProfileTrendSample] {

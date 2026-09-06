@@ -25,8 +25,54 @@ final class ChronoService {
     private(set) var batteryPercent: Int?
     /// 本体が選択している弾。重量スケールが未確定なのでジュール計算には使わない。
     private(set) var deviceAmmo: AmmoRecord?
-    /// リプレイ（デモ）モードで動いているか。
+    /// **開発用の再生**で動いているか（`--replay` / Debug のシミュレータ）。
+    /// 利用者が入れるデモモードとは別物（`isDemoMode`）。
     let isReplaying: Bool
+
+    // MARK: - デモモード
+    //
+    // 実機が無い人（App Review、まだ本体が届いていない人）がアプリの動きを確かめるための
+    // 機能。合成した射撃列を **実プロトコルのバイト列のまま** `ReplayTransport` から
+    // 流すので、Live 画面・統計・規制上限の色分け・ライブアクティビティ・ウィジェット・
+    // Watch まで、実機のときと同じ経路が動く。
+    //
+    // **実機とデモは混ざってはいけない。** このアプリは「その銃が上限に収まっているか」を
+    // 見るために使うので、合成値が本物の計測に見えるのは危険そのもの。混在を
+    // 「気を付けて避ける」のではなく、構造として起こせなくしてある:
+    //
+    // 1. デモ中は `CoreBluetoothTransport` を**そもそも作らない**。デモの間にクロノグラフが
+    //    繋がることは起こり得ない。
+    // 2. クロノグラフに繋がっている間はデモを**始められない**（`canEnableDemoMode`）。
+    // 3. 入り切りのどちらでも、進行中のセッションを先に締める。同じセッションに
+    //    デモの弾と実弾が並ぶ経路が無い。
+
+    /// 利用者がデモモードを入れているか。**リリースビルドでも効く。**
+    private(set) var isDemoMode: Bool
+
+    /// いま画面に出ている数値がデモ由来か（利用者のデモモード、または開発用の再生）。
+    /// 「DEMO」の表示、セッションへの印、CSV の列はすべてこれで決まる。
+    var isDemoActive: Bool { isDemoMode || isReplaying }
+
+    /// クロノグラフに一度でも繋がったことがあるか。
+    ///
+    /// Live 画面の「実機が無くても試せます」の案内を出すかどうかに使う。一度でも
+    /// 本物に繋がった人にとって、待機中の画面はデモの勧誘ではなく「まだ繋がっていない」
+    /// を意味するので、案内は出さない。
+    private(set) var hasEverConnectedChronograph: Bool
+
+    /// いまデモモードを始められるか。
+    ///
+    /// 繋がっている（あるいは繋ぎに行っている）ときは**始めさせない**。裏で実機を
+    /// 切ってデモに差し替えると、手元の本体のランプは点いたままなのに画面の数字だけが
+    /// 合成値になる。「実機が繋がっているのでデモは始められません」と言って断るほうが、
+    /// 何が起きているか分かる。
+    var canEnableDemoMode: Bool {
+        if isDemoMode { return true }
+        switch connectionState {
+        case .idle, .scanning, .disconnected: return true
+        case .connecting, .pairing, .ready: return isReplaying
+        }
+    }
     /// 音・振動・読み上げ。設定画面はこの中のトグルを直接束縛する。
     let feedback: FeedbackService
     /// ロック画面 / Dynamic Island のライブアクティビティ（Round E）。
@@ -69,7 +115,7 @@ final class ChronoService {
             defaults.set(selectedProfile?.name, forKey: Keys.selectedProfileName)
             // 銃を替えたら、次のセッションの条件はその銃の既定値から始める。
             // 前の銃の 0.20 g が黙って引き継がれると、ジュールが静かに間違う。
-            pendingVariables = selectedProfile?.defaultVariables ?? SessionVariables()
+            pendingVariables = defaultVariables(for: selectedProfile)
             recomputeStats()
         }
     }
@@ -186,6 +232,10 @@ final class ChronoService {
     /// **本体には何も書き込まない。** 本体の設定を勝手に変えると、アプリを閉じた後の
     /// 本体単体の表示まで変わってしまう。食い違いを知らせて、直すかどうかは人が決める。
     var ammoWeightMismatch: AmmoWeightMismatch? {
+        // デモの擬似本体が「選んでいる」弾は台本の一部で、利用者の本体の設定ではない。
+        // 利用者のプロファイルが 0.25 g だと、デモ中ずっと「本体は 0.20 g です」と
+        // 出し続けることになり、直しようのない警告になる。デモでは出さない。
+        guard !isDemoMode else { return nil }
         guard let deviceGrams = deviceAmmo?.weightGrams else { return nil }
         let mismatch = AmmoWeightMismatch(deviceGrams: deviceGrams, sessionGrams: massGrams)
         guard abs(mismatch.deviceGrams - mismatch.sessionGrams) > Self.ammoWeightTolerance else {
@@ -334,6 +384,7 @@ final class ChronoService {
                profile: selectedProfile,
                gunName: gunName,
                isPartial: outcome != .completed,
+               isDemo: isDemoActive,
                into: modelContext
            ) {
             savedShotCount = session.shots.count
@@ -442,7 +493,24 @@ final class ChronoService {
 
     /// 条件をプロファイルの既定値へ戻す。
     func resetVariablesToProfileDefaults() {
-        variables = selectedProfile?.defaultVariables ?? SessionVariables()
+        variables = defaultVariables(for: selectedProfile)
+    }
+
+    /// 次のセッションを始めるときの条件。
+    ///
+    /// 普段はプロファイルの既定値そのまま。**デモモードの間だけ BB 重量を台本の弾
+    /// （0.20 g）に合わせる。** デモの台本は 0.20 g で ≒90 m/s（≒0.81 J）という
+    /// エアソフトの実勢で組んであるが、初期プロファイルの既定は 0.25 g なので、
+    /// そのまま流すと 1.03 J になり、デモが**始まった瞬間に「規制上限を超過」の
+    /// 真っ赤な画面**になる。動きを見に来た人へ見せる絵として嘘なので、デモの間は
+    /// 台本の弾に合わせ、抜けたらプロファイルの既定へ戻す。
+    ///
+    /// **書き換えるのは「次のセッションの条件」だけで、プロファイルには触らない。**
+    /// 利用者が登録した銃の設定を、デモを試したせいで書き換えてはいけない。
+    private func defaultVariables(for profile: GunProfile?) -> SessionVariables {
+        var variables = profile?.defaultVariables ?? SessionVariables()
+        if isDemoMode { variables.bbWeightGrams = DemoScript.deviceBBWeightGrams }
+        return variables.normalized
     }
 
     /// プロファイルの既定値と一致しているか（「既定値に戻す」を出すかの判定）。
@@ -476,12 +544,17 @@ final class ChronoService {
         static let rateOfFireUnit = "muzzlemeter.rateOfFireUnit"
         static let autoReconnect = "muzzlemeter.autoReconnect"
         static let selectedProfileName = "muzzlemeter.selectedProfileName"
+        static let demoMode = "muzzlemeter.demoMode"
+        static let hasConnectedChronograph = "muzzlemeter.hasConnectedChronograph"
     }
 
-    private let device: ChronoDevice
+    private var device: ChronoDevice
     private let defaults: UserDefaults
     private var modelContext: ModelContext?
     private var eventTask: Task<Void, Never>?
+    /// `start(modelContext:)` を通ったか。デモの入り切りで機器を作り直すとき、
+    /// まだ動かしていないサービスを勝手に動かし始めないための印。
+    private var isRunning = false
 
     // MARK: - 生成
 
@@ -504,22 +577,117 @@ final class ChronoService {
             .flatMap(SpeedUnit.init(rawValue:)) ?? .metersPerSecond
         self.rateOfFireUnit = defaults.string(forKey: Keys.rateOfFireUnit)
             .flatMap(RateOfFireUnit.init(rawValue:)) ?? .rps
-        self.autoReconnect = defaults.object(forKey: Keys.autoReconnect) as? Bool ?? true
+        // `@Observable` のプロパティは全部の格納プロパティが埋まるまで読めないので、
+        // 機器の組み立てに要る値はローカルに置いてから両方へ渡す。
+        let autoReconnect = defaults.object(forKey: Keys.autoReconnect) as? Bool ?? true
+        let isDemoMode = defaults.bool(forKey: Keys.demoMode)
+        let isReplaying = forceReplay ?? ReplaySupport.isEnabled
+        self.autoReconnect = autoReconnect
+        self.isDemoMode = isDemoMode
+        self.hasEverConnectedChronograph = defaults.bool(forKey: Keys.hasConnectedChronograph)
 
-        // 実機では CoreBluetooth、シミュレータ / `--replay` では記録済みパケットの再生。
-        // **デコーダと設定は両方で同じもの**を使う。再生でも鍵ハンドシェイクまで
-        // 実機と同じ経路を通るので、UI から見て挙動が変わらない。
-        let transport: any ChronoTransport = self.isReplaying
-            ? ReplaySupport.makeTransport()
-            : CoreBluetoothTransport()
-        self.device = ChronoDevice(
+        self.device = Self.makeDevice(
+            isDemoMode: isDemoMode,
+            isReplaying: isReplaying,
+            defaults: defaults,
+            autoReconnect: autoReconnect
+        )
+    }
+
+    /// 機器（＝トランスポート）を組み立てる。
+    ///
+    /// 実機では CoreBluetooth、デモモードでは合成スクリプトの再生、開発用の再生では
+    /// 記録済みパケットの再生。**デコーダと設定は 3 つとも同じもの**を使う。再生でも
+    /// 鍵ハンドシェイクまで実機と同じ経路を通るので、UI から見て挙動が変わらない。
+    ///
+    /// デモモードのときは `CoreBluetoothTransport` を**作らない**。これが
+    /// 「デモ中に実機が繋がる」を構造として起こせなくしている実装。
+    private static func makeDevice(
+        isDemoMode: Bool,
+        isReplaying: Bool,
+        defaults: UserDefaults,
+        autoReconnect: Bool
+    ) -> ChronoDevice {
+        let transport: any ChronoTransport
+        if isDemoMode {
+            transport = DemoScript.makeTransport()
+        } else if isReplaying {
+            transport = ReplaySupport.makeTransport()
+        } else {
+            transport = CoreBluetoothTransport()
+        }
+        return ChronoDevice(
             transport: transport,
             decoder: MuzzlemeterDecoder(),
             store: UserDefaultsKeyValueStore(defaults: defaults),
-            configuration: .ac6000(
-                autoReconnect: defaults.object(forKey: Keys.autoReconnect) as? Bool ?? true
-            )
+            configuration: .ac6000(autoReconnect: autoReconnect)
         )
+    }
+
+    // MARK: - デモモードの入り切り
+
+    /// デモモードを入れる／切る。
+    ///
+    /// **どちらの向きでも、まず進行中のセッションを締める。** 締めずに切り替えると、
+    /// 同じセッションの中にデモの弾と実弾が並んでしまう。締めたうえで機器ごと
+    /// 作り直すので、切り替え後の 1 発目は必ず新しいセッションになる。
+    func setDemoMode(_ enabled: Bool) {
+        guard enabled != isDemoMode else { return }
+        if enabled { guard canEnableDemoMode else { return } }
+
+        if activeSession != nil { endSession() }
+        isDemoMode = enabled
+        defaults.set(enabled, forKey: Keys.demoMode)
+        pendingVariables = defaultVariables(for: selectedProfile)
+        recomputeStats()
+        // サービスが知らない開きっぱなしのデモセッション（前回の起動で落ちた等）も締める。
+        if let modelContext { DemoSessionStore.closeOpenDemoSessions(in: modelContext) }
+        rebuildDevice()
+    }
+
+    /// トランスポートを差し替えて機器を作り直す。
+    ///
+    /// 前の機器は `shutdown()` でイベントストリームごと閉じる。閉じないと、
+    /// 古いストリームから遅れて届いた 1 発が**切り替え後の**セッションに入りかねない。
+    private func rebuildDevice() {
+        eventTask?.cancel()
+        eventTask = nil
+        let previous = device
+        Task { await previous.shutdown() }
+
+        // 画面に出ている「前の機器の状態」を全部落とす。
+        connectionState = .idle
+        lastShot = nil
+        currentShots = []
+        batteryPercent = nil
+        deviceAmmo = nil
+        deviceLogCount = nil
+        deviceLogImport = .idle
+        discovery = DiscoveryList()
+        connectedPeripheralID = nil
+        recomputeStats()
+
+        device = Self.makeDevice(
+            isDemoMode: isDemoMode,
+            isReplaying: isReplaying,
+            defaults: defaults,
+            autoReconnect: autoReconnect
+        )
+        guard isRunning else { return }
+        startEventLoop()
+        let device = self.device
+        Task { await device.start() }
+    }
+
+    // MARK: - デモデータ
+
+    /// デモのセッションをすべて消す。**実データには触らない。**
+    @discardableResult
+    func deleteDemoData() -> Int {
+        guard let modelContext else { return 0 }
+        // 進行中がデモなら、消す前に自分の手から離す（消えた実体を掴んだままにしない）。
+        if let session = activeSession, session.isDemo { discardSession() }
+        return DemoSessionStore.deleteDemoSessions(in: modelContext)
     }
 
     /// SwiftData のコンテキストを渡してイベントの取り込みを始める。View の `.task` から呼ぶ。
@@ -529,8 +697,16 @@ final class ChronoService {
         StoreMigration.run(in: modelContext)
         restoreSelectedProfileIfNeeded()
         closeSessionsLeftOpen(in: modelContext)
+        isRunning = true
         guard eventTask == nil else { return }
 
+        startEventLoop()
+        let device = self.device
+        Task { await device.start() }
+    }
+
+    /// いまの機器のイベントストリームを読み始める。機器を差し替えたら張り直す。
+    private func startEventLoop() {
         let stream = device.events
         eventTask = Task { [weak self] in
             for await event in stream {
@@ -538,8 +714,6 @@ final class ChronoService {
                 self.handle(event)
             }
         }
-        let device = self.device
-        Task { await device.start() }
     }
 
     func stop() {
@@ -595,6 +769,12 @@ final class ChronoService {
             connectionState = state
             // 繋がった直後に 1 回だけ訊く。切れたら件数は忘れる（別の機器かもしれない）。
             if state.isReady, !wasReady {
+                // 「本物に繋がったことがある人」には Live 画面のデモの案内を出さない。
+                // デモ／再生で繋がった `AC6000BT-DEMO` は本物ではないので数えない。
+                if !isDemoActive, !hasEverConnectedChronograph {
+                    hasEverConnectedChronograph = true
+                    defaults.set(true, forKey: Keys.hasConnectedChronograph)
+                }
                 refreshDeviceLog()
             } else if !state.isReady {
                 deviceLogCount = nil
@@ -657,7 +837,10 @@ final class ChronoService {
         try? modelContext.save()
         // 気象の取得は**保存の後**に始める。保存前の `persistentModelID` は一時的な値で、
         // 後から引き直しても実体に当たらない（SwiftData がアサートで落ちる）。
-        if isNewSession { captureEnvironment(for: session) }
+        // デモのセッションでは気象も位置も取らない。合成した射撃に**本物の**
+        // 気温・場所が付くと、記録として実測と見分けがつかなくなるうえ、
+        // ただ動きを見たいだけの人に位置情報の許可を求めることになる。
+        if isNewSession, !session.isDemo { captureEnvironment(for: session) }
         recomputeStats()
         // 上限の判定はセッションが決まってから（セッションが持つ上限を使う）。
         report(shot)
@@ -680,7 +863,8 @@ final class ChronoService {
             speedUnit: speedUnit,
             energyLimitJoules: energyLimitJoules,
             target: shotTarget,
-            gunName: gunName
+            gunName: gunName,
+            isDemo: isDemoActive
         )
         let watchState = WatchLiveState.derive(
             shots: currentShots,
@@ -689,7 +873,8 @@ final class ChronoService {
             energyLimitJoules: energyLimitJoules,
             target: shotTarget,
             gunName: gunName,
-            isSessionActive: true
+            isSessionActive: true,
+            isDemo: isDemoActive
         )
         if isNewSession {
             liveActivity.start(content: content, startedAt: session.startedAt)
@@ -741,7 +926,10 @@ final class ChronoService {
             energyLimitJoules: profile?.energyLimitJoules ?? 0.98,
             gunManufacturer: profile?.manufacturer ?? "",
             gunModel: profile?.model ?? "",
-            gunInnerBarrelLengthMm: profile?.innerBarrelLengthMm
+            gunInnerBarrelLengthMm: profile?.innerBarrelLengthMm,
+            // 出どころは**セッションを作るその場で焼き込む**。後から表示側で
+            // 判定すると、デモを切った後に開いた履歴で印が消えてしまう。
+            isDemo: isDemoActive
         )
         modelContext.insert(session)
         activeSession = session
@@ -825,7 +1013,8 @@ final class ChronoService {
             speedUnit: speedUnit,
             energyLimitJoules: energyLimitJoules,
             target: shotTarget,
-            gunName: gunName
+            gunName: gunName,
+            isDemo: isDemoActive
         )
         liveActivity.end(content: content)
         let watchState = WatchLiveState.derive(
@@ -835,7 +1024,8 @@ final class ChronoService {
             energyLimitJoules: energyLimitJoules,
             target: shotTarget,
             gunName: gunName,
-            isSessionActive: false
+            isSessionActive: false,
+            isDemo: isDemoActive
         )
         watchConnectivity.syncState(watchState)
     }
